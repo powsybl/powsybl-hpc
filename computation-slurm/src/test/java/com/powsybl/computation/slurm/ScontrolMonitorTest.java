@@ -55,11 +55,11 @@ public class ScontrolMonitorTest {
 
     @Before
     public void setup() {
-        SlurmComputationManager.Mycf mycf;
+        SlurmComputationManager.SlurmCompletableFuture slurmCompletableFuture;
         slurm = mock(SlurmComputationManager.class);
-        mycf = new SlurmComputationManager.Mycf(slurm);
-        mycf.setThread(new Thread());
-        ts = TaskStoreTest.generateTaskStore(mycf, false);
+        slurmCompletableFuture = new SlurmComputationManager.SlurmCompletableFuture(slurm);
+        slurmCompletableFuture.setThread(new Thread());
+        ts = TaskStoreTest.generateTaskStore(slurmCompletableFuture, false);
         Whitebox.setInternalState(slurm, "taskStore", ts);
         when(slurm.getTaskStore()).thenReturn(ts);
         cm = mock(CommandExecutor.class);

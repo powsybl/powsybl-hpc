@@ -26,8 +26,8 @@ class TaskStore {
     // workingDir<--->Task of computation
     private Map<String, TaskCounter> workingDirTaskMap = new HashMap<>();
     private Map<String, Long> workingDirFirstJobMap = new HashMap<>();
-    private Map<CompletableFuture, String> futureWorkingDirMap = new HashMap<>();
-    private Map<String, CompletableFuture> workingDirFutureMap = new HashMap<>();
+    private Map<SlurmComputationManager.SlurmCompletableFuture, String> futureWorkingDirMap = new HashMap<>();
+    private Map<String, SlurmComputationManager.SlurmCompletableFuture> workingDirFutureMap = new HashMap<>();
     private ReadWriteLock taskLock = new ReentrantReadWriteLock();
 
     private Map<Long, Long> jobDependencies = new HashMap<>();
@@ -67,7 +67,7 @@ class TaskStore {
         }
     }
 
-    CompletableFuture getCompletableFuture(String workingDirName) {
+    SlurmComputationManager.SlurmCompletableFuture getCompletableFuture(String workingDirName) {
         taskLock.readLock().lock();
         try {
             return workingDirFutureMap.get(workingDirName);
@@ -101,7 +101,7 @@ class TaskStore {
         trace(firstJobId);
     }
 
-    void insert(String workingDirName, CompletableFuture future) {
+    void insert(String workingDirName, SlurmComputationManager.SlurmCompletableFuture future) {
         taskLock.writeLock().lock();
         try {
             futureWorkingDirMap.put(future, workingDirName);
@@ -162,7 +162,12 @@ class TaskStore {
         return new HashSet<>(workingDirTaskMap.values());
     }
 
-    void remove(CompletableFuture future) {
+    /**
+     * Clear all job ids and its dependency in the task store.
+     * Called after complete or cancel all job
+     * @param future all job ids belongs to the future
+     */
+    void clearBy(CompletableFuture future) {
         Long firstJobId = removeTaskMaps(future);
         removeIds(firstJobId);
     }
@@ -218,9 +223,9 @@ class TaskStore {
         }
     }
 
-    Optional<CompletableFuture> getCompletableFutureByJobId(long id) {
+    Optional<SlurmComputationManager.SlurmCompletableFuture> getCompletableFutureByJobId(long id) {
         // try with first id
-        Optional<CompletableFuture> completableFuture = getFutureByFirstId(id);
+        Optional<SlurmComputationManager.SlurmCompletableFuture> completableFuture = getFutureByFirstId(id);
         if (completableFuture.isPresent()) {
             return completableFuture;
         }
@@ -234,7 +239,7 @@ class TaskStore {
         return completableFuture;
     }
 
-    private Optional<CompletableFuture> getFutureByFirstId(long firstJobId) {
+    private Optional<SlurmComputationManager.SlurmCompletableFuture> getFutureByFirstId(long firstJobId) {
         taskLock.readLock().lock();
         try {
             return workingDirFirstJobMap.entrySet()
@@ -248,7 +253,7 @@ class TaskStore {
         }
     }
 
-    private Optional<CompletableFuture> getFutureByMasterId(long masterId) {
+    private Optional<SlurmComputationManager.SlurmCompletableFuture> getFutureByMasterId(long masterId) {
         OptionalLong option = getFirstId(masterId);
         if (option.isPresent()) {
             return getFutureByFirstId(option.getAsLong());
@@ -259,7 +264,7 @@ class TaskStore {
 
     private OptionalLong getFirstId(long masterId) {
         // is already a first job id
-        Optional<CompletableFuture> completableFuture = getFutureByFirstId(masterId);
+        Optional<SlurmComputationManager.SlurmCompletableFuture> completableFuture = getFutureByFirstId(masterId);
         if (completableFuture.isPresent()) {
             return OptionalLong.of(masterId);
         }
@@ -288,7 +293,7 @@ class TaskStore {
         return OptionalLong.of(tmp);
     }
 
-    private Optional<CompletableFuture> getFutureByBatchId(long batchId) {
+    private Optional<SlurmComputationManager.SlurmCompletableFuture> getFutureByBatchId(long batchId) {
         OptionalLong optMasterId = getMasterId(batchId);
         if (optMasterId.isPresent()) {
             return getFutureByMasterId(optMasterId.getAsLong());

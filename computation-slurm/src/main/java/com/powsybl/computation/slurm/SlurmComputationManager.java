@@ -48,6 +48,8 @@ public class SlurmComputationManager implements ComputationManager {
 
     private static final String CLOSE_START_NO_MORE_SEND_INFO = "SCM close started and no more send sbatch to slurm";
 
+    private static final String CANCEL_BY_CALLER_MSG = "Cancelled by submitter";
+
     private final SlurmComputationConfig config;
 
     private final ExecutorService executorService;
@@ -206,7 +208,7 @@ public class SlurmComputationManager implements ComputationManager {
         requireNonNull(environment);
         requireNonNull(handler);
 
-        Mycf<R> f = new Mycf<>(this);
+        SlurmCompletableFuture<R> f = new SlurmCompletableFuture<>(this);
         executorService.submit(() -> {
             f.setThread(Thread.currentThread());
             try {
@@ -215,24 +217,41 @@ public class SlurmComputationManager implements ComputationManager {
                 LOGGER.error(e.toString(), e);
                 f.completeExceptionally(e);
             }
-            taskStore.remove(f);
+            if (!f.isCancelled()) {
+                taskStore.clearBy(f);
+            }
         });
         return f;
     }
 
-    static class Mycf<R> extends CompletableFuture<R> {
+    static class SlurmCompletableFuture<R> extends CompletableFuture<R> {
 
-        Thread thread;
-        SlurmComputationManager mgr;
-        volatile boolean cancel = false;
+        private Thread thread;
+        private SlurmComputationManager mgr;
+        private volatile boolean cancel = false;
+        private volatile boolean cancelledBySlurm = false;
 
-        Mycf(SlurmComputationManager manager) {
-            mgr = manager;
+        private SlurmException exception;
+
+        SlurmCompletableFuture(SlurmComputationManager manager) {
+            mgr = Objects.requireNonNull(manager);
         }
 
         @Override
         public boolean isCancelled() {
             return cancel;
+        }
+
+        // called by monitors, it differs from cancel() by client-side
+        boolean cancelBySlurm(SlurmException exception) {
+            Objects.requireNonNull(exception);
+            this.exception = exception;
+            cancelledBySlurm = true;
+            return cancel(true);
+        }
+
+        private boolean isCancelledBySlurm() {
+            return cancelledBySlurm;
         }
 
         @Override
@@ -243,6 +262,10 @@ public class SlurmComputationManager implements ComputationManager {
                 LOGGER.debug("Can not cancel");
                 return false;
             }
+
+            completeExceptionally(cancelledBySlurm ?
+                    new CompletionException(exception.getMessage(), exception) :
+                    new CancellationException(CANCEL_BY_CALLER_MSG));
 
             while (thread == null) {
                 try {
@@ -272,7 +295,7 @@ public class SlurmComputationManager implements ComputationManager {
             }
 
             mgr.scancelCascading(jobId);
-            mgr.taskStore.remove(this);
+            mgr.taskStore.clearBy(this);
             return true;
         }
 
@@ -302,7 +325,7 @@ public class SlurmComputationManager implements ComputationManager {
         commandRunner.execute("scancel " + jobId);
     }
 
-    private <R> void remoteExecute(ExecutionEnvironment environment, ExecutionHandler<R> handler, ComputationParameters parameters, CompletableFuture<R> f) {
+    private <R> void remoteExecute(ExecutionEnvironment environment, ExecutionHandler<R> handler, ComputationParameters parameters, SlurmCompletableFuture<R> f) {
         Path remoteWorkingDir;
         try (WorkingDirectory remoteWorkingDirectory = new RemoteWorkingDir(baseDir, environment.getWorkingDirPrefix(), environment.isDebug())) {
             remoteWorkingDir = remoteWorkingDirectory.toPath();
@@ -330,14 +353,17 @@ public class SlurmComputationManager implements ComputationManager {
                 Thread.currentThread().interrupt();
             }
 
-            if (closeStarted) {
-                return;
-            }
-
             SlurmExecutionReport report = generateReport(jobIdCommandMap, remoteWorkingDir);
-
-            R result = handler.after(remoteWorkingDir, report);
-            f.complete(result);
+            if (f.isCancelled()) {
+                if (f.isCancelledBySlurm()) {
+                    // some exceptions in platform
+                    handler.after(remoteWorkingDir, report);
+                } else {
+                    // client call cancel and skip after
+                }
+            } else {
+                f.complete(handler.after(remoteWorkingDir, report));
+            }
         } catch (IOException e) {
             LOGGER.error(e.toString(), e);
             f.completeExceptionally(e);

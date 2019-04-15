@@ -12,7 +12,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
@@ -56,7 +55,7 @@ public class TaskStoreTest {
     // 3←4,5
     // ↑
     // 6
-    static TaskStore generateTaskStore(CompletableFuture future, boolean checkTracing) {
+    static TaskStore generateTaskStore(SlurmComputationManager.SlurmCompletableFuture future, boolean checkTracing) {
         String workingDir = "a_working_dir";
         TaskCounter counter = mock(TaskCounter.class);
 
@@ -91,7 +90,7 @@ public class TaskStoreTest {
 
     @Test
     public void test() {
-        TaskStore taskStore = generateTaskStore(mock(CompletableFuture.class), false);
+        TaskStore taskStore = generateTaskStore(mock(SlurmComputationManager.SlurmCompletableFuture.class), false);
         assertEquals(Arrays.asList(3L, 6L), taskStore.getDependentJobs(1L));
         assertEquals(Collections.singletonList(6L), taskStore.getDependentJobs(3L));
         assertTrue(taskStore.getDependentJobs(6L).isEmpty());
@@ -102,13 +101,13 @@ public class TaskStoreTest {
 
     @Test
     public void testRemove() {
-        CompletableFuture future = mock(CompletableFuture.class);
+        SlurmComputationManager.SlurmCompletableFuture future = mock(SlurmComputationManager.SlurmCompletableFuture.class);
         TaskStore taskStore = generateTaskStore(future, false);
         assertEquals(1L, taskStore.getFirstJobId(future).longValue());
         assertNotNull(taskStore.getTaskCounter(future));
         assertEquals(future, taskStore.getCompletableFuture("a_working_dir"));
 
-        taskStore.remove(future);
+        taskStore.clearBy(future);
 
         assertNull(taskStore.getTaskCounter(future));
         assertNull(taskStore.getFirstJobId(future));
@@ -121,7 +120,7 @@ public class TaskStoreTest {
 
     @Test
     public void testGetFutureFromJobId() {
-        CompletableFuture future = mock(CompletableFuture.class);
+        SlurmComputationManager.SlurmCompletableFuture future = mock(SlurmComputationManager.SlurmCompletableFuture.class);
         TaskStore taskStore = generateTaskStore(future, false);
         assertEquals(future, taskStore.getCompletableFutureByJobId(1L).orElse(null));
         assertEquals(future, taskStore.getCompletableFutureByJobId(2L).orElse(null));
@@ -133,6 +132,6 @@ public class TaskStoreTest {
 
     @Test
     public void testTracing() {
-        generateTaskStore(mock(CompletableFuture.class), true);
+        generateTaskStore(mock(SlurmComputationManager.SlurmCompletableFuture.class), true);
     }
 }

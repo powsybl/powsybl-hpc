@@ -12,7 +12,6 @@ import com.powsybl.computation.*;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
 import org.apache.commons.io.IOUtils;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -28,6 +27,8 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
@@ -35,7 +36,8 @@ import java.util.function.Supplier;
 import java.util.stream.IntStream;
 import java.util.zip.GZIPOutputStream;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * @author Yichen TANG <yichen.tang at rte-france.com>
@@ -46,7 +48,15 @@ public class SlurmUnitTests {
     private static final Logger LOGGER = LoggerFactory.getLogger(SlurmUnitTests.class);
     private static final ExecutionEnvironment EMPTY_ENV = new ExecutionEnvironment(Collections.emptyMap(), "unit_test_", false);
 
+    private static final String EXPECTED_ERROR_JOB_MSG = "An error job found";
+    private static final String EXPECTED_SCANCEL_JOB_MSG = "A CANCELLED job detected by monitor";
+    private static final String EXPECTED_DEADLINE_JOB_MSG = "A DEADLINE job detected by monitor";
+    private static final String EXPECTED_SUBMITTER_CANCEL_MSG = "Cancelled by submitter";
+    private static final String FAILED_SEP = "******** TEST FAILED ********";
+
     private ModuleConfig config;
+
+    private volatile boolean failed = false;
 
     @Before
     public void setup() {
@@ -82,28 +92,20 @@ public class SlurmUnitTests {
         try (ComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
             CompletableFuture<Void> completableFuture = computationManager.execute(EMPTY_ENV, supplier.get(), parameters);
             if (testAttribute.getType() == Type.TO_CANCEL) {
-                if (testAttribute.getTestName().endsWith("CancelExternal")) {
-                    System.out.println("Go to cancel on server");
+                System.out.println("Will be cancelled by junit test in 5 seconds...");
+                Thread.sleep(5000);
+                boolean cancel = completableFuture.cancel(true);
+                System.out.println("Cancelled:" + cancel);
+                failed = !cancel;
+                try {
                     completableFuture.join();
-                    System.out.println("Canceled:" + completableFuture.isCancelled());
-                } else {
-                    System.out.println("to cancel");
-                    Thread.sleep(5000);
-                    boolean cancel = completableFuture.cancel(true);
-                    System.out.println("Canceled:" + cancel);
-                    Assert.assertTrue(cancel);
+                    failed = true;
+                } catch (CancellationException ce) {
+                    boolean b = failed || !ce.getMessage().equals(EXPECTED_SUBMITTER_CANCEL_MSG);
+                    failed = b;
                 }
             } else if (testAttribute.getType() == Type.TO_WAIT) {
-                System.out.println("to wait finish");
-                if (testAttribute.getTestName().equals("deadline")) {
-                    try {
-                        completableFuture.join();
-                    } catch (CompletionException exception) {
-                        // ignored
-                    }
-                } else {
-                    completableFuture.join();
-                }
+                assertToWaitTest(testAttribute, completableFuture);
             } else if (testAttribute.getType() == Type.TO_SHUTDOWN) {
                 System.out.println("Go shutdown JVM");
                 completableFuture.join();
@@ -113,6 +115,45 @@ public class SlurmUnitTests {
         } catch (IOException e) {
             e.printStackTrace();
             fail();
+        } catch (Throwable e) {
+            e.printStackTrace();
+        }
+        if (failed) {
+            fail();
+        }
+    }
+
+    private void assertToWaitTest(TestAttribute testAttribute, CompletableFuture completableFuture) {
+        if (testAttribute.getTestName().endsWith("CancelExternal")) {
+            System.out.println("Go to cancel on server...");
+        } else {
+            System.out.println("Wait finish...");
+        }
+        try {
+            completableFuture.join();
+            failed = false;
+        } catch (CompletionException e) {
+            if (testAttribute.getTestName().equals("qos")) {
+                failed = !e.getMessage().contains("Invalid qos specification");
+                return;
+            }
+            String expected = "no exception";
+            if (testAttribute.getTestName().contains("invalid")) {
+                expected = EXPECTED_ERROR_JOB_MSG;
+            } else if (testAttribute.getTestName().endsWith("CancelExternal")) {
+                expected = EXPECTED_SCANCEL_JOB_MSG;
+            } else if (testAttribute.getTestName().contains("deadline")) {
+                expected = EXPECTED_DEADLINE_JOB_MSG;
+            } else {
+                // normal tests
+                failed = true;
+            }
+            if (!e.getMessage().equals(expected)) {
+                failed = true;
+                System.out.println(FAILED_SEP);
+                System.out.println("Actuel:" + e.getMessage());
+                System.out.println("Expect:" + expected);
+            }
         }
     }
 
@@ -127,11 +168,6 @@ public class SlurmUnitTests {
 
             @Override
             public Void after(Path workingDir, ExecutionReport report) {
-                try {
-                    return super.after(workingDir, report);
-                } catch (IOException e) {
-                    fail();
-                }
                 return null;
             }
 
@@ -171,13 +207,12 @@ public class SlurmUnitTests {
                 try {
                     super.after(workingDir, report);
                 } catch (IOException e) {
-                    e.printStackTrace();
-                    fail();
+                        failed = true;
                 }
                 Path out2 = workingDir.resolve("out2.gz");
                 System.out.println("---------" + testAttribute.testName + "----------");
                 System.out.println("out2.gz should exists:" + Files.exists(out2));
-                Assert.assertTrue(Files.exists(out2));
+                failed = !Files.exists(out2);
                 System.out.println("------------------------------------");
                 return null;
             }
@@ -198,7 +233,7 @@ public class SlurmUnitTests {
     }
 
     @Test
-    public void testGrougCmd() throws InterruptedException {
+    public void testGroupCmd() throws InterruptedException {
         TestAttribute testAttribute = new TestAttribute(Type.TO_WAIT, "groupCmd");
         Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
             @Override
@@ -283,6 +318,12 @@ public class SlurmUnitTests {
             public List<CommandExecution> before(Path workingDir) {
                 return longProgramToCancel();
             }
+
+            @Override
+            public Void after(Path workingDir, ExecutionReport report) throws IOException {
+                failed = true;
+                return null;
+            }
         };
         baseTest(testAttribute, supplier);
     }
@@ -294,6 +335,12 @@ public class SlurmUnitTests {
             @Override
             public List<CommandExecution> before(Path workingDir) {
                 return longListProgsToCancel();
+            }
+
+            @Override
+            public Void after(Path workingDir, ExecutionReport report) throws IOException {
+                failed = true;
+                return null;
             }
         };
         baseTest(testAttribute, supplier);
@@ -307,17 +354,28 @@ public class SlurmUnitTests {
             public List<CommandExecution> before(Path workingDir) {
                 return mixedProgsToCancel();
             }
+
+            @Override
+            public Void after(Path workingDir, ExecutionReport report) throws IOException {
+                failed = true;
+                return null;
+            }
         };
         baseTest(testAttribute, supplier);
     }
 
     @Test
     public void testLongProgramToCancelExternal() throws InterruptedException {
-        TestAttribute testAttribute = new TestAttribute(Type.TO_CANCEL, "longProgramToCancelExternal", true);
+        TestAttribute testAttribute = new TestAttribute(Type.TO_WAIT, "longProgramToCancelExternal", true);
         Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
                 return longProgram(200);
+            }
+
+            @Override
+            public Void after(Path workingDir, ExecutionReport report) throws IOException {
+                return null;
             }
         };
         baseTest(testAttribute, supplier);
@@ -378,10 +436,18 @@ public class SlurmUnitTests {
             public Void after(Path workingDir, ExecutionReport report) throws IOException {
                 List<String> actual2GMd5 = Files.readAllLines(workingDir.resolve("c1_0.out"));
                 List<String> actual4GMd5 = Files.readAllLines(workingDir.resolve("c2_0.out"));
-                List<String> expected2GMd5 = Collections.singletonList("1ea9851f9b83e9bd50b8d7577b23e14b  2GFile");
-                List<String> expected4GMd5 = Collections.singletonList("bbe2b516d690f337d8f48fc03db99c9a  4GFile");
-                assertEquals(expected2GMd5, actual2GMd5);
-                assertEquals(expected4GMd5, actual4GMd5);
+                String expected2GMd5 = "1ea9851f9b83e9bd50b8d7577b23e14b  2GFile";
+                String expected4GMd5 = "bbe2b516d690f337d8f48fc03db99c9a  4GFile";
+                if (!Objects.equals(actual2GMd5.get(0), expected2GMd5)) {
+                    failed = true;
+                    System.out.println("  actuel:" + actual2GMd5.get(0));
+                    System.out.println("expected:" + expected2GMd5);
+                }
+                if (!Objects.equals(actual4GMd5.get(0), expected4GMd5)) {
+                    failed = true;
+                    System.out.println("  actuel:" + actual4GMd5.get(0));
+                    System.out.println("expected:" + expected4GMd5);
+                }
                 return null;
             }
         };
@@ -427,7 +493,7 @@ public class SlurmUnitTests {
         Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
-                return CommandExecutionsTestFactory.longProgram(10);
+                return longProgram(10);
             }
         };
         ComputationParametersBuilder builder = new ComputationParametersBuilder();
@@ -457,7 +523,7 @@ public class SlurmUnitTests {
         Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
-                return CommandExecutionsTestFactory.longProgram(10);
+                return longProgram(10);
             }
         };
         ComputationParameters parameters = ComputationParameters.empty();
@@ -466,12 +532,15 @@ public class SlurmUnitTests {
         baseTest(testAttribute, supplier, parameters);
     }
 
-    private static void assertErrors(String testName, ExecutionReport report) {
+    private void assertErrors(String testName, ExecutionReport report) {
         System.out.println("---------" + testName + "----------");
         System.out.println("Errors should exists:" + !report.getErrors().isEmpty());
-        Assert.assertFalse(report.getErrors().isEmpty());
+        if (report.getErrors().isEmpty()) {
+            failed = true;
+        }
         System.out.println("------------------------------------");
     }
+
 
     private static class TestAttribute {
 
@@ -502,7 +571,7 @@ public class SlurmUnitTests {
         }
     }
 
-    private static List<CommandExecution> twoSimpleCmd() {
+    static List<CommandExecution> twoSimpleCmd() {
         Command command1 = new SimpleCommandBuilder()
                 .id("simpleCmdId")
                 .program("sleep")

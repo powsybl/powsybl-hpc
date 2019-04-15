@@ -53,7 +53,7 @@ class FlagFilesMonitor implements Runnable {
                         commandRunner.execute("rm " + flagDir + "/" + line);
                         // cancel following jobs(which depends on this job) if there are errors
                         if (line.startsWith("myerror_")) {
-                            taskStore.getCompletableFuture(workingDirName).cancel(true);
+                            taskStore.getCompletableFuture(workingDirName).cancelBySlurm(new SlurmException("An error job found"));
                         } else if (line.startsWith("mydone_")) {
                             String id = line.substring(lastIdx + 1);
                             taskStore.untracing(Long.parseLong(id));

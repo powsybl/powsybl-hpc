@@ -9,8 +9,10 @@ package com.powsybl.computation.slurm;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -54,7 +56,7 @@ public class ScontrolMonitor implements Runnable {
                 try {
                     scontrolResult = scontrolCmd.send(commandRunner);
                     SlurmConstants.JobState jobState = scontrolResult.getJobState();
-                    boolean unmoral = false;
+                    boolean unormal = false;
                     switch (jobState) {
                         case RUNNING:
                         case PENDING:
@@ -63,10 +65,10 @@ public class ScontrolMonitor implements Runnable {
                         case TIMEOUT:
                         case DEADLINE:
                         case CANCELLED:
-                            unmoral = true;
+                            unormal = true;
                             LOGGER.info("JobId: {} is {}", id, jobState);
-                            Optional<CompletableFuture> unormalFuture = taskStore.getCompletableFutureByJobId(id);
-                            unormalFuture.ifPresent(completableFuture -> completableFuture.cancel(true));
+                            Optional<SlurmComputationManager.SlurmCompletableFuture> unormalFuture = taskStore.getCompletableFutureByJobId(id);
+                            unormalFuture.ifPresent(f -> f.cancelBySlurm(new SlurmException("A " + jobState + " job detected by monitor")));
                             break;
                         case COMPLETE:
                             // this monitor found task finished before flagDirMonitor
@@ -76,7 +78,7 @@ public class ScontrolMonitor implements Runnable {
                         default:
                             LOGGER.warn("Not implemented yet {}", jobState);
                     }
-                    if (unmoral) {
+                    if (unormal) {
                         break; // restart
                     }
                 } catch (SlurmCmdNonZeroException e) {
