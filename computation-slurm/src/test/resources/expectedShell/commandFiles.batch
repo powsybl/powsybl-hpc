@@ -1,0 +1,22 @@
+#!/bin/sh
+case $SLURM_ARRAY_TASK_ID in
+    0)
+      PRE1=in0.zip
+      POST0=tozip0
+      ARGS=""in0" "out0""
+    ;;
+    1)
+      PRE1=in1.zip
+      POST0=tozip1
+      ARGS=""in1" "out1""
+    ;;
+    2)
+      PRE1=in2.zip
+      POST0=tozip2
+      ARGS=""in2" "out2""
+    ;;
+esac
+unzip -o -q $PRE1
+/home/dev-itesla/myapps/myecho.sh $ARGS
+rc=$?; if [[ $rc != 0 ]]; then touch /tmp/flags/myerror_workingPath_12345_$SLURM_JOBID; exit $rc; fi
+gzip $POST0

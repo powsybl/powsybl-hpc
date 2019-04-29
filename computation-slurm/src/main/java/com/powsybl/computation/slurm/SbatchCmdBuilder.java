@@ -33,14 +33,16 @@ class SbatchCmdBuilder {
         return this;
     }
 
+    /**
+     *
+     * @param i if equals 1, --array would not be set. If negative, exception would be thrown.
+     * @return this builder
+     */
     SbatchCmdBuilder array(int i) {
-        if (i < 0) {
+        if (i <= 0) {
             throw new IllegalArgumentException(i + " is not validate for array.");
         }
-        if (i == 1) {
-            sbatchArgsByName.put("array", Integer.toString(0));
-        }
-        if (i != 1) {
+        if (i > 1) {
             sbatchArgsByName.put("array", "0-" + (i - 1));
         }
         return this;
@@ -51,6 +53,20 @@ class SbatchCmdBuilder {
         if (!jobIds.isEmpty()) {
             String coll = jobIds.stream().map(Object::toString).collect(Collectors.joining(":", "aftercorr:", ""));
             sbatchArgsByName.put("dependency", coll);
+        }
+        return this;
+    }
+
+    SbatchCmdBuilder aftercorr(@Nullable Long preMasterJob) {
+        if (preMasterJob != null) {
+            sbatchArgsByName.put("dependency", "aftercorr:" + preMasterJob);
+        }
+        return this;
+    }
+
+    SbatchCmdBuilder afternotok(Long lastMasterJob) {
+        if (lastMasterJob != null) {
+            sbatchArgsByName.put("dependency", "afternotok:" + lastMasterJob);
         }
         return this;
     }
@@ -84,6 +100,7 @@ class SbatchCmdBuilder {
         return this;
     }
 
+    // TODO test
     SbatchCmdBuilder error(String pattern) {
         Objects.requireNonNull(pattern);
         sbatchArgsByName.put("error", pattern);
@@ -104,6 +121,11 @@ class SbatchCmdBuilder {
 
     SbatchCmdBuilder oversubscribe() {
         sbatchOptions.add("oversubscribe");
+        return this;
+    }
+
+    private SbatchCmdBuilder killOnInvalidDep() {
+        sbatchArgsByName.put("kill-on-invalid-dep", "yes");
         return this;
     }
 
@@ -144,6 +166,7 @@ class SbatchCmdBuilder {
     }
 
     SbatchCmd build() {
+        killOnInvalidDep();
         validate();
         return new SbatchCmd(sbatchArgsByName, sbatchArgsByCharacter, sbatchOptions, script);
     }

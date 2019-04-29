@@ -1,0 +1,14 @@
+#!/bin/sh
+case $SLURM_ARRAY_TASK_ID in
+    0)
+      ARGS=""te1st0""
+    ;;
+    1)
+      ARGS=""te1st1""
+    ;;
+    2)
+      ARGS=""te1st2""
+    ;;
+esac
+echo $ARGS
+rc=$?; if [[ $rc != 0 ]]; then touch /tmp/flags/myerror_workingPath_12345_$SLURM_JOBID; exit $rc; fi

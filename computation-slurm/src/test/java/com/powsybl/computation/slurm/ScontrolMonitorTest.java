@@ -11,7 +11,6 @@ import org.junit.Test;
 import org.mockito.Matchers;
 import org.mockito.internal.util.reflection.Whitebox;
 
-
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.anyString;
@@ -47,10 +46,10 @@ public class ScontrolMonitorTest {
         ScontrolMonitor monitor = new ScontrolMonitor(slurm);
         monitor.run();
         assertTrue(ts.getTracingIds().isEmpty());
-        // check scancel all 6 jobs only once
-        for (int i = 1; i < 7; i++) {
-            verify(cm, times(1)).execute("scancel " + i);
-        }
+        // check scancel all master jobs only once
+        verify(cm, times(1)).execute("scancel 1");
+        verify(cm, times(1)).execute("scancel 3");
+        verify(cm, times(1)).execute("scancel 6");
     }
 
     @Before

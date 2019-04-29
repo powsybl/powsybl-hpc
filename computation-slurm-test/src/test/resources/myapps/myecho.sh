@@ -1,2 +1,6 @@
 #!/bin/sh
-echo $1 > $2
+if [ $1 = "oddIn3" ]; then
+  echoooo
+else
+  echo $1 > $2
+fi

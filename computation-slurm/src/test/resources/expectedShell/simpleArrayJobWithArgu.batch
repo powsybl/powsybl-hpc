@@ -1,0 +1,14 @@
+#!/bin/sh
+case $SLURM_ARRAY_TASK_ID in
+    0)
+      ARGS=""evenIn0" "evenOutput0.txt""
+    ;;
+    1)
+      ARGS=""oddIn1" "oddOutput1.txt""
+    ;;
+    2)
+      ARGS=""evenIn2" "evenOutput2.txt""
+    ;;
+esac
+/home/dev-itesla/myapps/myecho.sh $ARGS
+rc=$?; if [[ $rc != 0 ]]; then touch /tmp/flags/myerror_workingPath_12345_$SLURM_JOBID; exit $rc; fi

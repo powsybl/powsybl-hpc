@@ -46,7 +46,8 @@ import static org.junit.Assert.fail;
 public class SlurmUnitTests {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SlurmUnitTests.class);
-    private static final ExecutionEnvironment EMPTY_ENV = new ExecutionEnvironment(Collections.emptyMap(), "unit_test_", false);
+    private static final boolean DEBUG = false;
+    private static final ExecutionEnvironment EMPTY_ENV = new ExecutionEnvironment(Collections.emptyMap(), "unit_test_", DEBUG);
 
     private static final String EXPECTED_ERROR_JOB_MSG = "An error job found";
     private static final String EXPECTED_SCANCEL_JOB_MSG = "A CANCELLED job detected by monitor";
@@ -158,24 +159,43 @@ public class SlurmUnitTests {
     }
 
     @Test
-    public void testSimpleCmdWithCount() throws InterruptedException {
-        TestAttribute testAttribute = new TestAttribute(Type.TO_WAIT, "simpleCmdWithCount");
-        Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
-            @Override
-            public List<CommandExecution> before(Path path) {
-                return simpleCmdWithCount(7);
-            }
+    public void testSimpleEchoWithoutCount() throws InterruptedException {
+        TestAttribute testAttribute = new TestAttribute(Type.TO_WAIT, "simpleEchoWithoutCount");
+        Supplier<AbstractExecutionHandler<Void>> supplier = () -> {
+            return new AbstractExecutionHandler<Void>() {
 
-            @Override
-            public Void after(Path workingDir, ExecutionReport report) {
-                return null;
-            }
+                @Override
+                public List<CommandExecution> before(Path path) {
+                    return simpleEchoWithCount(1);
+                }
 
-            private List<CommandExecution> simpleCmdWithCount(int count) {
-                return CommandExecutionsTestFactory.simpleCmdWithCount(count);
-            }
+                // TODO verify the .out file into which "te1st0" string are echoed.
+            };
         };
         baseTest(testAttribute, supplier);
+    }
+
+    @Test
+    public void testSimpleCmdWithCount() throws InterruptedException {
+        TestAttribute testAttribute = new TestAttribute(Type.TO_WAIT, "simpleEchoWithCount");
+        Supplier<AbstractExecutionHandler<Void>> supplier = () ->
+            new AbstractExecutionHandler<Void>() {
+                @Override
+                public List<CommandExecution> before(Path path) {
+                    return simpleEchoWithCount(7);
+                }
+
+                @Override
+                public Void after(Path workingDir, ExecutionReport report) {
+                    return null;
+                }
+
+            };
+        baseTest(testAttribute, supplier);
+    }
+
+    private static List<CommandExecution> simpleEchoWithCount(int count) {
+        return CommandExecutionsTestFactory.simpleEchoWithCount(count);
     }
 
     @Test
@@ -233,6 +253,53 @@ public class SlurmUnitTests {
     }
 
     @Test
+    public void testSimpleArgs() throws InterruptedException {
+        TestAttribute testAttribute = new TestAttribute(Type.TO_WAIT, "simpleArgs");
+        Supplier<AbstractExecutionHandler<Void>> supplier = () -> {
+            return new AbstractExecutionHandler<Void>() {
+                @Override
+                public List<CommandExecution> before(Path workingDir) throws IOException {
+                    return CommandExecutionsTestFactory.oddEvenCmd(3);
+                }
+
+                @Override
+                public Void after(Path workingDir, ExecutionReport report) throws IOException {
+                    super.after(workingDir, report);
+                    List<String> lines0 = Files.readAllLines(workingDir.resolve("evenOutput0.txt"));
+                    List<String> lines1 = Files.readAllLines(workingDir.resolve("oddOutput1.txt"));
+                    System.out.println(lines0);
+                    System.out.println(lines1);
+                    if (!lines0.get(0).equals("evenIn0") || !lines1.get(0).equals("oddIn1")) {
+                        failed = true;
+                    }
+                    return null;
+                }
+            };
+        };
+        baseTest(testAttribute, supplier);
+    }
+
+    @Test
+    public void testOneJobFails() throws InterruptedException {
+        TestAttribute testAttribute = new TestAttribute(Type.TO_WAIT, "OneJobFails");
+        Supplier<AbstractExecutionHandler<Void>> supplier = () -> {
+            return new AbstractExecutionHandler<Void>() {
+                @Override
+                public List<CommandExecution> before(Path workingDir) throws IOException {
+                    return CommandExecutionsTestFactory.failInOneOfArrayJob();
+                }
+
+                @Override
+                public Void after(Path workingDir, ExecutionReport report) {
+                    assertErrors(testAttribute.testName, report);
+                    return null;
+                }
+            };
+        };
+        baseTest(testAttribute, supplier);
+    }
+
+    @Test
     public void testGroupCmd() throws InterruptedException {
         TestAttribute testAttribute = new TestAttribute(Type.TO_WAIT, "groupCmd");
         Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
@@ -240,6 +307,20 @@ public class SlurmUnitTests {
             public List<CommandExecution> before(Path workingDir) {
                 return CommandExecutionsTestFactory.groupCmd();
             }
+        };
+        baseTest(testAttribute, supplier);
+    }
+
+    @Test
+    public void testGroupCmdWithArgs() throws InterruptedException {
+        TestAttribute testAttribute = new TestAttribute(Type.TO_WAIT, "GroupCmdWithArgs");
+        Supplier<AbstractExecutionHandler<Void>> supplier = () -> {
+            return new AbstractExecutionHandler<Void>() {
+                @Override
+                public List<CommandExecution> before(Path workingDir) {
+                    return CommandExecutionsTestFactory.groupCmdWithArgs(3);
+                }
+            };
         };
         baseTest(testAttribute, supplier);
     }
@@ -489,6 +570,16 @@ public class SlurmUnitTests {
     // 2. Wait 1 mins
     @Test
     public void testDeadline() throws InterruptedException {
+        Thread makeSlurmBusyThread = new Thread(() -> {
+            try {
+                makeSlurmBusy();
+            } catch (InterruptedException e) {
+                // do nothing
+            }
+        });
+        makeSlurmBusyThread.start();
+        TimeUnit.SECONDS.sleep(5);
+
         TestAttribute testAttribute = new TestAttribute(Type.TO_WAIT, "deadline", true);
         Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
             @Override

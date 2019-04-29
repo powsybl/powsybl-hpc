@@ -33,9 +33,6 @@ class TaskStore {
     private Map<Long, Long> jobDependencies = new HashMap<>();
     private ReadWriteLock jobDependencyLock = new ReentrantReadWriteLock();
 
-    private Map<Long, List<Long>> batchIds = new HashMap<>();
-    private ReadWriteLock batchIdsLock = new ReentrantReadWriteLock();
-
     private Set<Long> tracingIds = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     TaskCounter getTaskCounter(String workingDir) {
@@ -122,29 +119,6 @@ class TaskStore {
         trace(jobId);
     }
 
-    void insertBatchIds(Long masterJobId, Long jobId) {
-        if (!masterJobId.equals(jobId)) {
-            batchIdsLock.writeLock().lock();
-            try {
-                batchIds.computeIfAbsent(masterJobId, k -> new ArrayList<>()).add(jobId);
-                LOGGER.debug("batchIds: {} -> {}", masterJobId, jobId);
-            } finally {
-                batchIdsLock.writeLock().unlock();
-            }
-            trace(jobId);
-        }
-    }
-
-    List<Long> getBatchIds(Long masterJobId) {
-        batchIdsLock.readLock().lock();
-        try {
-            List<Long> longs = batchIds.get(masterJobId);
-            return longs == null ? Collections.emptyList() : longs;
-        } finally {
-            batchIdsLock.readLock().unlock();
-        }
-    }
-
     private void trace(long id) {
         LOGGER.debug("tracing {}", id);
         tracingIds.add(id);
@@ -205,21 +179,10 @@ class TaskStore {
                 toRemoveMasterIds.add(toRemove);
                 toRemove = jobDependencies.remove(toRemove);
             }
-        } finally {
-            jobDependencyLock.writeLock().unlock();
-        }
-        allIdsFromFirstId.addAll(toRemoveMasterIds);
-        batchIdsLock.writeLock().lock();
-        try {
-            toRemoveMasterIds.forEach(masterId -> {
-                List<Long> remove = batchIds.remove(masterId);
-                if (remove != null && !remove.isEmpty()) {
-                    allIdsFromFirstId.addAll(remove);
-                }
-            });
+            allIdsFromFirstId.addAll(toRemoveMasterIds);
             return allIdsFromFirstId;
         } finally {
-            batchIdsLock.writeLock().unlock();
+            jobDependencyLock.writeLock().unlock();
         }
     }
 
@@ -234,8 +197,9 @@ class TaskStore {
         if (completableFuture.isPresent()) {
             return completableFuture;
         }
+        // TODO get future by array job
         // try with batch id
-        completableFuture = getFutureByBatchId(id);
+//        completableFuture = getFutureByBatchId(id);
         return completableFuture;
     }
 
@@ -293,28 +257,4 @@ class TaskStore {
         return OptionalLong.of(tmp);
     }
 
-    private Optional<SlurmComputationManager.SlurmCompletableFuture> getFutureByBatchId(long batchId) {
-        OptionalLong optMasterId = getMasterId(batchId);
-        if (optMasterId.isPresent()) {
-            return getFutureByMasterId(optMasterId.getAsLong());
-        }
-        return Optional.empty();
-    }
-
-    private OptionalLong getMasterId(long batchId) {
-        Optional<Map.Entry<Long, List<Long>>> max;
-        batchIdsLock.readLock().lock();
-        try {
-            max = batchIds.entrySet().stream()
-                    .filter(entry -> entry.getKey() < batchId)
-                    .max(Comparator.comparingLong(Map.Entry::getKey));
-        } finally {
-            batchIdsLock.readLock().unlock();
-        }
-
-        if (max.isPresent() && (max.get().getValue().contains(batchId))) {
-            return OptionalLong.of(max.get().getKey());
-        }
-        return OptionalLong.empty();
-    }
 }

@@ -33,7 +33,6 @@ public class TaskStoreTest {
                 for (long l = k * nbPerThread; l < (k + 1) * nbPerThread; l++) {
                     long v = l + 1;
                     taskStore.insertDependency(l, v);
-                    taskStore.insertBatchIds(l, v);
                 }
             });
             t.start();
@@ -50,9 +49,9 @@ public class TaskStoreTest {
         assertEquals(nbPerThread * threadSize - toTestId, taskStore.getDependentJobs(toTestId).size());
     }
 
-    // 1←2
+    // 1(2)
     // ↑
-    // 3←4,5
+    // 3(4,5)
     // ↑
     // 6
     static TaskStore generateTaskStore(SlurmComputationManager.SlurmCompletableFuture future, boolean checkTracing) {
@@ -62,28 +61,19 @@ public class TaskStoreTest {
         TaskStore taskStore = new TaskStore();
         taskStore.insert(workingDir, future);
         taskStore.insert(workingDir, counter, 1L);
-        taskStore.insertBatchIds(1L, 1L);
         if (checkTracing) {
             assertEquals(Collections.singleton(1L), taskStore.getTracingIds());
         }
-        taskStore.insertBatchIds(1L, 2L);
+        if (checkTracing) {
+            assertEquals(1, taskStore.getTracingIds().size());
+        }
+        taskStore.insertDependency(1L, 3L);
         if (checkTracing) {
             assertEquals(2, taskStore.getTracingIds().size());
         }
-        taskStore.insertDependency(1L, 3L);
-        taskStore.insertBatchIds(3L, 3L);
-        taskStore.insertBatchIds(3L, 4L);
-        if (checkTracing) {
-            assertEquals(4, taskStore.getTracingIds().size());
-        }
-        taskStore.insertBatchIds(3L, 5L);
-        if (checkTracing) {
-            assertEquals(5, taskStore.getTracingIds().size());
-        }
         taskStore.insertDependency(3L, 6L);
-        taskStore.insertBatchIds(6L, 6L);
         if (checkTracing) {
-            assertEquals(6, taskStore.getTracingIds().size());
+            assertEquals(3, taskStore.getTracingIds().size());
         }
         return taskStore;
     }
@@ -94,9 +84,6 @@ public class TaskStoreTest {
         assertEquals(Arrays.asList(3L, 6L), taskStore.getDependentJobs(1L));
         assertEquals(Collections.singletonList(6L), taskStore.getDependentJobs(3L));
         assertTrue(taskStore.getDependentJobs(6L).isEmpty());
-        assertEquals(Collections.singletonList(2L), taskStore.getBatchIds(1L));
-        assertEquals(Arrays.asList(4L, 5L), taskStore.getBatchIds(3L));
-        assertTrue(taskStore.getBatchIds(6L).isEmpty());
     }
 
     @Test
@@ -113,7 +100,6 @@ public class TaskStoreTest {
         assertNull(taskStore.getFirstJobId(future));
         assertNull(taskStore.getCompletableFuture("a_working_dir"));
         assertTrue(taskStore.getDependentJobs(1L).isEmpty());
-        assertTrue(taskStore.getBatchIds(3L).isEmpty());
         // tracing ids are cleaned by 1. mydone_ in flag monitor 2. scancel in scm
         assertFalse(taskStore.getTracingIds().isEmpty());
     }
@@ -123,10 +109,7 @@ public class TaskStoreTest {
         SlurmComputationManager.SlurmCompletableFuture future = mock(SlurmComputationManager.SlurmCompletableFuture.class);
         TaskStore taskStore = generateTaskStore(future, false);
         assertEquals(future, taskStore.getCompletableFutureByJobId(1L).orElse(null));
-        assertEquals(future, taskStore.getCompletableFutureByJobId(2L).orElse(null));
         assertEquals(future, taskStore.getCompletableFutureByJobId(3L).orElse(null));
-        assertEquals(future, taskStore.getCompletableFutureByJobId(4L).orElse(null));
-        assertEquals(future, taskStore.getCompletableFutureByJobId(5L).orElse(null));
         assertEquals(future, taskStore.getCompletableFutureByJobId(6L).orElse(null));
     }
 
