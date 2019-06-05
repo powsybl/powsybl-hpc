@@ -43,8 +43,7 @@ public class SlurmComputationManager implements ComputationManager {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SlurmComputationManager.class);
 
-    private static final String SACCT_NONZERO_JOB = "sacct --jobs=%s -n --format=\"jobid,exitcode\" | grep -v \"0:0\" | grep -v \"\\.\"";
-    private static final String ARRAY_INDEX_PH = "%a"; // ph=placeholder
+    private static final String SACCT_NONZERO_JOB = "sacct --jobs=%s -n --format=\"jobid,exitcode,state\" | grep -v \"0:0\" | grep -v \"\\.\"";
     private static final Pattern DIGITAL_PATTERN = Pattern.compile("\\d+");
     private static final String BATCH_EXT = ".batch";
     private static final String FLAGS_DIR_PREFIX = "myflags_"; // where flag files are created and be watched
@@ -383,13 +382,20 @@ public class SlurmComputationManager implements ComputationManager {
         if (sacctOutput.length() > 0) {
             String[] lines = sacctOutput.split("\n");
             for (String line : lines) {
+                int executionIdx = 0;
                 Matcher m = DIGITAL_PATTERN.matcher(line);
                 m.find();
                 long jobId = Long.parseLong(m.group());
-                m.find();
-                int executionIdx = Integer.parseInt(m.group());
-                m.find();
-                int exitCode = Integer.parseInt(m.group());
+                if (line.contains("_") && !line.contains("-")) {
+                    // see https://stackoverflow.com/questions/56424735/saccts-result-on-an-arrayjob-is-not-updated
+                    m.find();
+                    executionIdx = Integer.parseInt(m.group());
+                } else {
+                    // not array job and do nothing
+                    // 9952            127:0
+                }
+                String[] split = line.split("\\s+");
+                int exitCode = Integer.parseInt(split[1].split(":")[0]);
                 // error message ???
                 ExecutionError error = new ExecutionError(jobIdCommandMap.get(jobId), executionIdx, exitCode);
                 errors.add(error);

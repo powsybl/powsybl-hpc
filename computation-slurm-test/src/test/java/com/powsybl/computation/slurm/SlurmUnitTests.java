@@ -280,8 +280,8 @@ public class SlurmUnitTests {
     }
 
     @Test
-    public void testOneJobFails() throws InterruptedException {
-        TestAttribute testAttribute = new TestAttribute(Type.TO_WAIT, "OneJobFails");
+    public void testOneExecutionInvalid() throws InterruptedException {
+        TestAttribute testAttribute = new TestAttribute(Type.TO_WAIT, "invalidOneExecution");
         Supplier<AbstractExecutionHandler<Void>> supplier = () -> {
             return new AbstractExecutionHandler<Void>() {
                 @Override
@@ -291,7 +291,7 @@ public class SlurmUnitTests {
 
                 @Override
                 public Void after(Path workingDir, ExecutionReport report) {
-                    assertErrors(testAttribute.testName, report);
+                    assertErrors(testAttribute.testName, report, 3);
                     return null;
                 }
             };
@@ -631,10 +631,18 @@ public class SlurmUnitTests {
     }
 
     private void assertErrors(String testName, ExecutionReport report) {
+        assertErrors(testName, report, 0);
+    }
+
+    private void assertErrors(String testName, ExecutionReport report, int expectedFailIdx) {
         System.out.println("---------" + testName + "----------");
         System.out.println("Errors should exists:" + !report.getErrors().isEmpty());
         if (report.getErrors().isEmpty()) {
             failed = true;
+        } else {
+            System.out.println("idx:" + report.getErrors().get(0).getIndex());
+            System.out.println("exitcode:" + report.getErrors().get(0).getExitCode());
+            failed = !(expectedFailIdx == report.getErrors().get(0).getIndex());
         }
         System.out.println("------------------------------------");
     }
@@ -688,7 +696,7 @@ public class SlurmUnitTests {
                 .program("echoo")
                 .args("hello")
                 .build();
-        return Collections.singletonList(new CommandExecution(cmd, 1));
+        return Collections.singletonList(new CommandExecution(cmd, 3));
     }
 
     private static List<CommandExecution> invalidProgramInGroup() {
