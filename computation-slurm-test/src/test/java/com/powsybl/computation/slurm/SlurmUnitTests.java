@@ -554,7 +554,6 @@ public class SlurmUnitTests {
         }
     }
 
-    @Test
     public void makeSlurmBusy() throws InterruptedException {
         TestAttribute testAttribute = new TestAttribute(Type.TO_WAIT, "deadline");
         Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
@@ -566,8 +565,7 @@ public class SlurmUnitTests {
         baseTest(testAttribute, supplier);
     }
 
-    // 1. Make slurm busy if necessary
-    // 2. Wait 1 mins
+    // TODO with makeSlurmBusy()
     @Test
     public void testDeadline() throws InterruptedException {
         Thread makeSlurmBusyThread = new Thread(() -> {
@@ -598,6 +596,7 @@ public class SlurmUnitTests {
         builder.setDeadline("longProgram", 12);
 
         baseTest(testAttribute, supplier, builder.build());
+        makeSlurmBusyThread.interrupt();
     }
 
     // sacctmgr show qos
