@@ -148,7 +148,7 @@ public class SlurmUnitTests {
                 // normal tests
                 failed = true;
             }
-            if (!e.getMessage().equals(expected)) {
+            if (!e.getCause().getMessage().equals(expected)) {
                 failed = true;
                 System.out.println(FAILED_SEP);
                 System.out.println("Actuel:" + e.getMessage());
@@ -492,8 +492,15 @@ public class SlurmUnitTests {
         TestAttribute testAttribute = new TestAttribute(Type.TO_WAIT, "deadline", true);
         Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
             @Override
-            public List<CommandExecution> before(Path workingDir) {
-                return longProgram(10);
+            public List<CommandExecution> before(Path workingDir) throws IOException {
+                return CommandExecutionsTestFactory.longProgram(10);
+            }
+
+            @Override
+            public Void after(Path workingDir, ExecutionReport report) throws IOException {
+                System.out.println("in deadline after");
+                failed = report.getErrors().isEmpty();
+                return null;
             }
         };
         ComputationParametersBuilder builder = new ComputationParametersBuilder();

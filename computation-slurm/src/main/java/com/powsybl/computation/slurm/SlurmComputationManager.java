@@ -250,6 +250,10 @@ public class SlurmComputationManager implements ComputationManager {
             return cancel(true);
         }
 
+        SlurmException getException() {
+            return exception;
+        }
+
         private boolean isCancelledBySlurm() {
             return cancelledBySlurm;
         }
@@ -262,10 +266,6 @@ public class SlurmComputationManager implements ComputationManager {
                 LOGGER.debug("Can not cancel");
                 return false;
             }
-
-            completeExceptionally(cancelledBySlurm ?
-                    new CompletionException(exception.getMessage(), exception) :
-                    new CancellationException(CANCEL_BY_CALLER_MSG));
 
             while (thread == null) {
                 try {
@@ -358,8 +358,15 @@ public class SlurmComputationManager implements ComputationManager {
                 if (f.isCancelledBySlurm()) {
                     // some exceptions in platform
                     handler.after(remoteWorkingDir, report);
+                    // Normally in this case the handler.after() will throw exceptions because:
+                    // 1. Exitcode non-zero
+                    // 2. Result file not found
+                    // the exception would be caught outside.
+                    // But if the after() not throws exception, (ex: unit tests), it rethrows slurm exception
+                    throw f.getException();
                 } else {
                     // client call cancel and skip after
+                    throw new CancellationException(CANCEL_BY_CALLER_MSG);
                 }
             } else {
                 f.complete(handler.after(remoteWorkingDir, report));
