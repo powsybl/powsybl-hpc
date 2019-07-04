@@ -1,0 +1,17 @@
+#!/bin/bash
+#
+# Copyright (c) 2016, All partners of the iTesla project (http://www.itesla-project.eu/consortium)
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+
+installBinDir=$(dirname $(readlink -f $0))
+installDir=${installBinDir%/*}
+
+. $installDir/etc/itools-mpi.conf
+
+# check mpirun is in the path
+[[ $(type -P mpirun) ]] ||  { echo "mpirun is not in the path" 1>&2; exit 1; }
+echo "running itools in parallel mode using $mpi_tasks tasks on hosts $mpi_hosts"
+mpirun -np $mpi_tasks -map-by node -host $mpi_hosts $mpirun_options -oversubscribe itools-mpi-task.sh "$@"
