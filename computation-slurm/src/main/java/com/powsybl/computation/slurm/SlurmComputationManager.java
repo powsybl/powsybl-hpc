@@ -386,8 +386,9 @@ public class SlurmComputationManager implements ComputationManager {
             CommandExecution commandExecution = commandExecutions.get(commandIdx);
             Command command = commandExecution.getCommand();
             SbatchCmd cmd;
-            LOGGER.debug("Executing {} command {} in working directory {}", command.getType(),
-                    command.toString(), workingDir);
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Executing {} command {} in working directory {}", command.getType(), command, workingDir);
+            }
 
             // a master job to copy NonExecutionDependent and PreProcess needed input files
             if (command.getInputFiles().stream()
@@ -511,10 +512,9 @@ public class SlurmComputationManager implements ComputationManager {
         }
         SlurmComputationParameters extension = baseParams.getExtension(SlurmComputationParameters.class);
         if (extension != null) {
-            extension.getQos().ifPresent(qos -> builder.qos(qos));
+            extension.getQos().ifPresent(builder::qos);
         }
-        baseParams.getDeadline(commandId)
-                .ifPresent(dl -> builder.deadline(dl));
+        baseParams.getDeadline(commandId).ifPresent(builder::deadline);
         return builder.build();
     }
 
@@ -626,19 +626,16 @@ public class SlurmComputationManager implements ComputationManager {
     }
 
     private Thread shutdownThread() {
-        return new Thread(new Runnable() {
-            @Override
-            public void run() {
-                closeStarted = true;
-                if (!isClosed) {
-                    LOGGER.info("Shutdown slurm...");
-                    LOGGER.info("Cancel current subbmited jobs");
-                    Set<Long> tracingIds = new HashSet<>(getTaskStore().getTracingIds());
-                    tracingIds.forEach(l -> scancel(l));
-                    // count down task to avoid InterruptedException
-                    getTaskStore().getTaskCounters().forEach(TaskCounter::cancel);
-                    baseClose();
-                }
+        return new Thread(() -> {
+            closeStarted = true;
+            if (!isClosed) {
+                LOGGER.info("Shutdown slurm...");
+                LOGGER.info("Cancel current subbmited jobs");
+                Set<Long> tracingIds = new HashSet<>(getTaskStore().getTracingIds());
+                tracingIds.forEach(this::scancel);
+                // count down task to avoid InterruptedException
+                getTaskStore().getTaskCounters().forEach(TaskCounter::cancel);
+                baseClose();
             }
         });
     }

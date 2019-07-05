@@ -64,7 +64,7 @@ public class ScontrolMonitor implements Runnable {
                         case DEADLINE:
                         case CANCELLED:
                             unmoral = true;
-                            LOGGER.info("JobId:" + id + " is " + jobState);
+                            LOGGER.info("JobId: {} is {}", id, jobState);
                             Optional<CompletableFuture> unormalFuture = taskStore.getCompletableFutureByJobId(id);
                             unormalFuture.ifPresent(completableFuture -> completableFuture.cancel(true));
                             break;
@@ -74,7 +74,7 @@ public class ScontrolMonitor implements Runnable {
                             checkedIds.add(id);
                             break;
                         default:
-                            LOGGER.warn("Not implemented yet " + jobState);
+                            LOGGER.warn("Not implemented yet {}", jobState);
                     }
                     if (unmoral) {
                         break; // restart

@@ -40,8 +40,8 @@ class SlurmStatusManager {
         DateTime time = DATE_TIME_FORMATTER.parseDateTime(dateOutput);
         String coresInfoOutput = commandExecutor.execute(INFO_CORES_CMD).getStdOut();
         String[] splits = coresInfoOutput.split("/");
-        int availCores = Integer.valueOf(splits[1]);
-        int busyCores = Integer.valueOf(splits[0]);
+        int availCores = Integer.parseInt(splits[1]);
+        int busyCores = Integer.parseInt(splits[0]);
 
         // job
         Map<String, Integer> coresPerApp = new HashMap<>();

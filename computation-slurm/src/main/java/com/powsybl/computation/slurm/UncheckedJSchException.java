@@ -21,7 +21,7 @@ public class UncheckedJSchException extends RuntimeException {
     }
 
     @Override
-    public JSchException getCause() {
+    public synchronized JSchException getCause() {
         return (JSchException) super.getCause();
     }
 }

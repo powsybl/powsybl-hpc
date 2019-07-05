@@ -164,7 +164,7 @@ class TaskStore {
 
     void remove(CompletableFuture future) {
         Long firstJobId = removeTaskMaps(future);
-        Set<Long> batchIds = removeIds(firstJobId);
+        removeIds(firstJobId);
     }
 
     private Long removeTaskMaps(CompletableFuture future) {
@@ -307,10 +307,8 @@ class TaskStore {
             batchIdsLock.readLock().unlock();
         }
 
-        if (max.isPresent()) {
-            if (max.get().getValue().contains(batchId)) {
-                return OptionalLong.of(max.get().getKey());
-            }
+        if (max.isPresent() && (max.get().getValue().contains(batchId))) {
+            return OptionalLong.of(max.get().getKey());
         }
         return OptionalLong.empty();
     }

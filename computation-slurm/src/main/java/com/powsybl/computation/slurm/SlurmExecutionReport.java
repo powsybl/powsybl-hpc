@@ -57,7 +57,7 @@ public class SlurmExecutionReport extends DefaultExecutionReport implements Exec
         try {
             return Optional.of(Files.newInputStream(stdPath));
         } catch (IOException e) {
-            LOG.warn("Can not read: " + stdPath);
+            LOG.warn("Can not read: {}", stdPath);
         }
         return Optional.empty();
     }

@@ -44,9 +44,7 @@ class SbatchScriptGenerator {
         command.getInputFiles()
                 .stream().filter(inputFile -> !inputFile.dependsOnExecutionNumber()) // common
                 .filter(inputFile -> inputFile.getPreProcessor() != null) // to unzip
-                .forEach(inputFile -> {
-                    addUnzip(shell, inputFile.getName(0), inputFile.getPreProcessor());
-                });
+                .forEach(inputFile -> addUnzip(shell, inputFile.getName(0), inputFile.getPreProcessor()));
         return shell;
     }
 
@@ -68,9 +66,7 @@ class SbatchScriptGenerator {
     private void preProcess(List<String> list, Command command, int executionIndex) {
         command.getInputFiles().stream()
                 .filter(InputFile::dependsOnExecutionNumber)
-                .forEach(file -> {
-                    addUnzip(list, file.getName(executionIndex), file.getPreProcessor());
-                });
+                .forEach(file -> addUnzip(list, file.getName(executionIndex), file.getPreProcessor()));
     }
 
     private static void addUnzip(List<String> shell, String filename, FilePreProcessor preProcessor) {
