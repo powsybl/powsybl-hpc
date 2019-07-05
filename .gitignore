@@ -26,3 +26,6 @@ org.eclipse.jdt.groovy.core.prefs
 
 # Log files
 powsybl.log
+
+# Config
+/computation-slurm-test/src/test/resources/config.yml
