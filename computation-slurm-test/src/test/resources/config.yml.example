@@ -1,0 +1,12 @@
+# COPY this file and name as config.yml.
+# NEVER put config.yml in git
+slurm-computation-manager:
+    # ip or name
+    hostname: FIXME
+    # use your username and password
+    username: FIXME
+    password: FIXME
+    #
+    remote-dir: FIXME
+    # your local folder, not used in current tests
+    local-dir: FIXME
