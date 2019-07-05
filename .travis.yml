@@ -24,10 +24,10 @@ addons:
             secure: ${SONAR_TOKEN}
 
 install:
-    # Build powsybl-core
-    - git clone https://github.com/powsybl/powsybl-core powsybl/powsybl-core
-    - pushd powsybl/powsybl-core && mvn --batch-mode -DskipTests install && popd
+# Build powsybl-core
+- git clone https://github.com/powsybl/powsybl-core powsybl/powsybl-core
+- pushd powsybl/powsybl-core && mvn --batch-mode -DskipTests install && popd
 
 script:
-    - mvn --batch-mode -Pjacoco,checks clean verify
-    - if [ "$TRAVIS_OS_NAME" = "Linux" ]; then mvn sonar:sonar; fi
+- mvn --batch-mode -Pjacoco,checks clean verify sonar:sonar
+
