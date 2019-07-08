@@ -21,8 +21,8 @@ If you use maven for your project, add the following dependency:
 In your powsybl configuration file, you may choose to use that computation manager for you short or long computations:
 ```yml
 default-computation-manager:
-    short-time-execution-computation-manager-factory: SlurmComputationManagerFactory
-    long-time-execution-computation-manager-factory: SlurmComputationManagerFactory
+    short-time-execution-computation-manager-factory: com.powsybl.computation.slurm.SlurmComputationManagerFactory
+    long-time-execution-computation-manager-factory: com.powsybl.computation.slurm.SlurmComputationManagerFactory
 ```
 
 #### 3. Configure the infrastructure information
@@ -31,6 +31,7 @@ Finally, you need to define how to connect to the slurm infrastructure in you po
 
 ```yml
 slurm-computation-manager:
+    remote: true
     hostname: hostname
     port: 22
     username: username
@@ -42,6 +43,6 @@ slurm-computation-manager:
     polling-time: 10
 ```
 
-The computation manager sends command execution requests through ssh protocol.
+If `remote` is set to `true`, the computation manager sends command execution requests and copies files through ssh protocol. Otherwise, the connection settings are ignored and command execution requests are submitted on localhost, assuming that slurm is installed. This second scheme allows to more efficiently submit jobs from within a slurm managed infrastructure.
 
-In order to know when the command execution has actually finished, it polls for a "flag" file created in the remote directory on execution end.
+In order to know when the command execution has actually finished, the computation managers polls for a "flag" file created in the remote directory on execution end.

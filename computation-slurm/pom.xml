@@ -18,8 +18,8 @@
     </parent>
 
     <artifactId>powsybl-computation-slurm</artifactId>
-    <name>Slurm computation</name>
-    <description>A computation implementation to run computations using Slurm resource manager</description>
+    <name>Slurm computation manager</name>
+    <description>A computation manager implementation to run computations using Slurm resource manager</description>
 
     <properties>
         <module.private>true</module.private>
