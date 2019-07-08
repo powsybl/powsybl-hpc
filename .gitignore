@@ -1,5 +1,7 @@
 # Maven projects
 /computation-mpi/target/
+/computation-slurm/target/
+/computation-slurm-tests/target/
 /distribution-hpc/target/
 /target
 
@@ -24,3 +26,6 @@ org.eclipse.jdt.groovy.core.prefs
 
 # Log files
 powsybl.log
+
+# Config
+/computation-slurm-test/src/test/resources/config.yml

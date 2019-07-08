@@ -4,7 +4,18 @@ dist: trusty
 sudo: required
 
 jdk:
-- oraclejdk8
+    - openjdk11
+    - oraclejdk8
+
+# osx images only support one jdk per image, so manually add them to the matrix.
+matrix:
+    include:
+        - os: osx
+          osx_image: xcode9.3
+          jdk: oraclejdk8
+        - os: osx
+          osx_image: xcode10.1
+          jdk: openjdk11
 
 addons:
     sonarcloud:
@@ -18,4 +29,5 @@ install:
 - pushd powsybl/powsybl-core && mvn --batch-mode -DskipTests install && popd
 
 script:
-- mvn --batch-mode clean verify sonar:sonar
+- mvn --batch-mode -Pjacoco,checks clean verify sonar:sonar
+
