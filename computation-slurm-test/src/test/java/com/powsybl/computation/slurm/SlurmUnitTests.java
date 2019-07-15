@@ -548,7 +548,6 @@ public class SlurmUnitTests {
         System.out.println("------------------------------------");
     }
 
-
     private static class TestAttribute {
 
         private final Type type;
