@@ -36,6 +36,7 @@ target_include_directories(common
 # master library
 set(MASTER_SOURCES
     src/jniutil.cpp
+    src/jniwrapper.cpp
     src/master.cpp
 )
 add_library(master SHARED ${MASTER_SOURCES})
