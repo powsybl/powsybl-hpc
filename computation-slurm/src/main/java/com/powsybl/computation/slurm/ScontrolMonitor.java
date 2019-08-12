@@ -56,7 +56,7 @@ public class ScontrolMonitor implements Runnable {
                 try {
                     scontrolResult = scontrolCmd.send(commandRunner);
                     SlurmConstants.JobState jobState = scontrolResult.getJobState();
-                    boolean unormal = false;
+                    boolean abnormal = false;
                     switch (jobState) {
                         case RUNNING:
                         case PENDING:
@@ -65,7 +65,7 @@ public class ScontrolMonitor implements Runnable {
                         case TIMEOUT:
                         case DEADLINE:
                         case CANCELLED:
-                            unormal = true;
+                            abnormal = true;
                             LOGGER.info("JobId: {} is {}", id, jobState);
                             Optional<SlurmComputationManager.SlurmCompletableFuture> unormalFuture = taskStore.getCompletableFutureByJobId(id);
                             unormalFuture.ifPresent(f -> f.cancelBySlurm(new SlurmException("A " + jobState + " job detected by monitor")));
@@ -78,7 +78,7 @@ public class ScontrolMonitor implements Runnable {
                         default:
                             LOGGER.warn("Not implemented yet {}", jobState);
                     }
-                    if (unormal) {
+                    if (abnormal) {
                         break; // restart
                     }
                 } catch (SlurmCmdNonZeroException e) {
