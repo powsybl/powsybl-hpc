@@ -62,7 +62,8 @@ public class TaskStoreTest {
 
         TaskStore taskStore = new TaskStore();
         taskStore.insert(workingDir, future);
-        taskStore.insert(workingDir, counter, 1L);
+        taskStore.insert(workingDir, counter);
+        taskStore.insert(workingDir, 1L);
         taskStore.insertBatchIds(1L, 1L);
         if (checkTracing) {
             assertEquals(Collections.singleton(1L), taskStore.getTracingIds());

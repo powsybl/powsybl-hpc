@@ -90,10 +90,18 @@ class TaskStore {
         }
     }
 
-    void insert(String workingDirName, TaskCounter taskCounter, Long firstJobId) {
+    void insert(String workingDirName, TaskCounter taskCounter) {
         taskLock.writeLock().lock();
         try {
             workingDirTaskMap.put(workingDirName, taskCounter);
+        } finally {
+            taskLock.writeLock().unlock();
+        }
+    }
+
+    void insert(String workingDirName, Long firstJobId) {
+        taskLock.writeLock().lock();
+        try {
             workingDirFirstJobMap.put(workingDirName, firstJobId);
         } finally {
             taskLock.writeLock().unlock();

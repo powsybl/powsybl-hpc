@@ -312,9 +312,10 @@ public class SlurmComputationManager implements ComputationManager {
 
             int sum = commandExecutions.stream().mapToInt(CommandExecution::getExecutionCount).sum();
             TaskCounter taskCounter = new TaskCounter(sum);
+            taskStore.insert(remoteWorkingDir.getFileName().toString(), taskCounter);
 
             Map<Long, Command> jobIdCommandMap;
-            jobIdCommandMap = generateSbatchAndSubmit(commandExecutions, parameters, remoteWorkingDir, environment, taskCounter, f);
+            jobIdCommandMap = generateSbatchAndSubmit(commandExecutions, parameters, remoteWorkingDir, environment, f);
 
             // waiting task finish
             try {
@@ -373,7 +374,7 @@ public class SlurmComputationManager implements ComputationManager {
     }
 
     private Map<Long, Command> generateSbatchAndSubmit(List<CommandExecution> commandExecutions, ComputationParameters parameters, Path workingDir,
-                                                       ExecutionEnvironment environment, TaskCounter taskCounter, CompletableFuture<?> future)
+                                                       ExecutionEnvironment environment, CompletableFuture<?> future)
             throws IOException {
         Map<Long, Command> jobIdCommandMap = new HashMap<>();
         Long firstJobId = null; // the first jobId submitted of List<CommandExecution>
@@ -405,7 +406,7 @@ public class SlurmComputationManager implements ComputationManager {
                     long jobId = launchSbatch(cmd);
                     if (firstJobId == null) {
                         firstJobId = jobId;
-                        taskStore.insert(workingDir.getFileName().toString(), taskCounter, firstJobId);
+                        taskStore.insert(workingDir.getFileName().toString(), firstJobId);
                         LOGGER.debug("First jobid : {}", firstJobId);
                     }
                     if (preMasterJobId != null) {
@@ -432,7 +433,7 @@ public class SlurmComputationManager implements ComputationManager {
                     long jobId = launchSbatch(cmd);
                     if (firstJobId == null) {
                         firstJobId = jobId;
-                        taskStore.insert(workingDir.getFileName().toString(), taskCounter, firstJobId);
+                        taskStore.insert(workingDir.getFileName().toString(), firstJobId);
                         LOGGER.debug("First jobid : {}", firstJobId);
                     }
                     if (executionIndex == 0) {
