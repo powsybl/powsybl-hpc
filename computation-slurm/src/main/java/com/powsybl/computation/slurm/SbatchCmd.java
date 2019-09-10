@@ -6,12 +6,12 @@
  */
 package com.powsybl.computation.slurm;
 
-import java.util.Map;
+import com.google.common.base.Preconditions;
+
 import java.util.Objects;
-import java.util.TreeSet;
 
 /**
- * A submission command to Slurm: sbatch options scriptName.
+ * A submission command to Slurm: sbatch [--deadline] scriptName.
  *
  * Sbatch scripts will be submitted using that kind of command.
  *
@@ -19,22 +19,21 @@ import java.util.TreeSet;
  */
 class SbatchCmd extends AbstractSlurmCmd<SbatchCmdResult> {
 
-    private static final String SBATCH = "sbatch";
-
-    private final Map<String, String> argsByName;
-    private final Map<Character, String> argsByChar;
-
-    private final TreeSet<String> options;
+    private static final String SBATCH = "sbatch ";
+    private static final String DATETIME_FORMATTER = "--deadline=`date -d \"%d seconds\" \"+%%Y-%%m-%%dT%%H:%%M:%%S\"` ";
 
     private final String scriptName;
 
-    private String cmd;
+    private long deadLine = 0;
 
-    SbatchCmd(Map<String, String> argsByName, Map<Character, String> argsByChar, TreeSet<String> options, String scriptName) {
-        this.argsByName = Objects.requireNonNull(argsByName);
-        this.argsByChar = Objects.requireNonNull(argsByChar);
+    SbatchCmd(String scriptName) {
         this.scriptName = Objects.requireNonNull(scriptName);
-        this.options = Objects.requireNonNull(options);
+    }
+
+    SbatchCmd deadLine(long seconds) {
+        Preconditions.checkArgument(seconds > 0, "Invalid seconds({}) for deadline: must be 1 or greater", seconds);
+        deadLine = seconds;
+        return this;
     }
 
     SbatchCmdResult send(CommandExecutor commandExecutor) throws SlurmCmdNonZeroException {
@@ -44,24 +43,10 @@ class SbatchCmd extends AbstractSlurmCmd<SbatchCmdResult> {
 
     @Override
     public String toString() {
-        if (cmd == null) {
-            StringBuilder sb = new StringBuilder();
-            sb.append(SBATCH);
-            argsByChar.forEach((c, v) -> {
-                sb.append(" -").append(c);
-                sb.append(" ").append(v);
-            });
-            argsByName.forEach((k, v) -> {
-                sb.append(" --").append(k);
-                sb.append("=").append(v);
-            });
-            options.forEach(opt -> {
-                sb.append(" --");
-                sb.append(opt);
-            });
-            sb.append(" ").append(scriptName);
-            cmd = sb.toString();
+        StringBuilder sb = new StringBuilder().append(SBATCH);
+        if (deadLine > 0) {
+            sb.append(String.format(DATETIME_FORMATTER, deadLine));
         }
-        return cmd;
+        return sb.append(scriptName).toString();
     }
 }

@@ -17,6 +17,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.io.*;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -30,6 +31,8 @@ import java.util.concurrent.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.powsybl.computation.slurm.SlurmConstants.ERR_EXT;
+import static com.powsybl.computation.slurm.SlurmConstants.OUT_EXT;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -40,13 +43,15 @@ public class SlurmComputationManager implements ComputationManager {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SlurmComputationManager.class);
 
-    private static final String SACCT_NONZERO_JOB = "sacct --jobs=%s -n --format=\"jobid,exitcode\" | grep -v \"0:0\" | grep -v \"\\.\"";
+    private static final String SACCT_NONZERO_JOB = "sacct --jobs=%s -n --format=\"jobid,exitcode,state\" | grep -v \"0:0\" | grep -v \"\\.\"";
     private static final Pattern DIGITAL_PATTERN = Pattern.compile("\\d+");
     private static final String BATCH_EXT = ".batch";
     private static final String FLAGS_DIR_PREFIX = "myflags_"; // where flag files are created and be watched
     private static final String UNZIP_INPUTS_COMMAND_ID = "unzip_inputs_command";
 
     private static final String CLOSE_START_NO_MORE_SEND_INFO = "SCM close started and no more send sbatch to slurm";
+
+    private static final String CANCEL_BY_CALLER_MSG = "Cancelled by submitter";
 
     private final SlurmComputationConfig config;
 
@@ -155,7 +160,7 @@ public class SlurmComputationManager implements ComputationManager {
         Path p;
         long n = new SecureRandom().nextLong();
         n = n == -9223372036854775808L ? 0L : Math.abs(n);
-        p = baseDir.resolve(FLAGS_DIR_PREFIX + Long.toString(n));
+        p = baseDir.resolve(FLAGS_DIR_PREFIX + n);
         return Files.createDirectories(p);
     }
 
@@ -206,7 +211,7 @@ public class SlurmComputationManager implements ComputationManager {
         requireNonNull(environment);
         requireNonNull(handler);
 
-        Mycf<R> f = new Mycf<>(this);
+        SlurmCompletableFuture<R> f = new SlurmCompletableFuture<>(this);
         executorService.submit(() -> {
             f.setThread(Thread.currentThread());
             try {
@@ -215,24 +220,45 @@ public class SlurmComputationManager implements ComputationManager {
                 LOGGER.error(e.toString(), e);
                 f.completeExceptionally(e);
             }
-            taskStore.remove(f);
+            if (!f.isCancelled()) {
+                taskStore.clearBy(f);
+            }
         });
         return f;
     }
 
-    static class Mycf<R> extends CompletableFuture<R> {
+    static class SlurmCompletableFuture<R> extends CompletableFuture<R> {
 
-        Thread thread;
-        SlurmComputationManager mgr;
-        volatile boolean cancel = false;
+        private Thread thread;
+        private SlurmComputationManager mgr;
+        private volatile boolean cancel = false;
+        private volatile boolean cancelledBySlurm = false;
 
-        Mycf(SlurmComputationManager manager) {
-            mgr = manager;
+        private SlurmException exception;
+
+        SlurmCompletableFuture(SlurmComputationManager manager) {
+            mgr = Objects.requireNonNull(manager);
         }
 
         @Override
         public boolean isCancelled() {
             return cancel;
+        }
+
+        // called by monitors, it differs from cancel() by client-side
+        boolean cancelBySlurm(SlurmException exception) {
+            Objects.requireNonNull(exception);
+            this.exception = exception;
+            cancelledBySlurm = true;
+            return cancel(true);
+        }
+
+        SlurmException getException() {
+            return exception;
+        }
+
+        private boolean isCancelledBySlurm() {
+            return cancelledBySlurm;
         }
 
         @Override
@@ -265,14 +291,14 @@ public class SlurmComputationManager implements ComputationManager {
             // in subsequent method calls such as Files.read in executionHandler.after.
             LOGGER.debug("Canceled thread");
 
-            Long jobId = mgr.taskStore.getFirstJobId(this);
-            if (jobId == null) {
+            Long firstJobId = mgr.taskStore.getFirstJobId(this);
+            if (firstJobId == null) {
                 LOGGER.warn("job not be submitted yet");
                 return true;
             }
 
-            mgr.scancelCascading(jobId);
-            mgr.taskStore.remove(this);
+            mgr.scancelCascading(firstJobId);
+            mgr.taskStore.clearBy(this);
             return true;
         }
 
@@ -281,28 +307,20 @@ public class SlurmComputationManager implements ComputationManager {
         }
     }
 
-    private void scancelCascading(Long jobId) {
+    private void scancelCascading(Long firstJobId) {
         // For array jobs can be cancelled just by calling on master jobId
-        // but currently array_job in slurm is not used, so jobs should be cancelled one by one
-        // For dependency jobs will not be cancelled automatically and they will be pending in queue infinitely
-        LOGGER.debug("cancel cascading: {}", jobId);
-        scancel(jobId);
-        taskStore.getBatchIds(jobId).forEach(this::scancel);
-        taskStore.getDependentJobs(jobId).forEach(this::scancelWithMasterId);
+        LOGGER.debug("scancel first job {}", firstJobId);
+        scancelMasterJob(firstJobId);
+        taskStore.getDependentJobs(firstJobId).forEach(this::scancelMasterJob);
     }
 
-    private void scancelWithMasterId(Long masterid) {
-        scancel(masterid);
-        taskStore.getBatchIds(masterid).forEach(this::scancel);
+    private void scancelMasterJob(Long masterid) {
+        LOGGER.debug("scancel master job {}", masterid);
+        taskStore.untracing(masterid);
+        commandRunner.execute("scancel " + masterid);
     }
 
-    private void scancel(Long jobId) {
-        LOGGER.debug("scancel {}", jobId);
-        taskStore.untracing(jobId);
-        commandRunner.execute("scancel " + jobId);
-    }
-
-    private <R> void remoteExecute(ExecutionEnvironment environment, ExecutionHandler<R> handler, ComputationParameters parameters, CompletableFuture<R> f) {
+    private <R> void remoteExecute(ExecutionEnvironment environment, ExecutionHandler<R> handler, ComputationParameters parameters, SlurmCompletableFuture<R> f) {
         Path remoteWorkingDir;
         try (WorkingDirectory remoteWorkingDirectory = new RemoteWorkingDir(baseDir, environment.getWorkingDirPrefix(), environment.isDebug())) {
             remoteWorkingDir = remoteWorkingDirectory.toPath();
@@ -310,8 +328,7 @@ public class SlurmComputationManager implements ComputationManager {
             taskStore.insert(remoteWorkingDir.getFileName().toString(), f);
             List<CommandExecution> commandExecutions = handler.before(remoteWorkingDir);
 
-            int sum = commandExecutions.stream().mapToInt(CommandExecution::getExecutionCount).sum();
-            TaskCounter taskCounter = new TaskCounter(sum);
+            TaskCounter taskCounter = new TaskCounter(commandExecutions.get(commandExecutions.size() - 1).getExecutionCount());
 
             Map<Long, Command> jobIdCommandMap;
             jobIdCommandMap = generateSbatchAndSubmit(commandExecutions, parameters, remoteWorkingDir, environment, taskCounter, f);
@@ -330,14 +347,24 @@ public class SlurmComputationManager implements ComputationManager {
                 Thread.currentThread().interrupt();
             }
 
-            if (closeStarted) {
-                return;
-            }
-
             SlurmExecutionReport report = generateReport(jobIdCommandMap, remoteWorkingDir);
-
-            R result = handler.after(remoteWorkingDir, report);
-            f.complete(result);
+            if (f.isCancelled()) {
+                if (f.isCancelledBySlurm()) {
+                    // some exceptions in platform
+                    handler.after(remoteWorkingDir, report);
+                    // Normally in this case the handler.after() will throw exceptions because:
+                    // 1. Exitcode non-zero
+                    // 2. Result file not found
+                    // the exception would be caught outside.
+                    // But if the after() not throws exception, (ex: unit tests), it rethrows slurm exception
+                    throw f.getException();
+                } else {
+                    // client call cancel and skip after
+                    throw new CancellationException(CANCEL_BY_CALLER_MSG);
+                }
+            } else {
+                f.complete(handler.after(remoteWorkingDir, report));
+            }
         } catch (IOException e) {
             LOGGER.error(e.toString(), e);
             f.completeExceptionally(e);
@@ -355,13 +382,20 @@ public class SlurmComputationManager implements ComputationManager {
         if (sacctOutput.length() > 0) {
             String[] lines = sacctOutput.split("\n");
             for (String line : lines) {
+                int executionIdx = 0;
                 Matcher m = DIGITAL_PATTERN.matcher(line);
                 m.find();
                 long jobId = Long.parseLong(m.group());
-                m.find();
-                int executionIdx = Integer.parseInt(m.group());
-                m.find();
-                int exitCode = Integer.parseInt(m.group());
+                if (line.contains("_") && !line.contains("-")) {
+                    // see https://stackoverflow.com/questions/56424735/saccts-result-on-an-arrayjob-is-not-updated
+                    m.find();
+                    executionIdx = Integer.parseInt(m.group());
+                } else {
+                    // not array job and do nothing
+                    // 9952            127:0
+                }
+                String[] split = line.split("\\s+");
+                int exitCode = Integer.parseInt(split[1].split(":")[0]);
                 // error message ???
                 ExecutionError error = new ExecutionError(jobIdCommandMap.get(jobId), executionIdx, exitCode);
                 errors.add(error);
@@ -376,12 +410,10 @@ public class SlurmComputationManager implements ComputationManager {
                                                        ExecutionEnvironment environment, TaskCounter taskCounter, CompletableFuture<?> future)
             throws IOException {
         Map<Long, Command> jobIdCommandMap = new HashMap<>();
-        Long firstJobId = null; // the first jobId submitted of List<CommandExecution>
-        List<Long> preJobIds = new ArrayList<>();
+        Long firstJobId = null; // the first jobId submitted of List<CommandExecution>, or the unzip jobId
         Long preMasterJobId = null; // the masterJobId is the first id of each CommandExecution
                                     // it could be also job id for unzip common inputs
 
-        outerSendingLoop:
         for (int commandIdx = 0; commandIdx < commandExecutions.size(); commandIdx++) {
             CommandExecution commandExecution = commandExecutions.get(commandIdx);
             Command command = commandExecution.getCommand();
@@ -395,12 +427,12 @@ public class SlurmComputationManager implements ComputationManager {
                     .anyMatch(inputFile -> !inputFile.dependsOnExecutionNumber() && inputFile.getPreProcessor() != null)) {
                 if (closeStarted) {
                     LOGGER.info(CLOSE_START_NO_MORE_SEND_INFO);
-                    break outerSendingLoop;
+                    break;
                 }
-                SbatchScriptGenerator sbatchScriptGenerator = new SbatchScriptGenerator(flagDir);
-                List<String> shell = sbatchScriptGenerator.unzipCommonInputFiles(command);
-                copyShellToRemoteWorkingDir(shell, UNZIP_INPUTS_COMMAND_ID + "_" + commandIdx, workingDir);
-                cmd = buildSbatchCmd(workingDir, UNZIP_INPUTS_COMMAND_ID, commandIdx, preJobIds, parameters);
+                SbatchArguments sbatchArguments = prepareSbatchArguments(workingDir, commandIdx, preMasterJobId);
+                List<String> shell = SbatchScriptGenerator.unzipCommonInputFiles(command, sbatchArguments);
+                Path shellPath = copyShellToRemoteWorkingDir(shell, UNZIP_INPUTS_COMMAND_ID + commandIdx, workingDir);
+                cmd = new SbatchCmd(shellPath.toAbsolutePath().toString());
                 if (isSendAllowed(future)) {
                     long jobId = launchSbatch(cmd);
                     if (firstJobId == null) {
@@ -411,7 +443,6 @@ public class SlurmComputationManager implements ComputationManager {
                     if (preMasterJobId != null) {
                         taskStore.insertDependency(preMasterJobId, jobId);
                     }
-                    preJobIds = Collections.singletonList(jobId);
                     preMasterJobId = jobId;
                 } else {
                     logNotSendReason(future);
@@ -419,42 +450,34 @@ public class SlurmComputationManager implements ComputationManager {
                 }
             }
 
-            // no job array --> commandId_index.batch
-            Long masterJobId = null;
-            for (int executionIndex = 0; executionIndex < commandExecution.getExecutionCount(); executionIndex++) {
-                if (closeStarted) {
-                    LOGGER.info(CLOSE_START_NO_MORE_SEND_INFO);
-                    break outerSendingLoop;
-                }
-                prepareBatch(command, executionIndex, environment, commandExecution, workingDir);
-                cmd = buildSbatchCmd(workingDir, command.getId(), executionIndex, preJobIds, parameters);
-                if (isSendAllowed(future)) {
-                    long jobId = launchSbatch(cmd);
-                    if (firstJobId == null) {
-                        firstJobId = jobId;
-                        taskStore.insert(workingDir.getFileName().toString(), taskCounter, firstJobId);
-                        LOGGER.debug("First jobid : {}", firstJobId);
-                    }
-                    if (executionIndex == 0) {
-                        masterJobId = jobId;
-                        if (preMasterJobId != null) {
-                            taskStore.insertDependency(preMasterJobId, masterJobId);
-                        }
-                    }
-                    taskStore.insertBatchIds(masterJobId, jobId);
-                } else {
-                    logNotSendReason(future);
-                    break;
-                }
+            if (closeStarted) {
+                LOGGER.info(CLOSE_START_NO_MORE_SEND_INFO);
+                break;
             }
-
-            jobIdCommandMap.put(masterJobId, command);
-            List<Long> jobIds = new ArrayList<>(taskStore.getBatchIds(masterJobId));
-            jobIds.add(masterJobId);
-
+            Long masterJobId = null;
+            SbatchArguments sbatchArguments = convert2Builder(workingDir, command.getId(), commandExecution.getExecutionCount(), preMasterJobId, parameters);
+            Path shellPath = prepareBatch(environment, commandExecution, workingDir, commandIdx == commandExecutions.size() - 1, sbatchArguments);
+            cmd = new SbatchCmd(shellPath.toAbsolutePath().toString());
+            parameters.getDeadline(command.getId()).ifPresent(cmd::deadLine);
+            if (isSendAllowed(future)) {
+                long jobId = launchSbatch(cmd);
+                if (firstJobId == null) {
+                    firstJobId = jobId;
+                    taskStore.insert(workingDir.getFileName().toString(), taskCounter, firstJobId);
+                    LOGGER.debug("First jobid : {}", firstJobId);
+                }
+                masterJobId = jobId;
+                if (preMasterJobId != null) {
+                    taskStore.insertDependency(preMasterJobId, masterJobId);
+                }
+            } else {
+                logNotSendReason(future);
+                break;
+            }
             preMasterJobId = masterJobId;
-            preJobIds = jobIds;
+            jobIdCommandMap.put(masterJobId, command);
         }
+
         return jobIdCommandMap;
     }
 
@@ -471,51 +494,55 @@ public class SlurmComputationManager implements ComputationManager {
         }
     }
 
-    private void prepareBatch(Command command, int executionIndex, ExecutionEnvironment environment, CommandExecution commandExecution, Path remoteWorkingDir) throws IOException {
-        // prepare sbatch script from command
+    private Path prepareBatch(ExecutionEnvironment environment, CommandExecution commandExecution, Path remoteWorkingDir, boolean isLast, SbatchArguments builder) throws IOException {
         Map<String, String> executionVariables = CommandExecution.getExecutionVariables(environment.getVariables(), commandExecution);
-        SbatchScriptGenerator scriptGenerator = new SbatchScriptGenerator(flagDir);
-        List<String> shell = scriptGenerator.parser(command, executionIndex, remoteWorkingDir, executionVariables);
-        if (executionIndex == -1) {
-            // array job not used yet
-            copyShellToRemoteWorkingDir(shell, command.getId(), remoteWorkingDir);
-        } else {
-            copyShellToRemoteWorkingDir(shell, command.getId() + "_" + executionIndex, remoteWorkingDir);
-        }
+        SbatchScriptGenerator batchGen = new SbatchScriptGenerator(flagDir, commandExecution, remoteWorkingDir, executionVariables, builder).setIsLast(isLast);
+        List<String> shell = batchGen.parse();
+        return copyShellToRemoteWorkingDir(shell, commandExecution.getCommand().getId(), remoteWorkingDir);
     }
 
-    private static void copyShellToRemoteWorkingDir(List<String> shell, String batchName, Path remoteWorkingDir) throws IOException {
+    private static Path copyShellToRemoteWorkingDir(List<String> shell, String batchName, Path remoteWorkingDir) throws IOException {
         StringBuilder sb = new StringBuilder();
         shell.forEach(line -> sb.append(line).append('\n'));
         String str = sb.toString();
-        Path batch;
-        batch = remoteWorkingDir.resolve(batchName + BATCH_EXT);
+        Path batch = remoteWorkingDir.resolve(batchName + BATCH_EXT);
         try (InputStream targetStream = new ByteArrayInputStream(str.getBytes())) {
             Files.copy(targetStream, batch);
         }
+        return batch;
     }
 
-    private SbatchCmd buildSbatchCmd(Path workingDir, String commandId, int executionIndex, List<Long> preJobIds, ComputationParameters baseParams) {
-        // prepare sbatch cmd
+    private SbatchArguments convert2Builder(Path workingDir, String commandId, int count, @Nullable Long preJobId, ComputationParameters baseParams) {
         String baseFileName = workingDir.resolve(commandId).toAbsolutePath().toString();
-        SbatchCmdBuilder builder = new SbatchCmdBuilder()
-                .script(baseFileName + "_" + executionIndex + BATCH_EXT)
+        String idx = count == 1 ? "_0" : "_%a";
+        SbatchArguments builder = new SbatchArguments()
                 .jobName(commandId)
                 .workDir(workingDir)
                 .nodes(1)
                 .ntasks(1)
                 .oversubscribe()
-                .output(baseFileName + "_" + executionIndex + SlurmConstants.OUT_EXT)
-                .error(baseFileName + "_" + executionIndex + SlurmConstants.ERR_EXT);
-        if (!preJobIds.isEmpty()) {
-            builder.aftercorr(preJobIds);
-        }
+                .output(baseFileName + idx + OUT_EXT)
+                .error(baseFileName + idx + ERR_EXT)
+                .aftercorr(preJobId)
+                .array(count);
         SlurmComputationParameters extension = baseParams.getExtension(SlurmComputationParameters.class);
         if (extension != null) {
             extension.getQos().ifPresent(builder::qos);
         }
-        baseParams.getDeadline(commandId).ifPresent(builder::deadline);
-        return builder.build();
+        return builder;
+    }
+
+    /**
+     * Because UNZIP_INPUTS_COMMAND_ID is same basename, so executionIdx is needed to put cmd_Id.sbatch in same working dir
+     */
+    private static SbatchArguments prepareSbatchArguments(Path workingDir, int executionIdx, @Nullable Long preJobId) {
+        String baseFileName = workingDir.resolve(UNZIP_INPUTS_COMMAND_ID).toAbsolutePath().toString();
+        return new SbatchArguments()
+                .jobName(UNZIP_INPUTS_COMMAND_ID)
+                .workDir(workingDir)
+                .output(baseFileName + executionIdx + OUT_EXT)
+                .error(baseFileName + executionIdx + ERR_EXT)
+                .aftercorr(preJobId);
     }
 
     private long launchSbatch(SbatchCmd cmd) {
@@ -632,7 +659,7 @@ public class SlurmComputationManager implements ComputationManager {
                 LOGGER.info("Shutdown slurm...");
                 LOGGER.info("Cancel current subbmited jobs");
                 Set<Long> tracingIds = new HashSet<>(getTaskStore().getTracingIds());
-                tracingIds.forEach(this::scancel);
+                tracingIds.forEach(l -> scancelMasterJob(l));
                 // count down task to avoid InterruptedException
                 getTaskStore().getTaskCounters().forEach(TaskCounter::cancel);
                 baseClose();

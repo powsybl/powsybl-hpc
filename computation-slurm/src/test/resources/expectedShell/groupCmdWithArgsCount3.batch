@@ -1,0 +1,18 @@
+#!/bin/sh
+#SBATCH -D /home/test/workingPath_12345
+#SBATCH --kill-on-invalid-dep=yes
+case $SLURM_ARRAY_TASK_ID in
+    0)
+      ARGS_0=""1s"" ARGS_1=""1""
+    ;;
+    1)
+      ARGS_0=""2s"" ARGS_1=""22""
+    ;;
+    2)
+      ARGS_0=""3s"" ARGS_1=""333""
+    ;;
+esac
+sleep $ARGS_0
+rc=$?; if [[ $rc != 0 ]]; then touch /tmp/flags/myerror_workingPath_12345_$SLURM_JOBID; exit $rc; fi
+echo $ARGS_1
+rc=$?; if [[ $rc != 0 ]]; then touch /tmp/flags/myerror_workingPath_12345_$SLURM_JOBID; exit $rc; fi

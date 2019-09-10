@@ -30,7 +30,7 @@ public final class CommandExecutionsTestFactory {
         return Collections.singletonList(commandExecution);
     }
 
-    static List<CommandExecution> simpleCmdWithCount(int executionCount) {
+    static List<CommandExecution> simpleEchoWithCount(int executionCount) {
         Command command = new SimpleCommandBuilder()
                 .id("cmdId")
                 .program("echo")
@@ -53,6 +53,12 @@ public final class CommandExecutionsTestFactory {
         return Collections.singletonList(commandExecution);
     }
 
+    /**
+     * Test for:
+     * 1. One shared(non-execution-dependency) .zip file
+     * 2. Null post-process file
+     * @return
+     */
     static List<CommandExecution> commandFiles(int executionCount) {
         InputFile stringInput = new InputFile("foo.zip", FilePreProcessor.ARCHIVE_UNZIP);
         InputFile functionsInput = new InputFile(integer -> "in" + integer + ".zip", FilePreProcessor.ARCHIVE_UNZIP);
@@ -101,4 +107,51 @@ public final class CommandExecutionsTestFactory {
                 .build();
         return Collections.singletonList(new CommandExecution(command, 42));
     }
+
+    static List<CommandExecution> groupCmdWithArgs(int count) {
+        Command command = new GroupCommandBuilder()
+                .id("groupCmdId")
+                .subCommand()
+                .program("sleep")
+                .args(i -> Collections.singletonList(++i + "s"))
+                .add()
+                .subCommand()
+                .program("echo")
+                .args(i -> Collections.singletonList(echoString(++i)))
+                .add()
+                .build();
+        return Collections.singletonList(new CommandExecution(command, count));
+    }
+
+    // 1->1
+    // 2->22
+    // 3->333
+    private static String echoString(int i) {
+        StringBuilder sb = new StringBuilder();
+        for (int j = 0; j < i; j++) {
+            sb.append(i);
+        }
+        return sb.toString();
+    }
+
+    static List<CommandExecution> oddEvenCmd(int executionCount) {
+        Command cmd = new SimpleCommandBuilder()
+                .id("oddEven")
+                .program("/home/dev-itesla/myapps/myecho.sh")
+                .args(i -> {
+                    if (i % 2 == 0) {
+                        return Arrays.asList("evenIn" + i, "evenOutput" + i + ".txt");
+                    } else {
+                        return Arrays.asList("oddIn" + i, "oddOutput" + i + ".txt");
+                    }
+                })
+                .build();
+        return Collections.singletonList(new CommandExecution(cmd, executionCount));
+    }
+
+    static List<CommandExecution> failInOneOfArrayJob() {
+        // oddIn3 is not a valid input in myecho.sh
+        return oddEvenCmd(4);
+    }
+
 }
