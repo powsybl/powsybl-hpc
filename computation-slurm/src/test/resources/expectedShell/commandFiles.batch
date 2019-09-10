@@ -1,4 +1,6 @@
 #!/bin/sh
+#SBATCH -D /home/test/workingPath_12345
+#SBATCH --kill-on-invalid-dep=yes
 case $SLURM_ARRAY_TASK_ID in
     0)
       PRE1=in0.zip

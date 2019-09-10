@@ -46,7 +46,7 @@ import static org.junit.Assert.fail;
 public class SlurmUnitTests {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SlurmUnitTests.class);
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = true;
     private static final ExecutionEnvironment EMPTY_ENV = new ExecutionEnvironment(Collections.emptyMap(), "unit_test_", DEBUG);
 
     private static final String EXPECTED_ERROR_JOB_MSG = "An error job found";
@@ -554,7 +554,7 @@ public class SlurmUnitTests {
         }
     }
 
-    public void makeSlurmBusy() throws InterruptedException {
+    void makeSlurmBusy() throws InterruptedException {
         TestAttribute testAttribute = new TestAttribute(Type.TO_WAIT, "deadline");
         Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
             @Override

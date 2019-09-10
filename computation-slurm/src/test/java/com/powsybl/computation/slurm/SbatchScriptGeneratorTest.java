@@ -33,15 +33,22 @@ import static org.junit.Assert.assertEquals;
  */
 public class SbatchScriptGeneratorTest {
 
+    private static final String SHEBANG = "#!/bin/sh";
+    private static final String SBATCH_ARGU_KILL = "#SBATCH --kill-on-invalid-dep=yes";
+    private static final String SBATCH_ARGU_DIR = "#SBATCH -D /home/test/workingPath_12345";
+    private static final String CHECK_ERROR = "rc=$?; if [[ $rc != 0 ]]; then touch /tmp/flags/myerror_workingPath_12345_$SLURM_JOBID; exit $rc; fi";
+
     private FileSystem fileSystem;
     private Path flagPath;
     private Path workingPath;
+    private SbatchArguments arguments;
 
     @Before
     public void setUp() {
         fileSystem = Jimfs.newFileSystem(Configuration.unix());
         flagPath = fileSystem.getPath("/tmp/flags");
         workingPath = fileSystem.getPath("/home/test/workingPath_12345");
+        arguments = new SbatchArguments().workDir(workingPath);
     }
 
     @After
@@ -52,20 +59,24 @@ public class SbatchScriptGeneratorTest {
     @Test
     public void testSimpleCmd() {
         List<CommandExecution> commandExecutions = CommandExecutionsTestFactory.simpleCmd();
-        List<String> shell = new SbatchScriptGenerator(flagPath, commandExecutions.get(0), workingPath, Collections.emptyMap()).parse();
-        assertEquals(ImmutableList.of("#!/bin/sh",
+        List<String> shell = new SbatchScriptGenerator(flagPath, commandExecutions.get(0), workingPath, Collections.emptyMap(), arguments).parse();
+        assertEquals(ImmutableList.of(SHEBANG,
+                SBATCH_ARGU_DIR,
+                SBATCH_ARGU_KILL,
                 "echo \"test\"",
-                "rc=$?; if [[ $rc != 0 ]]; then touch /tmp/flags/myerror_workingPath_12345_$SLURM_JOBID; exit $rc; fi"), shell);
+                CHECK_ERROR), shell);
     }
 
     @Test
     public void testLastSimpleCmd() {
         List<CommandExecution> commandExecutions = CommandExecutionsTestFactory.simpleCmd();
-        List<String> shell = new SbatchScriptGenerator(flagPath, commandExecutions.get(0), workingPath, Collections.emptyMap())
+        List<String> shell = new SbatchScriptGenerator(flagPath, commandExecutions.get(0), workingPath, Collections.emptyMap(), arguments)
                 .setIsLast(true).parse();
-        assertEquals(ImmutableList.of("#!/bin/sh",
+        assertEquals(ImmutableList.of(SHEBANG,
+                SBATCH_ARGU_DIR,
+                SBATCH_ARGU_KILL,
                 "echo \"test\"",
-                "rc=$?; if [[ $rc != 0 ]]; then touch /tmp/flags/myerror_workingPath_12345_$SLURM_JOBID; exit $rc; fi",
+                CHECK_ERROR,
                 "touch /tmp/flags/mydone_workingPath_12345_$SLURM_JOBID"), shell);
     }
 
@@ -89,13 +100,15 @@ public class SbatchScriptGeneratorTest {
     public void testOnlyUnzipBatch() {
         List<CommandExecution> commandExecutions = CommandExecutionsTestFactory.commandFiles(3);
         Command command = commandExecutions.get(0).getCommand();
-        List<String> shell = SbatchScriptGenerator.unzipCommonInputFiles(command);
+        List<String> shell = SbatchScriptGenerator.unzipCommonInputFiles(command, arguments);
         assertEquals(expectedtestOnlyUnzipBatch(), shell);
     }
 
     private static List<String> expectedtestOnlyUnzipBatch() {
         List<String> shell = new ArrayList<>();
-        shell.add("#!/bin/sh");
+        shell.add(SHEBANG);
+        shell.add(SBATCH_ARGU_DIR);
+        shell.add(SBATCH_ARGU_KILL);
         shell.add("unzip -o -q foo.zip");
         return shell;
     }
@@ -103,12 +116,14 @@ public class SbatchScriptGeneratorTest {
     @Test
     public void testGroupCmd() {
         List<CommandExecution> commandExecutions = CommandExecutionsTestFactory.groupCmd();
-        List<String> shell = new SbatchScriptGenerator(flagPath, commandExecutions.get(0), workingPath, Collections.emptyMap()).parse();
-        assertEquals(ImmutableList.of("#!/bin/sh",
+        List<String> shell = new SbatchScriptGenerator(flagPath, commandExecutions.get(0), workingPath, Collections.emptyMap(), arguments).parse();
+        assertEquals(ImmutableList.of(SHEBANG,
+                SBATCH_ARGU_DIR,
+                SBATCH_ARGU_KILL,
                 "sleep \"5s\"",
-                "rc=$?; if [[ $rc != 0 ]]; then touch /tmp/flags/myerror_workingPath_12345_$SLURM_JOBID; exit $rc; fi",
+                CHECK_ERROR,
                 "echo \"sub2\"",
-                "rc=$?; if [[ $rc != 0 ]]; then touch /tmp/flags/myerror_workingPath_12345_$SLURM_JOBID; exit $rc; fi"), shell);
+                CHECK_ERROR), shell);
     }
 
     @Test
@@ -124,7 +139,7 @@ public class SbatchScriptGeneratorTest {
     }
 
     private void assertCommandExecutionToShell(CommandExecution commandExecution, String expected) throws URISyntaxException, IOException {
-        SbatchScriptGenerator shellGenerator = new SbatchScriptGenerator(flagPath, commandExecution, workingPath, Collections.emptyMap());
+        SbatchScriptGenerator shellGenerator = new SbatchScriptGenerator(flagPath, commandExecution, workingPath, Collections.emptyMap(), arguments);
         List<String> shell = shellGenerator.parse();
         List<String> expectedShell = Files.readAllLines(Paths.get(this.getClass().getResource("/expectedShell/" + expected).toURI()));
         assertEquals(expectedShell, shell);

@@ -429,9 +429,10 @@ public class SlurmComputationManager implements ComputationManager {
                     LOGGER.info(CLOSE_START_NO_MORE_SEND_INFO);
                     break;
                 }
-                List<String> shell = SbatchScriptGenerator.unzipCommonInputFiles(command);
-                copyShellToRemoteWorkingDir(shell, UNZIP_INPUTS_COMMAND_ID + commandIdx, workingDir);
-                cmd = buildCommonUnzipCmd(workingDir, commandIdx, preMasterJobId);
+                SbatchArguments sbatchArguments = prepareSbatchArguments(workingDir, commandIdx, preMasterJobId);
+                List<String> shell = SbatchScriptGenerator.unzipCommonInputFiles(command, sbatchArguments);
+                Path shellPath = copyShellToRemoteWorkingDir(shell, UNZIP_INPUTS_COMMAND_ID + commandIdx, workingDir);
+                cmd = new SbatchCmd(shellPath.toAbsolutePath().toString());
                 if (isSendAllowed(future)) {
                     long jobId = launchSbatch(cmd);
                     if (firstJobId == null) {
@@ -454,8 +455,10 @@ public class SlurmComputationManager implements ComputationManager {
                 break;
             }
             Long masterJobId = null;
-            prepareBatch(environment, commandExecution, workingDir, commandIdx == commandExecutions.size() - 1);
-            cmd = buildSbatchCmd(workingDir, command.getId(), commandExecution.getExecutionCount(), preMasterJobId, parameters);
+            SbatchArguments sbatchArguments = convert2Builder(workingDir, command.getId(), commandExecution.getExecutionCount(), preMasterJobId, parameters);
+            Path shellPath = prepareBatch(environment, commandExecution, workingDir, commandIdx == commandExecutions.size() - 1, sbatchArguments);
+            cmd = new SbatchCmd(shellPath.toAbsolutePath().toString());
+            parameters.getDeadline(command.getId()).ifPresent(cmd::deadLine);
             if (isSendAllowed(future)) {
                 long jobId = launchSbatch(cmd);
                 if (firstJobId == null) {
@@ -491,31 +494,28 @@ public class SlurmComputationManager implements ComputationManager {
         }
     }
 
-    private void prepareBatch(ExecutionEnvironment environment, CommandExecution commandExecution, Path remoteWorkingDir, boolean isLast) throws IOException {
+    private Path prepareBatch(ExecutionEnvironment environment, CommandExecution commandExecution, Path remoteWorkingDir, boolean isLast, SbatchArguments builder) throws IOException {
         Map<String, String> executionVariables = CommandExecution.getExecutionVariables(environment.getVariables(), commandExecution);
-        SbatchScriptGenerator batchGen = new SbatchScriptGenerator(flagDir, commandExecution, remoteWorkingDir, executionVariables).setIsLast(isLast);
+        SbatchScriptGenerator batchGen = new SbatchScriptGenerator(flagDir, commandExecution, remoteWorkingDir, executionVariables, builder).setIsLast(isLast);
         List<String> shell = batchGen.parse();
-        copyShellToRemoteWorkingDir(shell, commandExecution.getCommand().getId(), remoteWorkingDir);
+        return copyShellToRemoteWorkingDir(shell, commandExecution.getCommand().getId(), remoteWorkingDir);
     }
 
-    private static void copyShellToRemoteWorkingDir(List<String> shell, String batchName, Path remoteWorkingDir) throws IOException {
+    private static Path copyShellToRemoteWorkingDir(List<String> shell, String batchName, Path remoteWorkingDir) throws IOException {
         StringBuilder sb = new StringBuilder();
         shell.forEach(line -> sb.append(line).append('\n'));
         String str = sb.toString();
-        Path batch;
-        batch = remoteWorkingDir.resolve(batchName + BATCH_EXT);
+        Path batch = remoteWorkingDir.resolve(batchName + BATCH_EXT);
         try (InputStream targetStream = new ByteArrayInputStream(str.getBytes())) {
             Files.copy(targetStream, batch);
         }
+        return batch;
     }
 
-    // TODO move this part into .batch file
-    private SbatchCmd buildSbatchCmd(Path workingDir, String commandId, int count, @Nullable Long preJobId, ComputationParameters baseParams) {
-        // prepare sbatch cmd
+    private SbatchArguments convert2Builder(Path workingDir, String commandId, int count, @Nullable Long preJobId, ComputationParameters baseParams) {
         String baseFileName = workingDir.resolve(commandId).toAbsolutePath().toString();
         String idx = count == 1 ? "_0" : "_%a";
-        SbatchCmdBuilder builder = new SbatchCmdBuilder()
-                .script(baseFileName + BATCH_EXT)
+        SbatchArguments builder = new SbatchArguments()
                 .jobName(commandId)
                 .workDir(workingDir)
                 .nodes(1)
@@ -529,23 +529,20 @@ public class SlurmComputationManager implements ComputationManager {
         if (extension != null) {
             extension.getQos().ifPresent(builder::qos);
         }
-        baseParams.getDeadline(commandId).ifPresent(builder::deadline);
-        return builder.build();
+        return builder;
     }
 
     /**
      * Because UNZIP_INPUTS_COMMAND_ID is same basename, so executionIdx is needed to put cmd_Id.sbatch in same working dir
      */
-    private static SbatchCmd buildCommonUnzipCmd(Path workingDir, int executionIdx, @Nullable Long preJobId) {
+    private static SbatchArguments prepareSbatchArguments(Path workingDir, int executionIdx, @Nullable Long preJobId) {
         String baseFileName = workingDir.resolve(UNZIP_INPUTS_COMMAND_ID).toAbsolutePath().toString();
-        SbatchCmdBuilder builder = new SbatchCmdBuilder()
-                .script(baseFileName + executionIdx + BATCH_EXT)
+        return new SbatchArguments()
                 .jobName(UNZIP_INPUTS_COMMAND_ID)
                 .workDir(workingDir)
                 .output(baseFileName + executionIdx + OUT_EXT)
                 .error(baseFileName + executionIdx + ERR_EXT)
                 .aftercorr(preJobId);
-        return builder.build();
     }
 
     private long launchSbatch(SbatchCmd cmd) {

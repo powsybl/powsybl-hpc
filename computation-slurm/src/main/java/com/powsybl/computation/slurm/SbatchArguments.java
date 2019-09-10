@@ -6,29 +6,31 @@
  */
 package com.powsybl.computation.slurm;
 
-import com.google.common.base.Preconditions;
-
 import javax.annotation.Nullable;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Builds an {@link SbatchCmd}, used to submit script execution to Slurm.
+ * This class contains two map and one set for three types of arguments in sbatch.
  * @see <a href="https://slurm.schedmd.com/sbatch.html">Sbatch</a>
  *
  * @author Yichen Tang <yichen.tang at rte-france.com>
  */
-class SbatchCmdBuilder {
+class SbatchArguments {
 
-    private static final String DATETIME_FORMATTER = "`date -d \"%d seconds\" \"+%%Y-%%m-%%dT%%H:%%M:%%S\"`";
+    private static final String PRECEDENT = "#SBATCH ";
+    private static final String DENPENDENCY_OPT = "dependency";
 
     private final Map<String, String> sbatchArgsByName = new HashMap<>();
     private final Map<Character, String> sbatchArgsByCharacter = new HashMap<>();
     private final TreeSet<String> sbatchOptions = new TreeSet<>();
-    private String script;
 
-    SbatchCmdBuilder jobName(String jobName) {
+    SbatchArguments() {
+        killOnInvalidDep();
+    }
+
+    SbatchArguments jobName(String jobName) {
         sbatchArgsByName.put("job-name", jobName);
         return this;
     }
@@ -38,7 +40,7 @@ class SbatchCmdBuilder {
      * @param i if equals 1, --array would not be set. If negative, exception would be thrown.
      * @return this builder
      */
-    SbatchCmdBuilder array(int i) {
+    SbatchArguments array(int i) {
         if (i <= 0) {
             throw new IllegalArgumentException(i + " is not validate for array.");
         }
@@ -48,30 +50,30 @@ class SbatchCmdBuilder {
         return this;
     }
 
-    SbatchCmdBuilder aftercorr(List<Long> jobIds) {
+    SbatchArguments aftercorr(List<Long> jobIds) {
         Objects.requireNonNull(jobIds);
         if (!jobIds.isEmpty()) {
             String coll = jobIds.stream().map(Object::toString).collect(Collectors.joining(":", "aftercorr:", ""));
-            sbatchArgsByName.put("dependency", coll);
+            sbatchArgsByName.put(DENPENDENCY_OPT, coll);
         }
         return this;
     }
 
-    SbatchCmdBuilder aftercorr(@Nullable Long preMasterJob) {
+    SbatchArguments aftercorr(@Nullable Long preMasterJob) {
         if (preMasterJob != null) {
-            sbatchArgsByName.put("dependency", "aftercorr:" + preMasterJob);
+            sbatchArgsByName.put(DENPENDENCY_OPT, "aftercorr:" + preMasterJob);
         }
         return this;
     }
 
-    SbatchCmdBuilder afternotok(Long lastMasterJob) {
+    SbatchArguments afternotok(Long lastMasterJob) {
         if (lastMasterJob != null) {
-            sbatchArgsByName.put("dependency", "afternotok:" + lastMasterJob);
+            sbatchArgsByName.put(DENPENDENCY_OPT, "afternotok:" + lastMasterJob);
         }
         return this;
     }
 
-    SbatchCmdBuilder nodes(int i) {
+    SbatchArguments nodes(int i) {
         if (i < 1) {
             throw new IllegalArgumentException(i + " is not validate for nodes.");
         }
@@ -79,7 +81,7 @@ class SbatchCmdBuilder {
         return this;
     }
 
-    SbatchCmdBuilder ntasks(int i) {
+    SbatchArguments ntasks(int i) {
         if (i < 1) {
             throw new IllegalArgumentException(i + " is not validate for ntasks.");
         }
@@ -87,7 +89,7 @@ class SbatchCmdBuilder {
         return this;
     }
 
-    SbatchCmdBuilder tasksPerNode(int i) {
+    SbatchArguments tasksPerNode(int i) {
         if (i < 1) {
             throw new IllegalArgumentException(i + " is not validate for tasksPerNode.");
         }
@@ -95,59 +97,48 @@ class SbatchCmdBuilder {
         return this;
     }
 
-    SbatchCmdBuilder cpusPerTask(int i) {
+    SbatchArguments cpusPerTask(int i) {
         sbatchArgsByName.put("cpus-per-task", Integer.toString(i));
         return this;
     }
 
     // TODO test
-    SbatchCmdBuilder error(String pattern) {
+    SbatchArguments error(String pattern) {
         Objects.requireNonNull(pattern);
         sbatchArgsByName.put("error", pattern);
         return this;
     }
 
-    SbatchCmdBuilder output(String pattern) {
+    SbatchArguments output(String pattern) {
         Objects.requireNonNull(pattern);
         sbatchArgsByName.put("output", pattern);
         return this;
     }
 
-    SbatchCmdBuilder partition(String partition) {
+    SbatchArguments partition(String partition) {
         Objects.requireNonNull(partition);
         sbatchArgsByName.put("partition", partition);
         return this;
     }
 
-    SbatchCmdBuilder oversubscribe() {
+    SbatchArguments oversubscribe() {
         sbatchOptions.add("oversubscribe");
         return this;
     }
 
-    private SbatchCmdBuilder killOnInvalidDep() {
+    private SbatchArguments killOnInvalidDep() {
         sbatchArgsByName.put("kill-on-invalid-dep", "yes");
         return this;
     }
 
-    SbatchCmdBuilder script(String name) {
-        this.script = Objects.requireNonNull(name);
-        return this;
-    }
-
-    SbatchCmdBuilder workDir(Path dir) {
+    SbatchArguments workDir(Path dir) {
         Objects.requireNonNull(dir);
         sbatchArgsByCharacter.put('D', dir.toAbsolutePath().toString());
         return this;
     }
 
-    SbatchCmdBuilder timeout(@Nullable String duration) {
+    SbatchArguments timeout(@Nullable String duration) {
         sbatchArgsByName.put("time", checkTimeout(duration));
-        return this;
-    }
-
-    SbatchCmdBuilder deadline(long seconds) {
-        Preconditions.checkArgument(seconds > 0, "Invalid seconds({}) for deadline: must be 1 or greater", seconds);
-        sbatchArgsByName.put("deadline", String.format(DATETIME_FORMATTER, seconds));
         return this;
     }
 
@@ -159,21 +150,18 @@ class SbatchCmdBuilder {
         return duration;
     }
 
-    SbatchCmdBuilder qos(String qos) {
+    SbatchArguments qos(String qos) {
         Objects.requireNonNull(qos);
         sbatchArgsByName.put("qos", qos);
         return this;
     }
 
-    SbatchCmd build() {
-        killOnInvalidDep();
-        validate();
-        return new SbatchCmd(sbatchArgsByName, sbatchArgsByCharacter, sbatchOptions, script);
+    List<String> toScript() {
+        List<String> list = new ArrayList<>();
+        sbatchArgsByCharacter.forEach((k, v) -> list.add(PRECEDENT + "-" + k + " " + v));
+        sbatchArgsByName.forEach((k, v) -> list.add(PRECEDENT + "--" + k + "=" + v));
+        sbatchOptions.forEach(o -> list.add(PRECEDENT + "--" + o));
+        return list;
     }
 
-    private void validate() {
-        if (null == script) {
-            throw new SlurmException("Script is null in cmd");
-        }
-    }
 }

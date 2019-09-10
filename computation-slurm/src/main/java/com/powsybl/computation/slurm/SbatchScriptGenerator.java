@@ -46,14 +46,17 @@ class SbatchScriptGenerator {
     private final Map<String, String> env;
     private final CommandExecution commandExecution;
 
+    private final SbatchArguments arguments;
+
     private boolean isArrayJob;
     private boolean isLast = false;
 
-    SbatchScriptGenerator(Path flagDir, CommandExecution commandExecution, Path workingDir, Map<String, String> env) {
+    SbatchScriptGenerator(Path flagDir, CommandExecution commandExecution, Path workingDir, Map<String, String> env, SbatchArguments sbatchArguments) {
         this.flagDir = Objects.requireNonNull(flagDir);
         this.commandExecution = Objects.requireNonNull(commandExecution);
         this.workingDir = Objects.requireNonNull(workingDir);
         this.env = Objects.requireNonNull(env);
+        arguments = Objects.requireNonNull(sbatchArguments);
         isArrayJob = commandExecution.getExecutionCount() != 1;
     }
 
@@ -68,6 +71,7 @@ class SbatchScriptGenerator {
     List<String> parse() {
         List<String> shell = new ArrayList<>();
         shell.add(SHEBANG);
+        shell.addAll(arguments.toScript());
         if (isArrayJob) {
             arrayJobCase(shell);
             preProcess(shell);
@@ -88,10 +92,14 @@ class SbatchScriptGenerator {
     /**
      * Returns the list of commands which constitute the sbatch script.
      * The unzip common input files script DO NOT create a flag file at the end.
+     * @param command Contains the shared input files to be unzipped first
+     * @param sbatchArguments
+     * @return Sbatch shell
      */
-    static List<String> unzipCommonInputFiles(Command command) {
+    static List<String> unzipCommonInputFiles(Command command, SbatchArguments sbatchArguments) {
         List<String> shell = new ArrayList<>();
         shell.add(SHEBANG);
+        shell.addAll(sbatchArguments.toScript());
         command.getInputFiles()
                 .stream().filter(inputFile -> !inputFile.dependsOnExecutionNumber()) // common
                 .filter(inputFile -> inputFile.getPreProcessor() != null) // to unzip
