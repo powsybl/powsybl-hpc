@@ -51,31 +51,31 @@ class ScontrolCmd extends AbstractSlurmCmd<ScontrolCmd.ScontrolResult> {
             return userId;
         }
 
-        public long getJobId() {
+        long getJobId() {
             return jobId;
         }
 
-        public String getJobName() {
+        String getJobName() {
             return jobName;
         }
 
-        public String getGroupId() {
+        String getGroupId() {
             return groupId;
         }
 
-        public String getQos() {
+        String getQos() {
             return qos;
         }
 
-        public SlurmConstants.JobState getJobState() {
+        SlurmConstants.JobState getJobState() {
             return jobState;
         }
 
-        public String getDependency() {
+        String getDependency() {
             return dependency;
         }
 
-        public String getExitCode() {
+        String getExitCode() {
             return exitCode;
         }
 
@@ -101,7 +101,10 @@ class ScontrolCmd extends AbstractSlurmCmd<ScontrolCmd.ScontrolResult> {
                 } else if (s.startsWith(JOBID)) {
                     jobId = Long.parseLong(s.substring(JOBID_LENGTH));
                 } else if (s.startsWith(JOBSTATE)) {
-                    jobState = SlurmConstants.JobState.valueOf(s.substring(JOBSTATE_LENGTH));
+                    SlurmConstants.JobState newState = SlurmConstants.JobState.valueOf(s.substring(JOBSTATE_LENGTH));
+                    if (jobState == null || jobState.getRank() < newState.getRank()) {
+                        jobState = newState;
+                    }
                 }
             }
         }

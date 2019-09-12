@@ -11,7 +11,7 @@ package com.powsybl.computation.slurm;
  *
  * @author Yichen Tang <yichen.tang at rte-france.com>
  */
-public final class ScontrolCmdFactory {
+final class ScontrolCmdFactory {
 
     private static final String SCONTROL = "scontrol ";
     private static final String SHOW_JOB = "show job ";

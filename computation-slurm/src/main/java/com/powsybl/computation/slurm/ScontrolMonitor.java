@@ -65,12 +65,13 @@ public class ScontrolMonitor implements Runnable {
                         case TIMEOUT:
                         case DEADLINE:
                         case CANCELLED:
+                        case FAILED:
                             abnormal = true;
                             LOGGER.info("JobId: {} is {}", id, jobState);
                             Optional<SlurmComputationManager.SlurmCompletableFuture> unormalFuture = taskStore.getCompletableFutureByJobId(id);
                             unormalFuture.ifPresent(f -> f.cancelBySlurm(new SlurmException("A " + jobState + " job detected by monitor")));
                             break;
-                        case COMPLETE:
+                        case COMPLETED:
                             // this monitor found task finished before flagDirMonitor
                             // maybe store it and recheck in next run()
                             checkedIds.add(id);

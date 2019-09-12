@@ -291,13 +291,6 @@ public class SlurmComputationManager implements ComputationManager {
             // in subsequent method calls such as Files.read in executionHandler.after.
             LOGGER.debug("Canceled thread");
 
-            Long firstJobId = mgr.taskStore.getFirstJobId(this);
-            if (firstJobId == null) {
-                LOGGER.warn("job not be submitted yet");
-                return true;
-            }
-
-            mgr.scancelCascading(firstJobId);
             mgr.taskStore.clearBy(this);
             return true;
         }
@@ -305,13 +298,6 @@ public class SlurmComputationManager implements ComputationManager {
         void setThread(Thread t) {
             this.thread = t;
         }
-    }
-
-    private void scancelCascading(Long firstJobId) {
-        // For array jobs can be cancelled just by calling on master jobId
-        LOGGER.debug("scancel first job {}", firstJobId);
-        scancelMasterJob(firstJobId);
-        taskStore.getDependentJobs(firstJobId).forEach(this::scancelMasterJob);
     }
 
     private void scancelMasterJob(Long masterid) {

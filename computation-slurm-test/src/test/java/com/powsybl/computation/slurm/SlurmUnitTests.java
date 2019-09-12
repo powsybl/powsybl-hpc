@@ -67,7 +67,7 @@ public class SlurmUnitTests {
         // TODO prepare myapps if necessary
     }
 
-    static SlurmComputationConfig.SshConfig generateSsh(ModuleConfig config) {
+    private static SlurmComputationConfig.SshConfig generateSsh(ModuleConfig config) {
         return new SlurmComputationConfig.SshConfig(config.getStringProperty("hostname"), 22, config.getStringProperty("username"), config.getStringProperty("password"), 10, 5);
     }
 
@@ -88,9 +88,9 @@ public class SlurmUnitTests {
         baseTest(testAttribute, supplier, ComputationParameters.empty());
     }
 
-    private void baseTest(TestAttribute testAttribute, Supplier<AbstractExecutionHandler<Void>> supplier, ComputationParameters parameters) throws InterruptedException {
+    private void baseTest(TestAttribute testAttribute, Supplier<AbstractExecutionHandler<Void>> supplier, ComputationParameters parameters) {
         SlurmComputationConfig slurmConfig = testAttribute.isShortScontrolTime() ? generateSlurmConfigWithShortScontrolTime(config) : generateSlurmConfig(config);
-        try (ComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
+        try (SlurmComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
             CompletableFuture<Void> completableFuture = computationManager.execute(EMPTY_ENV, supplier.get(), parameters);
             if (testAttribute.getType() == Type.TO_CANCEL) {
                 System.out.println("Will be cancelled by junit test in 5 seconds...");

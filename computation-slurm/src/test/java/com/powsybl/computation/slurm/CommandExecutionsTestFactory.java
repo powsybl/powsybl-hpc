@@ -151,7 +151,7 @@ public final class CommandExecutionsTestFactory {
 
     static List<CommandExecution> failInOneOfArrayJob() {
         // oddIn3 is not a valid input in myecho.sh
-        return oddEvenCmd(4);
+        return oddEvenCmd(5);
     }
 
 }

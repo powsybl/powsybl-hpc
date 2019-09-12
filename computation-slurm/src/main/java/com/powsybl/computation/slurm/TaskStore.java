@@ -177,6 +177,7 @@ class TaskStore {
             Long toRemove = firstId;
             while (toRemove != null) {
                 toRemoveMasterIds.add(toRemove);
+                untracing(toRemove);
                 toRemove = jobDependencies.remove(toRemove);
             }
             allIdsFromFirstId.addAll(toRemoveMasterIds);
@@ -197,9 +198,6 @@ class TaskStore {
         if (completableFuture.isPresent()) {
             return completableFuture;
         }
-        // TODO get future by array job
-        // try with batch id
-//        completableFuture = getFutureByBatchId(id);
         return completableFuture;
     }
 

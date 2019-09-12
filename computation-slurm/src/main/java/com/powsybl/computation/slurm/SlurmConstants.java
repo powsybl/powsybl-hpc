@@ -15,12 +15,23 @@ final class SlurmConstants {
     static final String ERR_EXT = ".err";
 
     enum JobState {
-        PENDING,
-        RUNNING,
-        TIMEOUT,
-        DEADLINE,
-        CANCELLED,
-        COMPLETE
+        PENDING(1),
+        RUNNING(1),
+        TIMEOUT(10),
+        DEADLINE(10),
+        CANCELLED(10),
+        FAILED(10),
+        COMPLETED(0);
+
+        final int rank;
+
+        JobState(int rank) {
+            this.rank = rank;
+        }
+
+        int getRank() {
+            return rank;
+        }
     }
 
     private SlurmConstants() {

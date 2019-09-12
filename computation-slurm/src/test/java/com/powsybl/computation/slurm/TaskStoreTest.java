@@ -101,7 +101,8 @@ public class TaskStoreTest {
         assertNull(taskStore.getCompletableFuture("a_working_dir"));
         assertTrue(taskStore.getDependentJobs(1L).isEmpty());
         // tracing ids are cleaned by 1. mydone_ in flag monitor 2. scancel in scm
-        assertFalse(taskStore.getTracingIds().isEmpty());
+        // 3. clearBy future
+        assertTrue(taskStore.getTracingIds().isEmpty());
     }
 
     @Test

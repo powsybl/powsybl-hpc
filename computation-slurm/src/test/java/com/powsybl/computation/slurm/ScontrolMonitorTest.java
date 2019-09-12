@@ -46,10 +46,6 @@ public class ScontrolMonitorTest {
         ScontrolMonitor monitor = new ScontrolMonitor(slurm);
         monitor.run();
         assertTrue(ts.getTracingIds().isEmpty());
-        // check scancel all master jobs only once
-        verify(cm, times(1)).execute("scancel 1");
-        verify(cm, times(1)).execute("scancel 3");
-        verify(cm, times(1)).execute("scancel 6");
     }
 
     @Before

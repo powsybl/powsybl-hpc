@@ -58,7 +58,7 @@ class FlagFilesMonitor implements Runnable {
                             String id = line.substring(lastIdx + 1);
                             taskStore.untracing(Long.parseLong(id));
                         } else {
-                            LOGGER.warn("Unexcepted file found in flagDir: {}", line);
+                            LOGGER.warn("Unexpected file found in flagDir: {}", line);
                         }
                     }
                 }
