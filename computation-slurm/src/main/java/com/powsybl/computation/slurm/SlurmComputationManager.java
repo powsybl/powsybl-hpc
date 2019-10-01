@@ -114,15 +114,10 @@ public class SlurmComputationManager implements ComputationManager {
     }
 
     private void checkSlurmInstall() {
-        for (String program : new String[]{"squeue", "sinfo", "srun", "sbatch", "scontrol"}) {
+        for (String program : new String[]{"squeue", "sinfo", "srun", "sbatch", "scontrol", "sacct"}) {
             if (commandRunner.execute(program + " --help").getExitCode() != 0) {
                 throw new SlurmException("Slurm is not installed");
             }
-        }
-        // sacct --help return 0 but sacct return 1
-        CommandResult sacctResult = commandRunner.execute("sacct");
-        if (sacctResult.getExitCode() != 0) {
-            throw new SlurmException(sacctResult.getStdErr());
         }
     }
 
