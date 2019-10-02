@@ -308,11 +308,12 @@ public class SlurmComputationManager implements ComputationManager {
             remoteWorkingDir = remoteWorkingDirectory.toPath();
 
             taskStore.insert(remoteWorkingDir.getFileName().toString(), f);
+            TaskCounter taskCounter = new TaskCounter();
+            taskStore.insert(remoteWorkingDir.getFileName().toString(), taskCounter);
             List<CommandExecution> commandExecutions = handler.before(remoteWorkingDir);
 
             int sum = commandExecutions.stream().mapToInt(CommandExecution::getExecutionCount).sum();
-            TaskCounter taskCounter = new TaskCounter(sum);
-            taskStore.insert(remoteWorkingDir.getFileName().toString(), taskCounter);
+            taskCounter.setCount(sum);
 
             Map<Long, Command> jobIdCommandMap;
             jobIdCommandMap = generateSbatchAndSubmit(commandExecutions, parameters, remoteWorkingDir, environment, f);

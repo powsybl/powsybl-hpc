@@ -88,7 +88,7 @@ public class SlurmUnitTests {
                     System.out.println("Canceled:" + completableFuture.isCancelled());
                 } else {
                     System.out.println("to cancel");
-                    Thread.sleep(5000);
+                    TimeUnit.SECONDS.sleep(5);
                     boolean cancel = completableFuture.cancel(true);
                     System.out.println("Canceled:" + cancel);
                     Assert.assertTrue(cancel);
@@ -305,6 +305,23 @@ public class SlurmUnitTests {
         Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
+                return mixedProgsToCancel();
+            }
+        };
+        baseTest(testAttribute, supplier);
+    }
+
+    @Test
+    public void testCancelBeforeFirstJob() throws InterruptedException {
+        TestAttribute testAttribute = new TestAttribute(Type.TO_CANCEL, "cancelBeforeFirstJob");
+        Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
+            @Override
+            public List<CommandExecution> before(Path workingDir) {
+                try {
+                    TimeUnit.SECONDS.sleep(6);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
                 return mixedProgsToCancel();
             }
         };
