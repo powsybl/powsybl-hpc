@@ -1,7 +1,7 @@
 # Maven projects
 /computation-mpi/target/
 /computation-slurm/target/
-/computation-slurm-tests/target/
+/computation-slurm-test/target/
 /distribution-hpc/target/
 /target
 
