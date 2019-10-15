@@ -128,4 +128,15 @@ public class SbatchCmdTest {
             assertEquals("sbatch -D /tmp/foo --job-name=testDir submit.sh", cmd.toString());
         }
     }
+
+    @Test
+    public void testPriority()  {
+        SbatchCmdBuilder builder = new SbatchCmdBuilder();
+        SbatchCmd cmd = builder.jobName("testPriority")
+                .script("submit.sh")
+                .nice(2)
+                .priority(1)
+                .build();
+        assertEquals("sbatch --job-name=testPriority --priority=1 --nice=2 submit.sh", cmd.toString());
+    }
 }

@@ -28,4 +28,28 @@ public class SlurmComputationParametersTest {
         SlurmComputationParameters empty2 = new SlurmComputationParameters(base, "   ");
         assertFalse(empty2.getQos().isPresent());
     }
+
+    @Test
+    public void testPriority() {
+        ComputationParameters base = mock(ComputationParameters.class);
+        SlurmComputationParameters sut = new SlurmComputationParameters(base, "aQos");
+        String cmdId = "foo";
+        sut.setNice(cmdId, 1);
+        assertEquals(1, (int) sut.getNice(cmdId).orElse(3));
+        sut.setPriority(cmdId, 2);
+        assertEquals(2, (int) sut.getPriority(cmdId).orElse(3));
+
+        try {
+            sut.setNice(cmdId, -99);
+            fail();
+        } catch (Exception e) {
+            // ignored
+        }
+        try {
+            sut.setPriority(cmdId, -99);
+            fail();
+        } catch (Exception e) {
+            // ignored
+        }
+    }
 }

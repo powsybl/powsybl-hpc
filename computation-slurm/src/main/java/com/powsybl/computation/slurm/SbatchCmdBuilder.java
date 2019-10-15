@@ -133,6 +133,18 @@ class SbatchCmdBuilder {
         return this;
     }
 
+    SbatchCmdBuilder priority(int priority) {
+        Preconditions.checkArgument(priority >= 0, "Priority must be >= 0");
+        sbatchArgsByName.put("priority", Integer.toString(priority));
+        return this;
+    }
+
+    SbatchCmdBuilder nice(int nice) {
+        Preconditions.checkArgument(nice >= 0, "Invalid --nice value");
+        sbatchArgsByName.put("nice", Integer.toString(nice));
+        return this;
+    }
+
     private static String checkTimeout(@Nullable String duration) {
         if (duration == null) {
             return "UNLIMITED";
