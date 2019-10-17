@@ -11,10 +11,7 @@ import com.powsybl.commons.extensions.AbstractExtension;
 import com.powsybl.computation.ComputationParameters;
 
 import javax.annotation.Nullable;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * @author Yichen TANG <yichen.tang at rte-france.com>
@@ -24,6 +21,7 @@ public class SlurmComputationParameters extends AbstractExtension<ComputationPar
     private final String qos;
     private final Map<String, Integer> priorityByCmdId = new HashMap<>();
     private final Map<String, Integer> niceByCmdId = new HashMap<>();
+    private final Map<String, Long> timeminByCmdId = new HashMap<>();
 
     public SlurmComputationParameters(ComputationParameters parameters, @Nullable String qos) {
         super(parameters);
@@ -44,8 +42,9 @@ public class SlurmComputationParameters extends AbstractExtension<ComputationPar
         return this;
     }
 
-    public Optional<Integer> getPriority(String cmdId) {
-        return Optional.ofNullable(priorityByCmdId.get(cmdId));
+    public OptionalInt getPriority(String cmdId) {
+        Integer i = priorityByCmdId.get(cmdId);
+        return i == null ? OptionalInt.empty() : OptionalInt.of(i);
     }
 
     public SlurmComputationParameters setNice(String cmdId, int nice) {
@@ -55,8 +54,19 @@ public class SlurmComputationParameters extends AbstractExtension<ComputationPar
         return this;
     }
 
-    public Optional<Integer> getNice(String cmdId) {
-        return Optional.ofNullable(niceByCmdId.get(cmdId));
+    public OptionalInt getNice(String cmdId) {
+        Integer i = niceByCmdId.get(cmdId);
+        return i == null ? OptionalInt.empty() : OptionalInt.of(i);
+    }
+
+    public SlurmComputationParameters setTimemin(String cmdId, long l) {
+        timeminByCmdId.put(cmdId, l);
+        return this;
+    }
+
+    public OptionalLong getTimemin(String cmdId) {
+        Long aLong = timeminByCmdId.get(cmdId);
+        return aLong == null ? OptionalLong.empty() : OptionalLong.of(aLong);
     }
 
     @Override

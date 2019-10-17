@@ -127,6 +127,11 @@ class SbatchCmdBuilder {
         return timeout(SlurmUtils.toTime(seconds));
     }
 
+    SbatchCmdBuilder timemin(long seconds) {
+        sbatchArgsByName.put("time-min", SlurmUtils.toTime(seconds));
+        return this;
+    }
+
     SbatchCmdBuilder deadline(long seconds) {
         Preconditions.checkArgument(seconds > 0, "Invalid seconds({}) for deadline: must be 1 or greater", seconds);
         sbatchArgsByName.put("deadline", String.format(DATETIME_FORMATTER, seconds));

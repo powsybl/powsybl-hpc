@@ -510,6 +510,7 @@ public class SlurmComputationManager implements ComputationManager {
             extension.getQos().ifPresent(builder::qos);
             extension.getPriority(commandId).ifPresent(builder::priority);
             extension.getNice(commandId).ifPresent(builder::nice);
+            extension.getTimemin(commandId).ifPresent(builder::timemin);
         }
         baseParams.getDeadline(commandId).ifPresent(builder::deadline);
         baseParams.getTimeout(commandId).ifPresent(builder::timeout);

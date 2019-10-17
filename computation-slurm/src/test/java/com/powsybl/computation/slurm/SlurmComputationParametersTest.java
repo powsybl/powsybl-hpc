@@ -27,6 +27,9 @@ public class SlurmComputationParametersTest {
         assertFalse(empty.getQos().isPresent());
         SlurmComputationParameters empty2 = new SlurmComputationParameters(base, "   ");
         assertFalse(empty2.getQos().isPresent());
+
+        sut.setTimemin("foo", 3L);
+        assertEquals(3L, sut.getTimemin("foo").orElse(4L));
     }
 
     @Test
@@ -35,10 +38,9 @@ public class SlurmComputationParametersTest {
         SlurmComputationParameters sut = new SlurmComputationParameters(base, "aQos");
         String cmdId = "foo";
         sut.setNice(cmdId, 1);
-        assertEquals(1, (int) sut.getNice(cmdId).orElse(3));
+        assertEquals(1, sut.getNice(cmdId).orElse(3));
         sut.setPriority(cmdId, 2);
-        assertEquals(2, (int) sut.getPriority(cmdId).orElse(3));
-
+        assertEquals(2, sut.getPriority(cmdId).orElse(3));
         try {
             sut.setNice(cmdId, -99);
             fail();
