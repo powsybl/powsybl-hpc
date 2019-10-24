@@ -10,7 +10,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -26,8 +25,9 @@ class TaskStore {
     // workingDir<--->Task of computation
     private Map<String, TaskCounter> workingDirTaskMap = new HashMap<>();
     private Map<String, Long> workingDirFirstJobMap = new HashMap<>();
-    private Map<CompletableFuture, String> futureWorkingDirMap = new HashMap<>();
-    private Map<String, CompletableFuture> workingDirFutureMap = new HashMap<>();
+    private Map<String, SlurmException> workingDirException = new HashMap<>();
+//    private Map<CompletableFuture, String> futureWorkingDirMap = new HashMap<>();
+//    private Map<String, CompletableFuture> workingDirFutureMap = new HashMap<>();
     private ReadWriteLock taskLock = new ReentrantReadWriteLock();
 
     private Map<Long, Long> jobDependencies = new HashMap<>();
@@ -37,40 +37,22 @@ class TaskStore {
     private ReadWriteLock batchIdsLock = new ReentrantReadWriteLock();
 
     private Set<Long> tracingIds = Collections.newSetFromMap(new ConcurrentHashMap<>());
+    private Set<UUID> cancellingCallable = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
-    TaskCounter getTaskCounter(String workingDir) {
+    Optional<TaskCounter> getTaskCounter(String workingDir) {
         taskLock.readLock().lock();
         try {
-            return workingDirTaskMap.get(workingDir);
+            return Optional.ofNullable(workingDirTaskMap.get(workingDir));
         } finally {
             taskLock.readLock().unlock();
         }
     }
 
-    TaskCounter getTaskCounter(CompletableFuture future) {
+    OptionalLong getFirstJobId(String workingDir) {
         taskLock.readLock().lock();
         try {
-            String workingDir = futureWorkingDirMap.get(future);
-            return workingDirTaskMap.get(workingDir);
-        } finally {
-            taskLock.readLock().unlock();
-        }
-    }
-
-    Long getFirstJobId(CompletableFuture future) {
-        taskLock.readLock().lock();
-        try {
-            String workingDir = futureWorkingDirMap.get(future);
-            return workingDirFirstJobMap.get(workingDir);
-        } finally {
-            taskLock.readLock().unlock();
-        }
-    }
-
-    CompletableFuture getCompletableFuture(String workingDirName) {
-        taskLock.readLock().lock();
-        try {
-            return workingDirFutureMap.get(workingDirName);
+            Long firstJobId = workingDirFirstJobMap.get(workingDir);
+            return firstJobId == null ? OptionalLong.empty() : OptionalLong.of(firstJobId);
         } finally {
             taskLock.readLock().unlock();
         }
@@ -99,16 +81,6 @@ class TaskStore {
             taskLock.writeLock().unlock();
         }
         trace(firstJobId);
-    }
-
-    void insert(String workingDirName, CompletableFuture future) {
-        taskLock.writeLock().lock();
-        try {
-            futureWorkingDirMap.put(future, workingDirName);
-            workingDirFutureMap.put(workingDirName, future);
-        } finally {
-            taskLock.writeLock().unlock();
-        }
     }
 
     void insertDependency(Long preJobId, Long jobId) {
@@ -162,34 +134,18 @@ class TaskStore {
         return new HashSet<>(workingDirTaskMap.values());
     }
 
-    void remove(CompletableFuture future) {
-        Long firstJobId = removeTaskMaps(future);
-        removeIds(firstJobId);
-    }
-
-    private Long removeTaskMaps(CompletableFuture future) {
-        String dir;
-        Long firstJob;
-        taskLock.readLock().lock();
-        try {
-            dir = futureWorkingDirMap.get(future);
-            firstJob = workingDirFirstJobMap.get(dir);
-        } finally {
-            taskLock.readLock().unlock();
-        }
+    void cleanTaskMaps(String dirName) {
         taskLock.writeLock().lock();
         try {
-            workingDirFirstJobMap.remove(dir);
-            workingDirTaskMap.remove(dir);
-            futureWorkingDirMap.remove(future);
-            workingDirFutureMap.remove(dir);
-            return firstJob;
+            workingDirFirstJobMap.remove(dirName);
+            workingDirTaskMap.remove(dirName);
+            workingDirException.remove(dirName);
         } finally {
             taskLock.writeLock().unlock();
         }
     }
 
-    private Set<Long> removeIds(Long firstId) {
+    Set<Long> cleanIdMaps(Long firstId) {
         Set<Long> toRemoveMasterIds = new HashSet<>();
         Set<Long> allIdsFromFirstId = new HashSet<>();
         toRemoveMasterIds.add(firstId);
@@ -197,6 +153,8 @@ class TaskStore {
         try {
             Long toRemove = firstId;
             while (toRemove != null) {
+                // common unzip batch is not untraced by "mydone_"
+                untracing(toRemove);
                 toRemoveMasterIds.add(toRemove);
                 toRemove = jobDependencies.remove(toRemove);
             }
@@ -218,40 +176,39 @@ class TaskStore {
         }
     }
 
-    Optional<CompletableFuture> getCompletableFutureByJobId(long id) {
+    Optional<String> getDirNameByJobId(long id) {
         // try with first id
-        Optional<CompletableFuture> completableFuture = getFutureByFirstId(id);
-        if (completableFuture.isPresent()) {
-            return completableFuture;
+        Optional<String> optDirName = getDirNameByFirstId(id);
+        if (optDirName.isPresent()) {
+            return optDirName;
         }
         // try with master id
-        completableFuture = getFutureByMasterId(id);
-        if (completableFuture.isPresent()) {
-            return completableFuture;
+        optDirName = getDirNameByMasterId(id);
+        if (optDirName.isPresent()) {
+            return optDirName;
         }
         // try with batch id
-        completableFuture = getFutureByBatchId(id);
-        return completableFuture;
+        optDirName = getDirNameByBatchId(id);
+        return optDirName;
     }
 
-    private Optional<CompletableFuture> getFutureByFirstId(long firstJobId) {
+    private Optional<String> getDirNameByFirstId(long firstJobId) {
         taskLock.readLock().lock();
         try {
             return workingDirFirstJobMap.entrySet()
                     .stream()
                     .filter(e -> e.getValue() == firstJobId)
                     .findFirst()
-                    .map(Map.Entry::getKey)
-                    .map(workingDirFutureMap::get);
+                    .map(Map.Entry::getKey);
         } finally {
             taskLock.readLock().unlock();
         }
     }
 
-    private Optional<CompletableFuture> getFutureByMasterId(long masterId) {
+    private Optional<String> getDirNameByMasterId(long masterId) {
         OptionalLong option = getFirstId(masterId);
         if (option.isPresent()) {
-            return getFutureByFirstId(option.getAsLong());
+            return getDirNameByFirstId(option.getAsLong());
         } else {
             return Optional.empty();
         }
@@ -259,8 +216,8 @@ class TaskStore {
 
     private OptionalLong getFirstId(long masterId) {
         // is already a first job id
-        Optional<CompletableFuture> completableFuture = getFutureByFirstId(masterId);
-        if (completableFuture.isPresent()) {
+        Optional<String> optDirName = getDirNameByFirstId(masterId);
+        if (optDirName.isPresent()) {
             return OptionalLong.of(masterId);
         }
         Map<Long, Long> inverted;
@@ -288,10 +245,10 @@ class TaskStore {
         return OptionalLong.of(tmp);
     }
 
-    private Optional<CompletableFuture> getFutureByBatchId(long batchId) {
+    private Optional<String> getDirNameByBatchId(long batchId) {
         OptionalLong optMasterId = getMasterId(batchId);
         if (optMasterId.isPresent()) {
-            return getFutureByMasterId(optMasterId.getAsLong());
+            return getDirNameByMasterId(optMasterId.getAsLong());
         }
         return Optional.empty();
     }
@@ -311,5 +268,64 @@ class TaskStore {
             return OptionalLong.of(max.get().getKey());
         }
         return OptionalLong.empty();
+    }
+
+    void insertException(String workingDirName, SlurmException e) {
+        taskLock.writeLock().lock();
+        try {
+            workingDirException.put(workingDirName, e);
+        } finally {
+            taskLock.writeLock().unlock();
+        }
+    }
+
+    Optional<SlurmException> getExceptionAndClean(String workingDirName) {
+        Optional<SlurmException> exception = Optional.ofNullable(workingDirException.get(workingDirName));
+        if (exception.isPresent()) {
+            workingDirException.remove(workingDirName);
+        }
+        return exception;
+    }
+
+    void cancelCallable(UUID callableId) {
+        LOGGER.debug("cancelCallable added");
+        cancellingCallable.add(callableId);
+    }
+
+    boolean isCancelledThenClean(UUID callableId) {
+        boolean contains = cancellingCallable.contains(callableId);
+        if (contains) {
+            cancellingCallable.remove(callableId);
+        }
+        LOGGER.debug("cancelCallable checked:" + contains);
+        return contains;
+    }
+
+    boolean isCleaned() {
+        return debug(workingDirException, "workingDirException")
+                && debug(workingDirFirstJobMap, "workingDirFirstJobMap")
+                && debug(workingDirTaskMap, "workingDirTaskMap")
+                && debug(jobDependencies, "jobDependencies")
+                && debug(batchIds, "batchIds")
+                && debug(tracingIds, "tracingIds")
+                && debug(cancellingCallable, "cancellingCallable");
+    }
+
+    private boolean debug(Collection collection, String name) {
+        if (collection.isEmpty()) {
+            return true;
+        }
+        System.out.println(name + " is not empty");
+        System.out.println(collection);
+        return false;
+    }
+
+    private boolean debug(Map map, String name) {
+        if (map.isEmpty()) {
+            return true;
+        }
+        System.out.println(name + " is not empty");
+        System.out.println(map);
+        return false;
     }
 }

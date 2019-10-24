@@ -6,16 +6,18 @@
  */
 package com.powsybl.computation.slurm;
 
+import com.powsybl.commons.PowsyblException;
 import com.powsybl.commons.config.ModuleConfig;
 import com.powsybl.commons.config.YamlModuleConfigRepository;
 import com.powsybl.computation.*;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
 import org.apache.commons.io.IOUtils;
-import org.junit.Assert;
 import org.junit.Before;
+import org.junit.FixMethodOrder;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.junit.runners.MethodSorters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,6 +30,8 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
@@ -41,12 +45,18 @@ import static org.junit.Assert.*;
  * @author Yichen TANG <yichen.tang at rte-france.com>
  */
 @Ignore
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class SlurmUnitTests {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SlurmUnitTests.class);
     private static final ExecutionEnvironment EMPTY_ENV = new ExecutionEnvironment(Collections.emptyMap(), "unit_test_", false);
 
+    private static final String QOS = "itesla"; //TODO the qos name should be configured
+    private static final String EXPECTED_ERROR_JOB_MSG = "An error job found";
+
     private ModuleConfig config;
+
+    private static final PowsyblException EXPECTED_EXCEPTION = new PowsyblException(EXPECTED_ERROR_JOB_MSG);
 
     @Before
     public void setup() {
@@ -73,52 +83,98 @@ public class SlurmUnitTests {
                 Paths.get(config.getStringProperty("local-dir")), 5, 1);
     }
 
-    private void baseTest(TestAttribute testAttribute, Supplier<AbstractExecutionHandler<Void>> supplier) throws InterruptedException {
+    private void baseTest(TestAttribute testAttribute, Supplier<AbstractExecutionHandler<Void>> supplier) {
         baseTest(testAttribute, supplier, ComputationParameters.empty());
     }
 
-    private void baseTest(TestAttribute testAttribute, Supplier<AbstractExecutionHandler<Void>> supplier, ComputationParameters parameters) throws InterruptedException {
+    private void baseTest(TestAttribute testAttribute, Supplier<AbstractExecutionHandler<Void>> supplier, ComputationParameters parameters) {
         SlurmComputationConfig slurmConfig = testAttribute.isShortScontrolTime() ? generateSlurmConfigWithShortScontrolTime(config) : generateSlurmConfig(config);
-        try (ComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
+        try (SlurmComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
             CompletableFuture<Void> completableFuture = computationManager.execute(EMPTY_ENV, supplier.get(), parameters);
-            if (testAttribute.getType() == Type.TO_CANCEL) {
-                if (testAttribute.getTestName().endsWith("CancelExternal")) {
-                    System.out.println("Go to cancel on server");
-                    completableFuture.join();
-                    System.out.println("Canceled:" + completableFuture.isCancelled());
-                } else {
-                    System.out.println("to cancel");
-                    Thread.sleep(5000);
-                    boolean cancel = completableFuture.cancel(true);
-                    System.out.println("Canceled:" + cancel);
-                    Assert.assertTrue(cancel);
-                }
-            } else if (testAttribute.getType() == Type.TO_WAIT) {
-                System.out.println("to wait finish");
-                if (testAttribute.getTestName().equals("deadline")) {
-                    try {
-                        completableFuture.join();
-                    } catch (CompletionException exception) {
-                        // ignored
-                    }
-                } else {
-                    completableFuture.join();
-                }
-            } else if (testAttribute.getType() == Type.TO_SHUTDOWN) {
+            if (testAttribute.getType() == Type.CANCEL) {
+                assertCancel(testAttribute, completableFuture);
+            } else if (testAttribute.getType() == Type.JOIN_THROW_EXCEPTION) {
+                assertThrowException(testAttribute, completableFuture);
+            } else if (testAttribute.getType() == Type.WAIT_JOIN_NORMAL) {
+                assertWaitJoinNormal(testAttribute, completableFuture);
+            } else if (testAttribute.getType() == Type.SHUTDOWN) {
                 System.out.println("Go shutdown JVM");
                 completableFuture.join();
             } else {
                 throw new AssertionError(testAttribute.getType() + " is not valid.");
             }
-        } catch (IOException e) {
+            assertTaskStoreCleaned(computationManager);
+        } catch (Exception e) {
+            System.out.println("slkhfslkjf");
             e.printStackTrace();
             fail();
         }
     }
 
+    private void assertTaskStoreCleaned(SlurmComputationManager computationManager) {
+        assertTrue(computationManager.getTaskStore().isCleaned());
+    }
+
+    private void assertCancel(TestAttribute testAttribute, CompletableFuture completableFuture) throws InterruptedException {
+        LOGGER.debug("Will be cancelled by junit test in 3 seconds...");
+        TimeUnit.SECONDS.sleep(3);
+        boolean cancel = completableFuture.cancel(true);
+        LOGGER.debug("Cancel invoked return:" + cancel);
+        try {
+            completableFuture.join();
+            fail();
+        } catch (CancellationException ce) {
+            assertTrue(completableFuture.isCancelled());
+        } catch (Exception e) {
+            fail();
+        }
+        System.out.println("----------Do not close SCM immediately in cancel test-----------");
+        TimeUnit.SECONDS.sleep(10);
+    }
+
+    private void assertThrowException(TestAttribute testAttribute, CompletableFuture completableFuture) {
+        if (testAttribute.getTestName().endsWith("CancelExternal")) {
+            System.out.println("Go to cancel on server...");
+        } else {
+            System.out.println("Wait finish...");
+        }
+        try {
+            completableFuture.join();
+            fail();
+        } catch (CompletionException e) {
+            if (testAttribute.getTestName().endsWith("CancelExternal")) {
+                assertTrue(e.getCause().getMessage().contains("is CANCELLED"));
+                // it is not cancelled by submitter
+                assertFalse(completableFuture.isCancelled());
+            } else if (testAttribute.getTestName().equals("missing_qos")) {
+                assertTrue(e.getCause() instanceof SlurmException);
+                assertTrue(e.getCause().getMessage().contains("Invalid qos specification"));
+                assertTrue(e.getCause().getCause() instanceof SlurmCmdNonZeroException);
+            } else if (testAttribute.getTestName().contains("deadline")) {
+                assertTrue(e.getCause() instanceof SlurmException);
+            } else if (testAttribute.getTestName().contains("invalid")) {
+                assertSame(EXPECTED_EXCEPTION, e.getCause());
+            } else {
+                System.out.println(testAttribute.getTestName() + " normal tests");
+                fail();
+            }
+        } catch (Exception e) {
+            fail();
+        }
+    }
+
+    private void assertWaitJoinNormal(TestAttribute testAttribute, CompletableFuture completableFuture) {
+        try {
+            completableFuture.join();
+        } catch (Exception e) {
+            fail();
+        }
+    }
+
+    // ----------------WAIT_JOIN_NORMAL-------------
     @Test
-    public void testSimpleCmdWithCount() throws InterruptedException {
-        TestAttribute testAttribute = new TestAttribute(Type.TO_WAIT, "simpleCmdWithCount");
+    public void testSimpleCmdWithCount() {
+        TestAttribute testAttribute = new TestAttribute(Type.WAIT_JOIN_NORMAL, "simpleCmdWithCount");
         Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
             @Override
             public List<CommandExecution> before(Path path) {
@@ -127,11 +183,6 @@ public class SlurmUnitTests {
 
             @Override
             public Void after(Path workingDir, ExecutionReport report) {
-                try {
-                    return super.after(workingDir, report);
-                } catch (IOException e) {
-                    fail();
-                }
                 return null;
             }
 
@@ -143,8 +194,8 @@ public class SlurmUnitTests {
     }
 
     @Test
-    public void testLongTask() throws InterruptedException {
-        TestAttribute testAttribute = new TestAttribute(Type.TO_WAIT, "longTask");
+    public void testLongTask() {
+        TestAttribute testAttribute = new TestAttribute(Type.WAIT_JOIN_NORMAL, "longTask");
         Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
@@ -155,8 +206,8 @@ public class SlurmUnitTests {
     }
 
     @Test
-    public void testMyEchoSimpleCmd() throws InterruptedException {
-        TestAttribute testAttribute = new TestAttribute(Type.TO_WAIT, "myEchoSimpleCmdWithUnzipZip");
+    public void testMyEchoSimpleCmd() {
+        TestAttribute testAttribute = new TestAttribute(Type.WAIT_JOIN_NORMAL, "myEchoSimpleCmdWithUnzipZip");
         Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
@@ -171,13 +222,12 @@ public class SlurmUnitTests {
                 try {
                     super.after(workingDir, report);
                 } catch (IOException e) {
-                    e.printStackTrace();
                     fail();
                 }
                 Path out2 = workingDir.resolve("out2.gz");
                 System.out.println("---------" + testAttribute.testName + "----------");
                 System.out.println("out2.gz should exists:" + Files.exists(out2));
-                Assert.assertTrue(Files.exists(out2));
+                assertTrue(Files.exists(out2));
                 System.out.println("------------------------------------");
                 return null;
             }
@@ -198,8 +248,8 @@ public class SlurmUnitTests {
     }
 
     @Test
-    public void testGrougCmd() throws InterruptedException {
-        TestAttribute testAttribute = new TestAttribute(Type.TO_WAIT, "groupCmd");
+    public void testGroupCmd() {
+        TestAttribute testAttribute = new TestAttribute(Type.WAIT_JOIN_NORMAL, "groupCmd");
         Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
@@ -210,8 +260,8 @@ public class SlurmUnitTests {
     }
 
     @Test
-    public void testTwoSimpleCmd() throws InterruptedException {
-        TestAttribute testAttribute = new TestAttribute(Type.TO_WAIT, "twoSimpleCmd");
+    public void testTwoSimpleCmd() {
+        TestAttribute testAttribute = new TestAttribute(Type.WAIT_JOIN_NORMAL, "twoSimpleCmd");
         Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
@@ -222,110 +272,8 @@ public class SlurmUnitTests {
     }
 
     @Test
-    public void testInvalidProgram() throws InterruptedException {
-        TestAttribute testAttribute = new TestAttribute(Type.TO_WAIT, "invalidProgram");
-        Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
-            @Override
-            public List<CommandExecution> before(Path workingDir) {
-                return invalidProgram();
-            }
-
-            @Override
-            public Void after(Path workingDir, ExecutionReport report) {
-                assertErrors(testAttribute.testName, report);
-                return null;
-            }
-        };
-        baseTest(testAttribute, supplier);
-    }
-
-    @Test
-    public void testInvalidProgramInGroup() throws InterruptedException {
-        TestAttribute testAttribute = new TestAttribute(Type.TO_WAIT, "invalidProgramInGroup");
-        Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
-            @Override
-            public List<CommandExecution> before(Path workingDir) {
-                return invalidProgramInGroup();
-            }
-
-            @Override
-            public Void after(Path workingDir, ExecutionReport report) {
-                assertErrors(testAttribute.testName, report);
-                return null;
-            }
-        };
-        baseTest(testAttribute, supplier);
-    }
-
-    @Test
-    public void testInvalidProgramInList() throws InterruptedException {
-        TestAttribute testAttribute = new TestAttribute(Type.TO_WAIT, "invalidProgramInList");
-        Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
-            @Override
-            public List<CommandExecution> before(Path workingDir) {
-                return invalidProgramInList();
-            }
-
-            @Override
-            public Void after(Path workingDir, ExecutionReport report) {
-                assertErrors(testAttribute.testName, report);
-                return null;
-            }
-        };
-        baseTest(testAttribute, supplier);
-    }
-
-    @Test
-    public void testLongProgramToCancel() throws InterruptedException {
-        TestAttribute testAttribute = new TestAttribute(Type.TO_CANCEL, "longProgramToCancel");
-        Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
-            @Override
-            public List<CommandExecution> before(Path workingDir) {
-                return longProgramToCancel();
-            }
-        };
-        baseTest(testAttribute, supplier);
-    }
-
-    @Test
-    public void testLongListProgsToCancel() throws InterruptedException {
-        TestAttribute testAttribute = new TestAttribute(Type.TO_CANCEL, "longListProgsToCancel");
-        Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
-            @Override
-            public List<CommandExecution> before(Path workingDir) {
-                return longListProgsToCancel();
-            }
-        };
-        baseTest(testAttribute, supplier);
-    }
-
-    @Test
-    public void testMixedProgsToCancel() throws InterruptedException {
-        TestAttribute testAttribute = new TestAttribute(Type.TO_CANCEL, "mixedProgsToCancel");
-        Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
-            @Override
-            public List<CommandExecution> before(Path workingDir) {
-                return mixedProgsToCancel();
-            }
-        };
-        baseTest(testAttribute, supplier);
-    }
-
-    @Test
-    public void testLongProgramToCancelExternal() throws InterruptedException {
-        TestAttribute testAttribute = new TestAttribute(Type.TO_CANCEL, "longProgramToCancelExternal", true);
-        Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
-            @Override
-            public List<CommandExecution> before(Path workingDir) {
-                return longProgram(200);
-            }
-        };
-        baseTest(testAttribute, supplier);
-    }
-
-    @Test
-    public void testFilesReadBytes() throws InterruptedException {
-        TestAttribute testAttribute = new TestAttribute(Type.TO_WAIT, "filesReadBytes");
+    public void testFilesReadBytes() {
+        TestAttribute testAttribute = new TestAttribute(Type.WAIT_JOIN_NORMAL, "filesReadBytes");
         Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
 
             static final int COUNT = 10;
@@ -344,13 +292,12 @@ public class SlurmUnitTests {
             public Void after(Path workingDir, ExecutionReport report) throws IOException {
                 IntStream.range(0, COUNT).forEach(i -> {
                     try {
-                        System.out.println("i : " + i);
                         byte[] bytes = Files.readAllBytes(workingDir.resolve(i + ".txt"));
                         byte[] bytes1 = Files.readAllBytes(workingDir.resolve("echo_" + i + ".out"));
                         byte[] bytes2 = Files.readAllBytes(workingDir.resolve("echo_" + i + ".err"));
-                        System.out.println(bytes.length);
-                        System.out.println(bytes1.length);
-                        System.out.println(bytes2.length);
+                        assertEquals(5, bytes.length);
+                        assertEquals(0, bytes1.length);
+                        assertEquals(0, bytes2.length);
                     } catch (IOException e) {
                         fail();
                     }
@@ -362,8 +309,8 @@ public class SlurmUnitTests {
     }
 
     @Test
-    public void testMd5sumLargeFile() throws InterruptedException {
-        TestAttribute testAttribute = new TestAttribute(Type.TO_WAIT, "md5sumLargeFile");
+    public void testzMd5sumLargeFile() {
+        TestAttribute testAttribute = new TestAttribute(Type.WAIT_JOIN_NORMAL, "md5sumLargeFile");
         Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
@@ -378,10 +325,140 @@ public class SlurmUnitTests {
             public Void after(Path workingDir, ExecutionReport report) throws IOException {
                 List<String> actual2GMd5 = Files.readAllLines(workingDir.resolve("c1_0.out"));
                 List<String> actual4GMd5 = Files.readAllLines(workingDir.resolve("c2_0.out"));
-                List<String> expected2GMd5 = Collections.singletonList("1ea9851f9b83e9bd50b8d7577b23e14b  2GFile");
-                List<String> expected4GMd5 = Collections.singletonList("bbe2b516d690f337d8f48fc03db99c9a  4GFile");
-                assertEquals(expected2GMd5, actual2GMd5);
-                assertEquals(expected4GMd5, actual4GMd5);
+                String expected2GMd5 = "1ea9851f9b83e9bd50b8d7577b23e14b  2GFile";
+                String expected4GMd5 = "bbe2b516d690f337d8f48fc03db99c9a  4GFile";
+                if (!Objects.equals(actual2GMd5.get(0), expected2GMd5)) {
+                    System.out.println("  actual:" + actual2GMd5.get(0));
+                    System.out.println("expected:" + expected2GMd5);
+                    fail();
+                }
+                if (!Objects.equals(actual4GMd5.get(0), expected4GMd5)) {
+                    System.out.println("  actual:" + actual4GMd5.get(0));
+                    System.out.println("expected:" + expected4GMd5);
+                    fail();
+                }
+                return null;
+            }
+        };
+        baseTest(testAttribute, supplier);
+    }
+
+    // -----------------------JOIN_THROW_EXCEPTION-----------------
+    @Test
+    public void testInvalidProgram() {
+        TestAttribute testAttribute = new TestAttribute(Type.JOIN_THROW_EXCEPTION, "invalidProgram");
+        Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
+            @Override
+            public List<CommandExecution> before(Path workingDir) {
+                return invalidProgram();
+            }
+
+            @Override
+            public Void after(Path workingDir, ExecutionReport report) {
+                assertErrorsThenThrowPowsyblException(testAttribute.testName, report);
+                return null;
+            }
+        };
+        baseTest(testAttribute, supplier);
+    }
+
+    @Test
+    public void testInvalidProgramInGroup() {
+        TestAttribute testAttribute = new TestAttribute(Type.JOIN_THROW_EXCEPTION, "invalidProgramInGroup");
+        Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
+            @Override
+            public List<CommandExecution> before(Path workingDir) {
+                return invalidProgramInGroup();
+            }
+
+            @Override
+            public Void after(Path workingDir, ExecutionReport report) {
+                assertErrorsThenThrowPowsyblException(testAttribute.testName, report);
+                return null;
+            }
+        };
+        baseTest(testAttribute, supplier);
+    }
+
+    @Test
+    public void testInvalidProgramInList() {
+        TestAttribute testAttribute = new TestAttribute(Type.JOIN_THROW_EXCEPTION, "invalidProgramInList");
+        Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
+            @Override
+            public List<CommandExecution> before(Path workingDir) {
+                return invalidProgramInList();
+            }
+
+            @Override
+            public Void after(Path workingDir, ExecutionReport report) {
+                assertErrorsThenThrowPowsyblException(testAttribute.testName, report);
+                return null;
+            }
+        };
+        baseTest(testAttribute, supplier);
+    }
+
+    @Test
+    public void testzzLongProgramToCancelExternal() {
+        TestAttribute testAttribute = new TestAttribute(Type.JOIN_THROW_EXCEPTION, "longProgramToCancelExternal", true);
+        Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
+            @Override
+            public List<CommandExecution> before(Path workingDir) {
+                return longProgram(200);
+            }
+        };
+        baseTest(testAttribute, supplier);
+    }
+
+    // -------------------CANCEL-------------
+    @Test
+    public void testALongProgramToCancel() {
+        TestAttribute testAttribute = new TestAttribute(Type.CANCEL, "longProgramToCancel");
+        Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
+            @Override
+            public List<CommandExecution> before(Path workingDir) {
+                return longProgramToCancel();
+            }
+
+            @Override
+            public Void after(Path workingDir, ExecutionReport report) throws IOException {
+                fail();
+                return null;
+            }
+        };
+        baseTest(testAttribute, supplier);
+    }
+
+    @Test
+    public void testALongListProgsToCancel() {
+        TestAttribute testAttribute = new TestAttribute(Type.CANCEL, "longListProgsToCancel");
+        Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
+            @Override
+            public List<CommandExecution> before(Path workingDir) {
+                return longListProgsToCancel();
+            }
+
+            @Override
+            public Void after(Path workingDir, ExecutionReport report) throws IOException {
+                fail();
+                return null;
+            }
+        };
+        baseTest(testAttribute, supplier);
+    }
+
+    @Test
+    public void testAMixedProgsToCancel() {
+        TestAttribute testAttribute = new TestAttribute(Type.CANCEL, "mixedProgsToCancel");
+        Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
+            @Override
+            public List<CommandExecution> before(Path workingDir) {
+                return mixedProgsToCancel();
+            }
+
+            @Override
+            public Void after(Path workingDir, ExecutionReport report) throws IOException {
+                fail();
                 return null;
             }
         };
@@ -408,26 +485,18 @@ public class SlurmUnitTests {
     }
 
     @Test
-    public void makeSlurmBusy() throws InterruptedException {
-        TestAttribute testAttribute = new TestAttribute(Type.TO_WAIT, "deadline");
+    public void testyDeadline() {
+        TestAttribute testAttribute = new TestAttribute(Type.JOIN_THROW_EXCEPTION, "deadline", true);
         Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
-                return CommandExecutionsTestFactory.makeSlurmBusy();
+                return CommandExecutionsTestFactory.longProgram(60);
             }
-        };
-        baseTest(testAttribute, supplier);
-    }
 
-    // 1. Make slurm busy if necessary
-    // 2. Wait 1 mins
-    @Test
-    public void testDeadline() throws InterruptedException {
-        TestAttribute testAttribute = new TestAttribute(Type.TO_WAIT, "deadline", true);
-        Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
             @Override
-            public List<CommandExecution> before(Path workingDir) {
-                return CommandExecutionsTestFactory.longProgram(10);
+            public Void after(Path workingDir, ExecutionReport report) throws IOException {
+                // do nothing
+                return null;
             }
         };
         ComputationParametersBuilder builder = new ComputationParametersBuilder();
@@ -438,26 +507,32 @@ public class SlurmUnitTests {
 
     // sacctmgr show qos
     @Test
-    public void testParameters() throws InterruptedException {
-        String qos = "itesla"; //TODO the qos name should be configured
-        testParameters(qos);
+    public void testParameters() {
+        testParameters(QOS);
     }
 
     @Test
     public void testInvalidQos() {
-        try {
-            testParameters("THIS_QOS_SHOULD_NOT_EXIST_IN_SLURM");
-        } catch (Exception e) {
-            assertTrue(e.getMessage().contains("Invalid qos specification"));
-        }
+        testParameters("THIS_QOS_SHOULD_NOT_EXIST_IN_SLURM");
     }
 
-    private void testParameters(String qos) throws InterruptedException {
-        TestAttribute testAttribute = new TestAttribute(Type.TO_WAIT, "qos");
+    private void testParameters(String qos) {
+        TestAttribute testAttribute;
+        if (Objects.equals(qos, QOS)) {
+            testAttribute = new TestAttribute(Type.WAIT_JOIN_NORMAL, "qos");
+        } else {
+            testAttribute = new TestAttribute(Type.JOIN_THROW_EXCEPTION, "missing_qos");
+        }
         Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
                 return CommandExecutionsTestFactory.longProgram(10);
+            }
+
+            @Override
+            public Void after(Path workingDir, ExecutionReport report) {
+                // do not throw exception here to test slurm exception
+                return null;
             }
         };
         ComputationParameters parameters = new ComputationParametersBuilder().setTimeout("longProgram", 60).build();
@@ -466,11 +541,12 @@ public class SlurmUnitTests {
         baseTest(testAttribute, supplier, parameters);
     }
 
-    private static void assertErrors(String testName, ExecutionReport report) {
+    private void assertErrorsThenThrowPowsyblException(String testName, ExecutionReport report) {
         System.out.println("---------" + testName + "----------");
         System.out.println("Errors should exists:" + !report.getErrors().isEmpty());
-        Assert.assertFalse(report.getErrors().isEmpty());
+        assertFalse(report.getErrors().isEmpty());
         System.out.println("------------------------------------");
+        throw EXPECTED_EXCEPTION;
     }
 
     private static class TestAttribute {
@@ -502,7 +578,7 @@ public class SlurmUnitTests {
         }
     }
 
-    private static List<CommandExecution> twoSimpleCmd() {
+    static List<CommandExecution> twoSimpleCmd() {
         Command command1 = new SimpleCommandBuilder()
                 .id("simpleCmdId")
                 .program("sleep")
@@ -617,8 +693,9 @@ public class SlurmUnitTests {
     }
 
     private enum Type {
-        TO_WAIT,
-        TO_CANCEL,
-        TO_SHUTDOWN
+        WAIT_JOIN_NORMAL,
+        JOIN_THROW_EXCEPTION,
+        CANCEL,
+        SHUTDOWN
     }
 }

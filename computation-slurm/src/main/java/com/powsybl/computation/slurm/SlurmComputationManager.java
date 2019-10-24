@@ -201,79 +201,91 @@ public class SlurmComputationManager implements ComputationManager {
         requireNonNull(environment);
         requireNonNull(handler);
 
-        Mycf<R> f = new Mycf<>(this);
-        executorService.submit(() -> {
-            f.setThread(Thread.currentThread());
-            try {
-                remoteExecute(environment, handler, parameters, f);
-            } catch (Exception e) {
-                LOGGER.error(e.toString(), e);
-                f.completeExceptionally(e);
-            }
-            taskStore.remove(f);
-        });
-        return f;
+        UUID callableId = UUID.randomUUID();
+        Callable<R> callable = () -> doExecute(callableId, environment, handler, parameters);
+        return new SlurmCompletableFutureTask<>(callable, callableId, taskStore).runAsync(executorService);
     }
 
-    static class Mycf<R> extends CompletableFuture<R> {
-
-        Thread thread;
-        SlurmComputationManager mgr;
-        volatile boolean cancel = false;
-
-        Mycf(SlurmComputationManager manager) {
-            mgr = manager;
-        }
-
-        @Override
-        public boolean isCancelled() {
-            return cancel;
-        }
-
-        @Override
-        public boolean cancel(boolean mayInterruptIfRunning) {
-            cancel = true;
-
-            if (this.isDone() || this.isCompletedExceptionally()) {
-                LOGGER.debug("Can not cancel");
-                return false;
+    private <R> R doExecute(UUID callableId, ExecutionEnvironment environment, ExecutionHandler<R> handler, ComputationParameters parameters) throws IOException, InterruptedException {
+        Path remoteWorkingDir;
+        try (WorkingDirectory remoteWorkingDirectory = new RemoteWorkingDir(baseDir, environment.getWorkingDirPrefix(), environment.isDebug())) {
+            remoteWorkingDir = remoteWorkingDirectory.toPath();
+            String dirName = remoteWorkingDir.getFileName().toString();
+            if (taskStore.isCancelledThenClean(callableId)) {
+                LOGGER.debug("cancelled before submit");
+                throw new InterruptedException("cancelled before submit");
             }
+            List<CommandExecution> commandExecutions = handler.before(remoteWorkingDir);
+            SlurmExecutionReport report = null;
+            Map<Long, Command> jobIdCommandMap = null;
+            try {
+                int sum = commandExecutions.stream().mapToInt(CommandExecution::getExecutionCount).sum();
+                TaskCounter taskCounter = new TaskCounter(sum);
 
-            while (thread == null) {
-                try {
-                    LOGGER.debug("Waiting submittedFuture to be set...");
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    LOGGER.warn(e.toString(), e);
-                    Thread.currentThread().interrupt();
+                jobIdCommandMap = generateSbatchAndSubmit(callableId, commandExecutions, parameters, remoteWorkingDir, environment, taskCounter);
+                if (taskStore.isCancelledThenClean(callableId)) {
+                    LOGGER.debug("cancelled after submitted");
+                    throw new InterruptedException("cancelled after submitted");
                 }
+                LOGGER.debug("Waiting finish...");
+                // waiting task finish
+                taskCounter.await();
+
+                report = generateReport(jobIdCommandMap, remoteWorkingDir);
+
+            } catch (SlurmException e) {
+                taskStore.insertException(dirName, e);
+                cancel(dirName);
+                LOGGER.warn("slurm exception: {}", e.getCause().getMessage());
+                LOGGER.debug("not throw exception and after() would be executed");
+            } catch (InterruptedException e) {
+                LOGGER.debug("exit point 1: Interrupted " + e.getMessage());
+                cancel(dirName);
+                taskStore.cleanTaskMaps(dirName);
+                taskStore.isCancelledThenClean(callableId); // to clean the Set<> after interrupted during await
+                throw e;
             }
-            LOGGER.debug("trying cancel");
-            // countDown submitted task to avoid interruptedException
-            TaskCounter taskCounter = mgr.taskStore.getTaskCounter(this);
-            taskCounter.cancel();
 
-            //No thread.interrupt() here:
-            // it makes no sense to both interrupt the thread and cancel the taskCounter,
-            // it's one or the other.
-            // The interrupt will throw InterruptedExceptions or ClosedByInterruptException,
-            // in subsequent method calls such as Files.read in executionHandler.after.
-            LOGGER.debug("Canceled thread");
-
-            Long jobId = mgr.taskStore.getFirstJobId(this);
-            if (jobId == null) {
-                LOGGER.warn("job not be submitted yet");
-                return true;
+            try {
+                R result = handler.after(remoteWorkingDir, report);
+                Optional<SlurmException> optException = taskStore.getExceptionAndClean(dirName);
+                if (optException.isPresent()) {
+                    // TODO suppress exceptions(throw by after() and slurm exception: deadline) ???
+                    LOGGER.debug("exit point 2: Error by slurm --> re-catch by exit point 4");
+                    taskStore.cleanTaskMaps(dirName);
+                    throw optException.get();
+                }
+                taskStore.getFirstJobId(dirName).ifPresent(taskStore::cleanIdMaps);
+                taskStore.cleanTaskMaps(dirName);
+                LOGGER.debug("exit point 3: Normal");
+                return result;
+            } catch (Exception e) {
+                LOGGER.debug("exit point 4: other exception, ex: after throw powsybl exception");
+                LOGGER.warn("exception:", e);
+                taskStore.getFirstJobId(dirName).ifPresent(taskStore::cleanIdMaps);
+                taskStore.cleanTaskMaps(dirName);
+                throw e;
             }
-
-            mgr.scancelCascading(jobId);
-            mgr.taskStore.remove(this);
-            return true;
         }
+    }
 
-        void setThread(Thread t) {
-            this.thread = t;
-        }
+    /**
+     * Used in ScontrolMonitor where only job id is available.
+     * @param id The jobId to cancel and with all others correspond jobs submitted by the same handler.
+     */
+    void cancel(Long id, String cause) {
+        taskStore.getDirNameByJobId(id).ifPresent(dirName -> {
+            taskStore.insertException(dirName, new SlurmException(cause));
+            cancel(dirName);
+        });
+    }
+
+    void cancel(String workingDirName) {
+        taskStore.getTaskCounter(workingDirName).ifPresent(TaskCounter::cancel);
+        taskStore.getFirstJobId(workingDirName).ifPresent(firstId -> {
+            scancelCascading(firstId);
+            taskStore.cleanIdMaps(firstId);
+        });
     }
 
     private void scancelCascading(Long jobId) {
@@ -295,48 +307,6 @@ public class SlurmComputationManager implements ComputationManager {
         LOGGER.debug("scancel {}", jobId);
         taskStore.untracing(jobId);
         commandRunner.execute("scancel " + jobId);
-    }
-
-    private <R> void remoteExecute(ExecutionEnvironment environment, ExecutionHandler<R> handler, ComputationParameters parameters, CompletableFuture<R> f) {
-        Path remoteWorkingDir;
-        try (WorkingDirectory remoteWorkingDirectory = new RemoteWorkingDir(baseDir, environment.getWorkingDirPrefix(), environment.isDebug())) {
-            remoteWorkingDir = remoteWorkingDirectory.toPath();
-
-            taskStore.insert(remoteWorkingDir.getFileName().toString(), f);
-            List<CommandExecution> commandExecutions = handler.before(remoteWorkingDir);
-
-            int sum = commandExecutions.stream().mapToInt(CommandExecution::getExecutionCount).sum();
-            TaskCounter taskCounter = new TaskCounter(sum);
-
-            Map<Long, Command> jobIdCommandMap;
-            jobIdCommandMap = generateSbatchAndSubmit(commandExecutions, parameters, remoteWorkingDir, environment, taskCounter, f);
-
-            // waiting task finish
-            try {
-                taskCounter.await();
-            } catch (InterruptedException e) {
-                LOGGER.warn(e.toString(), e);
-                // Not sure we should restore the interrupt here...
-                // it will throw InterruptedException or ClosedByInterruptException,
-                // in subsequent method calls such as Files.read in executionHandler.after.
-
-                // We should either return right now, or let the following methods handle correctly
-                // the result of the interrupted task without being bothered by unexpected exceptions.
-                Thread.currentThread().interrupt();
-            }
-
-            if (closeStarted) {
-                return;
-            }
-
-            SlurmExecutionReport report = generateReport(jobIdCommandMap, remoteWorkingDir);
-
-            R result = handler.after(remoteWorkingDir, report);
-            f.complete(result);
-        } catch (IOException e) {
-            LOGGER.error(e.toString(), e);
-            f.completeExceptionally(e);
-        }
     }
 
     private SlurmExecutionReport generateReport(Map<Long, Command> jobIdCommandMap, Path workingDir) {
@@ -367,9 +337,9 @@ public class SlurmComputationManager implements ComputationManager {
         return new SlurmExecutionReport(errors, workingDir);
     }
 
-    private Map<Long, Command> generateSbatchAndSubmit(List<CommandExecution> commandExecutions, ComputationParameters parameters, Path workingDir,
-                                                       ExecutionEnvironment environment, TaskCounter taskCounter, CompletableFuture<?> future)
-            throws IOException {
+    private Map<Long, Command> generateSbatchAndSubmit(UUID callableId, List<CommandExecution> commandExecutions, ComputationParameters parameters, Path workingDir,
+                                                       ExecutionEnvironment environment, TaskCounter taskCounter)
+            throws IOException, InterruptedException {
         Map<Long, Command> jobIdCommandMap = new HashMap<>();
         Long firstJobId = null; // the first jobId submitted of List<CommandExecution>
         List<Long> preJobIds = new ArrayList<>();
@@ -378,11 +348,15 @@ public class SlurmComputationManager implements ComputationManager {
 
         outerSendingLoop:
         for (int commandIdx = 0; commandIdx < commandExecutions.size(); commandIdx++) {
+            if (taskStore.isCancelledThenClean(callableId)) {
+                LOGGER.debug("cancelled during submitting");
+                throw new InterruptedException("cancelled during submitting");
+            }
             CommandExecution commandExecution = commandExecutions.get(commandIdx);
             Command command = commandExecution.getCommand();
             SbatchCmd cmd;
             if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Executing {} command {} in working directory {}", command.getType(), command, workingDir);
+                LOGGER.debug("Submitting {} command {} in working directory {}", command.getType(), command, workingDir);
             }
 
             // a master job to copy NonExecutionDependent and PreProcess needed input files
@@ -392,26 +366,25 @@ public class SlurmComputationManager implements ComputationManager {
                     LOGGER.info(CLOSE_START_NO_MORE_SEND_INFO);
                     break outerSendingLoop;
                 }
+                if (taskStore.isCancelledThenClean(callableId)) {
+                    LOGGER.debug("cancelled during submitting");
+                    throw new InterruptedException("cancelled during submitting");
+                }
                 SbatchScriptGenerator sbatchScriptGenerator = new SbatchScriptGenerator(flagDir);
                 List<String> shell = sbatchScriptGenerator.unzipCommonInputFiles(command);
                 copyShellToRemoteWorkingDir(shell, UNZIP_INPUTS_COMMAND_ID + "_" + commandIdx, workingDir);
                 cmd = buildSbatchCmd(workingDir, UNZIP_INPUTS_COMMAND_ID, commandIdx, preJobIds, parameters);
-                if (isSendAllowed(future)) {
-                    long jobId = launchSbatch(cmd);
-                    if (firstJobId == null) {
-                        firstJobId = jobId;
-                        taskStore.insert(workingDir.getFileName().toString(), taskCounter, firstJobId);
-                        LOGGER.debug("First jobid : {}", firstJobId);
-                    }
-                    if (preMasterJobId != null) {
-                        taskStore.insertDependency(preMasterJobId, jobId);
-                    }
-                    preJobIds = Collections.singletonList(jobId);
-                    preMasterJobId = jobId;
-                } else {
-                    logNotSendReason(future);
-                    break;
+                long jobId = launchSbatch(cmd);
+                if (firstJobId == null) {
+                    firstJobId = jobId;
+                    taskStore.insert(workingDir.getFileName().toString(), taskCounter, firstJobId);
+                    LOGGER.debug("First jobid : {}", firstJobId);
                 }
+                if (preMasterJobId != null) {
+                    taskStore.insertDependency(preMasterJobId, jobId);
+                }
+                preJobIds = Collections.singletonList(jobId);
+                preMasterJobId = jobId;
             }
 
             // no job array --> commandId_index.batch
@@ -421,26 +394,24 @@ public class SlurmComputationManager implements ComputationManager {
                     LOGGER.info(CLOSE_START_NO_MORE_SEND_INFO);
                     break outerSendingLoop;
                 }
+                if (taskStore.isCancelledThenClean(callableId)) {
+                    throw new InterruptedException("cancelled during submitting");
+                }
                 prepareBatch(command, executionIndex, environment, commandExecution, workingDir);
                 cmd = buildSbatchCmd(workingDir, command.getId(), executionIndex, preJobIds, parameters);
-                if (isSendAllowed(future)) {
-                    long jobId = launchSbatch(cmd);
-                    if (firstJobId == null) {
-                        firstJobId = jobId;
-                        taskStore.insert(workingDir.getFileName().toString(), taskCounter, firstJobId);
-                        LOGGER.debug("First jobid : {}", firstJobId);
-                    }
-                    if (executionIndex == 0) {
-                        masterJobId = jobId;
-                        if (preMasterJobId != null) {
-                            taskStore.insertDependency(preMasterJobId, masterJobId);
-                        }
-                    }
-                    taskStore.insertBatchIds(masterJobId, jobId);
-                } else {
-                    logNotSendReason(future);
-                    break;
+                long jobId = launchSbatch(cmd);
+                if (firstJobId == null) {
+                    firstJobId = jobId;
+                    taskStore.insert(workingDir.getFileName().toString(), taskCounter, firstJobId);
+                    LOGGER.debug("First jobid : {}", firstJobId);
                 }
+                if (executionIndex == 0) {
+                    masterJobId = jobId;
+                    if (preMasterJobId != null) {
+                        taskStore.insertDependency(preMasterJobId, masterJobId);
+                    }
+                }
+                taskStore.insertBatchIds(masterJobId, jobId);
             }
 
             jobIdCommandMap.put(masterJobId, command);
@@ -453,18 +424,16 @@ public class SlurmComputationManager implements ComputationManager {
         return jobIdCommandMap;
     }
 
-    private boolean isSendAllowed(CompletableFuture future) {
-        return !future.isCancelled() && !closeStarted;
-    }
-
-    private void logNotSendReason(CompletableFuture future) {
-        if (closeStarted) {
-            LOGGER.info(CLOSE_START_NO_MORE_SEND_INFO);
-        }
-        if (future.isCancelled()) {
-            LOGGER.warn("Future cancelled. {}", future);
-        }
-    }
+//    private boolean isSendAllowed(String dirName) {
+//        return !taskStore.isCancellingAndClean(dirName) && !closeStarted;
+//    }
+//
+//    private void logNotSendReason(String dirName) {
+//        if (closeStarted) {
+//            LOGGER.info(CLOSE_START_NO_MORE_SEND_INFO);
+//        }
+//        LOGGER.warn("Future cancelled. {}", dirName);
+//    }
 
     private void prepareBatch(Command command, int executionIndex, ExecutionEnvironment environment, CommandExecution commandExecution, Path remoteWorkingDir) throws IOException {
         // prepare sbatch script from command
@@ -626,7 +595,7 @@ public class SlurmComputationManager implements ComputationManager {
             closeStarted = true;
             if (!isClosed) {
                 LOGGER.info("Shutdown slurm...");
-                LOGGER.info("Cancel current subbmited jobs");
+                LOGGER.info("Cancel current submitted jobs");
                 Set<Long> tracingIds = new HashSet<>(getTaskStore().getTracingIds());
                 tracingIds.forEach(this::scancel);
                 // count down task to avoid InterruptedException

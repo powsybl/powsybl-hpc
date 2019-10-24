@@ -8,11 +8,7 @@ package com.powsybl.computation.slurm;
 
 import org.junit.Test;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
+import java.util.*;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
@@ -21,6 +17,8 @@ import static org.mockito.Mockito.mock;
  * @author Yichen Tang <yichen.tang at rte-france.com>
  */
 public class TaskStoreTest {
+
+    private static final String DIR_NAME = "a_working_dir";
 
     @Test
     public void testParallelInserts() {
@@ -56,12 +54,10 @@ public class TaskStoreTest {
     // 3←4,5
     // ↑
     // 6
-    static TaskStore generateTaskStore(CompletableFuture future, boolean checkTracing) {
-        String workingDir = "a_working_dir";
+    static TaskStore generateTaskStore(String workingDir, boolean checkTracing) {
         TaskCounter counter = mock(TaskCounter.class);
 
         TaskStore taskStore = new TaskStore();
-        taskStore.insert(workingDir, future);
         taskStore.insert(workingDir, counter, 1L);
         taskStore.insertBatchIds(1L, 1L);
         if (checkTracing) {
@@ -91,7 +87,7 @@ public class TaskStoreTest {
 
     @Test
     public void test() {
-        TaskStore taskStore = generateTaskStore(mock(CompletableFuture.class), false);
+        TaskStore taskStore = generateTaskStore(DIR_NAME, false);
         assertEquals(Arrays.asList(3L, 6L), taskStore.getDependentJobs(1L));
         assertEquals(Collections.singletonList(6L), taskStore.getDependentJobs(3L));
         assertTrue(taskStore.getDependentJobs(6L).isEmpty());
@@ -101,38 +97,42 @@ public class TaskStoreTest {
     }
 
     @Test
-    public void testRemove() {
-        CompletableFuture future = mock(CompletableFuture.class);
-        TaskStore taskStore = generateTaskStore(future, false);
-        assertEquals(1L, taskStore.getFirstJobId(future).longValue());
-        assertNotNull(taskStore.getTaskCounter(future));
-        assertEquals(future, taskStore.getCompletableFuture("a_working_dir"));
-
-        taskStore.remove(future);
-
-        assertNull(taskStore.getTaskCounter(future));
-        assertNull(taskStore.getFirstJobId(future));
-        assertNull(taskStore.getCompletableFuture("a_working_dir"));
-        assertTrue(taskStore.getDependentJobs(1L).isEmpty());
-        assertTrue(taskStore.getBatchIds(3L).isEmpty());
-        // tracing ids are cleaned by 1. mydone_ in flag monitor 2. scancel in scm
-        assertFalse(taskStore.getTracingIds().isEmpty());
-    }
-
-    @Test
-    public void testGetFutureFromJobId() {
-        CompletableFuture future = mock(CompletableFuture.class);
-        TaskStore taskStore = generateTaskStore(future, false);
-        assertEquals(future, taskStore.getCompletableFutureByJobId(1L).orElse(null));
-        assertEquals(future, taskStore.getCompletableFutureByJobId(2L).orElse(null));
-        assertEquals(future, taskStore.getCompletableFutureByJobId(3L).orElse(null));
-        assertEquals(future, taskStore.getCompletableFutureByJobId(4L).orElse(null));
-        assertEquals(future, taskStore.getCompletableFutureByJobId(5L).orElse(null));
-        assertEquals(future, taskStore.getCompletableFutureByJobId(6L).orElse(null));
+    public void testGetDirNameFromJobId() {
+        TaskStore taskStore = generateTaskStore(DIR_NAME, false);
+        assertEquals(DIR_NAME, taskStore.getDirNameByJobId(1L).orElse(null));
+        assertEquals(DIR_NAME, taskStore.getDirNameByJobId(2L).orElse(null));
+        assertEquals(DIR_NAME, taskStore.getDirNameByJobId(3L).orElse(null));
+        assertEquals(DIR_NAME, taskStore.getDirNameByJobId(4L).orElse(null));
+        assertEquals(DIR_NAME, taskStore.getDirNameByJobId(5L).orElse(null));
+        assertEquals(DIR_NAME, taskStore.getDirNameByJobId(6L).orElse(null));
     }
 
     @Test
     public void testTracing() {
-        generateTaskStore(mock(CompletableFuture.class), true);
+        generateTaskStore(DIR_NAME, true);
+    }
+
+    @Test
+    public void testCleanIdMaps() {
+        TaskStore taskStore = generateTaskStore(DIR_NAME, false);
+        taskStore.cleanIdMaps(1L);
+    }
+
+    @Test
+    public void testExceptionMap() {
+        TaskStore taskStore = new TaskStore();
+        SlurmException e = new SlurmException("mock");
+        taskStore.insertException(DIR_NAME, e);
+        assertSame(e, taskStore.getExceptionAndClean(DIR_NAME).orElseGet(() -> new SlurmException("another")));
+        assertFalse(taskStore.getExceptionAndClean(DIR_NAME).isPresent());
+    }
+
+    @Test
+    public void testCancellingID() {
+        TaskStore taskStore = new TaskStore();
+        UUID id = UUID.randomUUID();
+        taskStore.cancelCallable(id);
+        assertTrue(taskStore.isCancelledThenClean(id));
+        assertFalse(taskStore.isCancelledThenClean(id));
     }
 }

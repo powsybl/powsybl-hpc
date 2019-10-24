@@ -19,18 +19,16 @@ class FlagFilesMonitor implements Runnable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(FlagFilesMonitor.class);
 
+    private final SlurmComputationManager computationManager;
     private final CommandExecutor commandRunner;
     private final Path flagDir;
     private final TaskStore taskStore;
 
     FlagFilesMonitor(SlurmComputationManager slurmComputationManager) {
-        this(slurmComputationManager.getCommandRunner(), slurmComputationManager.getFlagDir(), slurmComputationManager.getTaskStore());
-    }
-
-    FlagFilesMonitor(CommandExecutor commandRunner, Path flagDir, TaskStore taskStore) {
-        this.commandRunner = Objects.requireNonNull(commandRunner);
-        this.flagDir = Objects.requireNonNull(flagDir);
-        this.taskStore = Objects.requireNonNull(taskStore);
+        this.computationManager = Objects.requireNonNull(slurmComputationManager);
+        this.commandRunner = Objects.requireNonNull(slurmComputationManager.getCommandRunner());
+        this.flagDir = Objects.requireNonNull(slurmComputationManager.getFlagDir());
+        this.taskStore = Objects.requireNonNull(slurmComputationManager.getTaskStore());
     }
 
     @Override
@@ -46,21 +44,22 @@ class FlagFilesMonitor implements Runnable {
                     // ex: mydone_workingDirxxxxxx_taskid
                     int lastIdx = line.lastIndexOf('_');
                     String workingDirName = line.substring(idx + 1, lastIdx);
-                    TaskCounter taskCounter = taskStore.getTaskCounter(workingDirName);
-                    if (taskCounter != null) {
+                    taskStore.getTaskCounter(workingDirName).ifPresent(taskCounter -> {
                         LOGGER.debug("{} found", line);
                         taskCounter.countDown();
                         commandRunner.execute("rm " + flagDir + "/" + line);
                         // cancel following jobs(which depends on this job) if there are errors
                         if (line.startsWith("myerror_")) {
-                            taskStore.getCompletableFuture(workingDirName).cancel(true);
+                            // exit code is not 0, normally an exception would be thrown in handler's after()
+                            computationManager.cancel(workingDirName);
+                            taskStore.cleanTaskMaps(workingDirName);
                         } else if (line.startsWith("mydone_")) {
                             String id = line.substring(lastIdx + 1);
                             taskStore.untracing(Long.parseLong(id));
                         } else {
                             LOGGER.warn("Unexcepted file found in flagDir: {}", line);
                         }
-                    }
+                    });
                 }
             }
         } catch (Throwable t) {

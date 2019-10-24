@@ -11,9 +11,7 @@ import org.junit.Test;
 import org.mockito.Matchers;
 import org.mockito.internal.util.reflection.Whitebox;
 
-
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.*;
 
@@ -46,20 +44,18 @@ public class ScontrolMonitorTest {
 
         ScontrolMonitor monitor = new ScontrolMonitor(slurm);
         monitor.run();
-        assertTrue(ts.getTracingIds().isEmpty());
-        // check scancel all 6 jobs only once
-        for (int i = 1; i < 7; i++) {
-            verify(cm, times(1)).execute("scancel " + i);
-        }
+        verify(slurm, times(1)).cancel(3L, "JobId: 3 is CANCELLED");
+//        assertTrue(ts.getTracingIds().isEmpty());
+//        // check scancel all 6 jobs only once
+//        for (int i = 1; i < 7; i++) {
+//            verify(cm, times(1)).execute("scancel " + i);
+//        }
     }
 
     @Before
     public void setup() {
-        SlurmComputationManager.Mycf mycf;
         slurm = mock(SlurmComputationManager.class);
-        mycf = new SlurmComputationManager.Mycf(slurm);
-        mycf.setThread(new Thread());
-        ts = TaskStoreTest.generateTaskStore(mycf, false);
+        ts = TaskStoreTest.generateTaskStore("dir_name", false);
         Whitebox.setInternalState(slurm, "taskStore", ts);
         when(slurm.getTaskStore()).thenReturn(ts);
         cm = mock(CommandExecutor.class);
