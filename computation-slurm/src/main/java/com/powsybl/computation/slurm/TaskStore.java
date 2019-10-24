@@ -26,8 +26,6 @@ class TaskStore {
     private Map<String, TaskCounter> workingDirTaskMap = new HashMap<>();
     private Map<String, Long> workingDirFirstJobMap = new HashMap<>();
     private Map<String, SlurmException> workingDirException = new HashMap<>();
-//    private Map<CompletableFuture, String> futureWorkingDirMap = new HashMap<>();
-//    private Map<String, CompletableFuture> workingDirFutureMap = new HashMap<>();
     private ReadWriteLock taskLock = new ReentrantReadWriteLock();
 
     private Map<Long, Long> jobDependencies = new HashMap<>();

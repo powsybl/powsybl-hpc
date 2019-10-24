@@ -105,7 +105,6 @@ public class SlurmUnitTests {
             }
             assertTaskStoreCleaned(computationManager);
         } catch (Exception e) {
-            System.out.println("slkhfslkjf");
             e.printStackTrace();
             fail();
         }

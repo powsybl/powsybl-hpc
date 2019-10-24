@@ -8,6 +8,7 @@ package com.powsybl.computation.slurm;
 
 import com.powsybl.computation.CompletableFutureTask;
 
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 
@@ -21,8 +22,8 @@ public class SlurmCompletableFutureTask<R> extends CompletableFutureTask<R> {
 
     SlurmCompletableFutureTask(Callable<R> task, UUID callableID, TaskStore taskStore) {
         super(task);
-        this.taskStore = taskStore;
-        this.uuid = callableID;
+        this.taskStore = Objects.requireNonNull(taskStore);
+        this.uuid = Objects.requireNonNull(callableID);
     }
 
     @Override

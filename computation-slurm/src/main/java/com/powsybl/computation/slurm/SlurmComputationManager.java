@@ -424,17 +424,6 @@ public class SlurmComputationManager implements ComputationManager {
         return jobIdCommandMap;
     }
 
-//    private boolean isSendAllowed(String dirName) {
-//        return !taskStore.isCancellingAndClean(dirName) && !closeStarted;
-//    }
-//
-//    private void logNotSendReason(String dirName) {
-//        if (closeStarted) {
-//            LOGGER.info(CLOSE_START_NO_MORE_SEND_INFO);
-//        }
-//        LOGGER.warn("Future cancelled. {}", dirName);
-//    }
-
     private void prepareBatch(Command command, int executionIndex, ExecutionEnvironment environment, CommandExecution commandExecution, Path remoteWorkingDir) throws IOException {
         // prepare sbatch script from command
         Map<String, String> executionVariables = CommandExecution.getExecutionVariables(environment.getVariables(), commandExecution);

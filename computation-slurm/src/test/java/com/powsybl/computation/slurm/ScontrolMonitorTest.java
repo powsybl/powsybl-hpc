@@ -45,11 +45,7 @@ public class ScontrolMonitorTest {
         ScontrolMonitor monitor = new ScontrolMonitor(slurm);
         monitor.run();
         verify(slurm, times(1)).cancel(3L, "JobId: 3 is CANCELLED");
-//        assertTrue(ts.getTracingIds().isEmpty());
-//        // check scancel all 6 jobs only once
-//        for (int i = 1; i < 7; i++) {
-//            verify(cm, times(1)).execute("scancel " + i);
-//        }
+        // clean TaskStore is tested in slurm-test
     }
 
     @Before
