@@ -460,8 +460,11 @@ public class SlurmUnitTests {
                 return CommandExecutionsTestFactory.longProgram(10);
             }
         };
+        String cmdId = "longProgram";
         ComputationParameters parameters = new ComputationParametersBuilder().setTimeout("longProgram", 60).build();
         SlurmComputationParameters slurmComputationParameters = new SlurmComputationParameters(parameters, qos);
+        slurmComputationParameters.setPriority(cmdId, 2);
+        slurmComputationParameters.setNice(cmdId, 1);
         parameters.addExtension(SlurmComputationParameters.class, slurmComputationParameters);
         baseTest(testAttribute, supplier, parameters);
     }

@@ -82,12 +82,13 @@ public class SbatchCmdTest {
     }
 
     @Test
-    public void testTimeout() {
+    public void testTimes() {
         SbatchCmd cmd = new SbatchCmdBuilder().jobName("foo")
                 .script("foo.sh")
+                .timemin(100L)
                 .timeout("2:00")
                 .build();
-        assertEquals("sbatch --job-name=foo --time=2:00 foo.sh", cmd.toString());
+        assertEquals("sbatch --job-name=foo --time=2:00 --time-min=00-00:01:40 foo.sh", cmd.toString());
         String nullDuration = null;
         SbatchCmd nullableTimeout = new SbatchCmdBuilder().jobName("foo")
                 .script("foo.sh")
@@ -127,5 +128,16 @@ public class SbatchCmdTest {
                     .build();
             assertEquals("sbatch -D /tmp/foo --job-name=testDir submit.sh", cmd.toString());
         }
+    }
+
+    @Test
+    public void testPriority()  {
+        SbatchCmdBuilder builder = new SbatchCmdBuilder();
+        SbatchCmd cmd = builder.jobName("testPriority")
+                .script("submit.sh")
+                .nice(2)
+                .priority(1)
+                .build();
+        assertEquals("sbatch --job-name=testPriority --priority=1 --nice=2 submit.sh", cmd.toString());
     }
 }

@@ -127,9 +127,26 @@ class SbatchCmdBuilder {
         return timeout(SlurmUtils.toTime(seconds));
     }
 
+    SbatchCmdBuilder timemin(long seconds) {
+        sbatchArgsByName.put("time-min", SlurmUtils.toTime(seconds));
+        return this;
+    }
+
     SbatchCmdBuilder deadline(long seconds) {
         Preconditions.checkArgument(seconds > 0, "Invalid seconds({}) for deadline: must be 1 or greater", seconds);
         sbatchArgsByName.put("deadline", String.format(DATETIME_FORMATTER, seconds));
+        return this;
+    }
+
+    SbatchCmdBuilder priority(int priority) {
+        Preconditions.checkArgument(priority >= 0, "Priority must be >= 0");
+        sbatchArgsByName.put("priority", Integer.toString(priority));
+        return this;
+    }
+
+    SbatchCmdBuilder nice(int nice) {
+        Preconditions.checkArgument(nice >= 0, "Invalid --nice value");
+        sbatchArgsByName.put("nice", Integer.toString(nice));
         return this;
     }
 

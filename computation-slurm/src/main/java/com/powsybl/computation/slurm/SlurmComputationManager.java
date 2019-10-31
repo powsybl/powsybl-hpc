@@ -508,6 +508,9 @@ public class SlurmComputationManager implements ComputationManager {
         SlurmComputationParameters extension = baseParams.getExtension(SlurmComputationParameters.class);
         if (extension != null) {
             extension.getQos().ifPresent(builder::qos);
+            extension.getPriority(commandId).ifPresent(builder::priority);
+            extension.getNice(commandId).ifPresent(builder::nice);
+            extension.getTimemin(commandId).ifPresent(builder::timemin);
         }
         baseParams.getDeadline(commandId).ifPresent(builder::deadline);
         baseParams.getTimeout(commandId).ifPresent(builder::timeout);
