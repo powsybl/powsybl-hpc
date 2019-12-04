@@ -28,6 +28,7 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
@@ -35,7 +36,8 @@ import java.util.function.Supplier;
 import java.util.stream.IntStream;
 import java.util.zip.GZIPOutputStream;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * @author Yichen TANG <yichen.tang at rte-france.com>
@@ -47,6 +49,8 @@ public class SlurmUnitTests {
     private static final ExecutionEnvironment EMPTY_ENV = new ExecutionEnvironment(Collections.emptyMap(), "unit_test_", false);
 
     private ModuleConfig config;
+
+    private volatile boolean failed = false;
 
     @Before
     public void setup() {
@@ -112,8 +116,10 @@ public class SlurmUnitTests {
             }
         } catch (IOException e) {
             e.printStackTrace();
-            fail();
+            failed = true;
         }
+        // assert on main thread
+        assertFalse(failed);
     }
 
     @Test
@@ -130,7 +136,7 @@ public class SlurmUnitTests {
                 try {
                     return super.after(workingDir, report);
                 } catch (IOException e) {
-                    fail();
+                    failed = true;
                 }
                 return null;
             }
@@ -172,12 +178,12 @@ public class SlurmUnitTests {
                     super.after(workingDir, report);
                 } catch (IOException e) {
                     e.printStackTrace();
-                    fail();
+                    failed = true;
                 }
                 Path out2 = workingDir.resolve("out2.gz");
                 System.out.println("---------" + testAttribute.testName + "----------");
                 System.out.println("out2.gz should exists:" + Files.exists(out2));
-                Assert.assertTrue(Files.exists(out2));
+                failed = !Files.exists(out2);
                 System.out.println("------------------------------------");
                 return null;
             }
@@ -198,7 +204,7 @@ public class SlurmUnitTests {
     }
 
     @Test
-    public void testGrougCmd() throws InterruptedException {
+    public void testGroupCmd() throws InterruptedException {
         TestAttribute testAttribute = new TestAttribute(Type.TO_WAIT, "groupCmd");
         Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
             @Override
@@ -352,7 +358,7 @@ public class SlurmUnitTests {
                         System.out.println(bytes1.length);
                         System.out.println(bytes2.length);
                     } catch (IOException e) {
-                        fail();
+                        failed = true;
                     }
                 });
                 return super.after(workingDir, report);
@@ -378,17 +384,25 @@ public class SlurmUnitTests {
             public Void after(Path workingDir, ExecutionReport report) throws IOException {
                 List<String> actual2GMd5 = Files.readAllLines(workingDir.resolve("c1_0.out"));
                 List<String> actual4GMd5 = Files.readAllLines(workingDir.resolve("c2_0.out"));
-                List<String> expected2GMd5 = Collections.singletonList("1ea9851f9b83e9bd50b8d7577b23e14b  2GFile");
-                List<String> expected4GMd5 = Collections.singletonList("bbe2b516d690f337d8f48fc03db99c9a  4GFile");
-                assertEquals(expected2GMd5, actual2GMd5);
-                assertEquals(expected4GMd5, actual4GMd5);
+                String expected2GMd5 = "1ea9851f9b83e9bd50b8d7577b23e14b  2GFile";
+                String expected4GMd5 = "bbe2b516d690f337d8f48fc03db99c9a  4GFile";
+                if (!Objects.equals(actual2GMd5.get(0), expected2GMd5)) {
+                    failed = true;
+                    System.out.println("  actual:" + actual2GMd5.get(0));
+                    System.out.println("expected:" + expected2GMd5);
+                }
+                if (!Objects.equals(actual4GMd5.get(0), expected4GMd5)) {
+                    failed = true;
+                    System.out.println("  actual:" + actual4GMd5.get(0));
+                    System.out.println("expected:" + expected4GMd5);
+                }
                 return null;
             }
         };
         baseTest(testAttribute, supplier);
     }
 
-    private static void generateGzFileOnRemote(int sizeGb, Path dest) {
+    private void generateGzFileOnRemote(int sizeGb, Path dest) {
         StringBuilder sb = new StringBuilder();
         IntStream.range(0, 1024).forEach(i ->
                 IntStream.range(0, 128).forEach(j -> sb.append("KKKKKKKK"))); // 1mb
@@ -399,7 +413,7 @@ public class SlurmUnitTests {
                     outStream.write(oneMb.getBytes());
                 } catch (IOException e) {
                     e.printStackTrace();
-                    fail();
+                    failed = true;
                 }
             });
         } catch (IOException e) {
@@ -466,10 +480,12 @@ public class SlurmUnitTests {
         baseTest(testAttribute, supplier, parameters);
     }
 
-    private static void assertErrors(String testName, ExecutionReport report) {
+    private void assertErrors(String testName, ExecutionReport report) {
         System.out.println("---------" + testName + "----------");
         System.out.println("Errors should exists:" + !report.getErrors().isEmpty());
-        Assert.assertFalse(report.getErrors().isEmpty());
+        if (report.getErrors().isEmpty()) {
+            failed = true;
+        }
         System.out.println("------------------------------------");
     }
 
