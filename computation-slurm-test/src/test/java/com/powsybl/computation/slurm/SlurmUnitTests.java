@@ -17,7 +17,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -26,11 +25,9 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.function.Supplier;
-import java.util.stream.IntStream;
 
-import static com.powsybl.computation.slurm.CommandExecutionsTestFactory.*;
+import static com.powsybl.computation.slurm.CommandExecutionsTestFactory.longProgram;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 /**
  * @author Yichen TANG <yichen.tang at rte-france.com>
@@ -151,81 +148,6 @@ public class SlurmUnitTests {
             }
         };
         baseTest(testAttribute, supplier);
-    }
-
-    @Test
-    public void testLongProgramToCancelExternal() throws InterruptedException {
-        TestAttribute testAttribute = new TestAttribute(Type.TO_CANCEL, "longProgramToCancelExternal", true);
-        Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
-            @Override
-            public List<CommandExecution> before(Path workingDir) {
-                return longProgram(200);
-            }
-        };
-        baseTest(testAttribute, supplier);
-    }
-
-    @Test
-    public void makeSlurmBusy() throws InterruptedException {
-        TestAttribute testAttribute = new TestAttribute(Type.TO_WAIT, "deadline");
-        Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
-            @Override
-            public List<CommandExecution> before(Path workingDir) {
-                return CommandExecutionsTestFactory.makeSlurmBusy();
-            }
-        };
-        baseTest(testAttribute, supplier);
-    }
-
-    // 1. Make slurm busy if necessary
-    // 2. Wait 1 mins
-    @Test
-    public void testDeadline() throws InterruptedException {
-        TestAttribute testAttribute = new TestAttribute(Type.TO_WAIT, "deadline", true);
-        Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
-            @Override
-            public List<CommandExecution> before(Path workingDir) {
-                return longProgram(10);
-            }
-        };
-        ComputationParametersBuilder builder = new ComputationParametersBuilder();
-        builder.setDeadline("longProgram", 12);
-
-        baseTest(testAttribute, supplier, builder.build());
-    }
-
-    // sacctmgr show qos
-    @Test
-    public void testParameters() throws InterruptedException {
-        String qos = "itesla"; //TODO the qos name should be configured
-        testParameters(qos);
-    }
-
-    @Test
-    public void testInvalidQos() {
-        try {
-            testParameters("THIS_QOS_SHOULD_NOT_EXIST_IN_SLURM");
-        } catch (Exception e) {
-            assertTrue(e.getMessage().contains("Invalid qos specification"));
-        }
-    }
-
-    private void testParameters(String qos) throws InterruptedException {
-        TestAttribute testAttribute = new TestAttribute(Type.TO_WAIT, "qos");
-        Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
-            @Override
-            public List<CommandExecution> before(Path workingDir) {
-                return longProgram(10);
-            }
-        };
-        ComputationParameters parameters = new ComputationParametersBuilder().setTimeout("longProgram", 60).build();
-        SlurmComputationParameters slurmComputationParameters = new SlurmComputationParameters(parameters, qos);
-        parameters.addExtension(SlurmComputationParameters.class, slurmComputationParameters);
-        baseTest(testAttribute, supplier, parameters);
-    }
-
-    private void assertErrors(String testName, ExecutionReport report) {
-        System.out.println("---------" + testName + "----------");
     }
 
     private static class TestAttribute {

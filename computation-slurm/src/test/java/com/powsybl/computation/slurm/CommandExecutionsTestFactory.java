@@ -93,13 +93,13 @@ public final class CommandExecutionsTestFactory {
         return Collections.singletonList(new CommandExecution(command, 1));
     }
 
-    static List<CommandExecution> makeSlurmBusy() {
+    static List<CommandExecution> makeSlurmBusy(int count) {
         Command command = new SimpleCommandBuilder()
                 .id("makeBusy")
                 .program("sleep")
                 .arg("60s")
                 .build();
-        return Collections.singletonList(new CommandExecution(command, 42));
+        return Collections.singletonList(new CommandExecution(command, count));
     }
 
     static List<CommandExecution> twoSimpleCmd() {

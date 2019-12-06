@@ -75,7 +75,10 @@ public class SlurmNormalExecutionTest extends SlurmUnitTests {
                 return longProgram(10);
             }
         };
-        baseTest(supplier);
+        ComputationParameters parameters = new ComputationParametersBuilder().setTimeout("longProgram", 60).build();
+        SlurmComputationParameters slurmComputationParameters = new SlurmComputationParameters(parameters, "itesla");
+        parameters.addExtension(SlurmComputationParameters.class, slurmComputationParameters);
+        baseTest(supplier, parameters);
     }
 
     @Test
