@@ -101,4 +101,35 @@ public final class CommandExecutionsTestFactory {
                 .build();
         return Collections.singletonList(new CommandExecution(command, 42));
     }
+
+    static List<CommandExecution> twoSimpleCmd() {
+        Command command1 = new SimpleCommandBuilder()
+                .id("simpleCmdId")
+                .program("sleep")
+                .args("10s")
+                .build();
+        Command command2 = new SimpleCommandBuilder()
+                .id("cmd2")
+                .program("echo")
+                .args("hello", ">", "output")
+                .build();
+        return Arrays.asList(new CommandExecution(command1, 1), new CommandExecution(command2, 1));
+    }
+
+    static List<CommandExecution> md5sumLargeFile() {
+        Command command1 = new SimpleCommandBuilder()
+                .id("c1")
+                .program("md5sum")
+                .inputFiles(new InputFile("2GFile.gz", FilePreProcessor.FILE_GUNZIP))
+                .args("2GFile")
+                .build();
+        Command command2 = new SimpleCommandBuilder()
+                .id("c2")
+                .inputFiles(new InputFile("4GFile.gz", FilePreProcessor.FILE_GUNZIP))
+                .program("md5sum")
+                .args("4GFile")
+                .build();
+        return Arrays.asList(new CommandExecution(command1, 3),
+                new CommandExecution(command2, 1));
+    }
 }
