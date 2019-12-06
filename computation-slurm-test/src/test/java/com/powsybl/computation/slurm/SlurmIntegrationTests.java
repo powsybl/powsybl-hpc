@@ -19,9 +19,9 @@ import java.util.Collections;
 /**
  * @author Yichen TANG <yichen.tang at rte-france.com>
  */
-public class SlurmUnitTests {
+public class SlurmIntegrationTests {
 
-    static final Logger LOGGER = LoggerFactory.getLogger(SlurmUnitTests.class);
+    static final Logger LOGGER = LoggerFactory.getLogger(SlurmIntegrationTests.class);
     static final ExecutionEnvironment EMPTY_ENV = new ExecutionEnvironment(Collections.emptyMap(), "unit_test_", false);
 
     SlurmComputationConfig slurmConfig;

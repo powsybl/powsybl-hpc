@@ -27,7 +27,7 @@ import static org.junit.Assert.assertFalse;
  * @author Yichen TANG <yichen.tang at rte-france.com>
  */
 @Ignore
-public class SlurmCancelExectuionTest extends SlurmUnitTests {
+public class SlurmCancelExecutionTest extends SlurmIntegrationTests {
 
     private void baseTest(Supplier<AbstractExecutionHandler<Void>> supplier) throws InterruptedException {
         baseTest(supplier, ComputationParameters.empty());

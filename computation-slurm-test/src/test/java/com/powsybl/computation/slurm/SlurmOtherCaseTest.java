@@ -29,7 +29,7 @@ import static org.junit.Assert.*;
  * @author Yichen TANG <yichen.tang at rte-france.com>
  */
 @Ignore
-public class SlurmOtherCaseTest extends SlurmUnitTests {
+public class SlurmOtherCaseTest extends SlurmIntegrationTests {
 
     @Test
     public void testLongProgramToCancelExternal() {

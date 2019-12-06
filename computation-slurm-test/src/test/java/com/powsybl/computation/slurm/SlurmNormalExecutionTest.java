@@ -37,7 +37,7 @@ import static org.junit.Assert.*;
  */
 @Ignore
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-public class SlurmNormalExecutionTest extends SlurmUnitTests {
+public class SlurmNormalExecutionTest extends SlurmIntegrationTests {
 
     private void baseTest(Supplier<AbstractExecutionHandler<String>> supplier) {
         baseTest(supplier, ComputationParameters.empty());

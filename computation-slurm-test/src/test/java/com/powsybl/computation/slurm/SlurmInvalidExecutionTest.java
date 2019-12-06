@@ -23,7 +23,7 @@ import static org.junit.Assert.*;
  * @author Yichen TANG <yichen.tang at rte-france.com>
  */
 @Ignore
-public class SlurmInvalidExecutionTest extends SlurmUnitTests {
+public class SlurmInvalidExecutionTest extends SlurmIntegrationTests {
 
     private void baseTest(Supplier<AbstractExecutionHandler<String>> supplier) {
         baseTest(supplier, ComputationParameters.empty());
