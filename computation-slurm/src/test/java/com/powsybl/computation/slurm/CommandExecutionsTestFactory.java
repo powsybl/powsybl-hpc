@@ -132,4 +132,32 @@ public final class CommandExecutionsTestFactory {
         return Arrays.asList(new CommandExecution(command1, 3),
                 new CommandExecution(command2, 1));
     }
+
+    static List<CommandExecution> invalidProgram() {
+        Command cmd = new SimpleCommandBuilder()
+                .id("invalidProgram")
+                .program("echoo")
+                .args("hello")
+                .build();
+        return Collections.singletonList(new CommandExecution(cmd, 1));
+    }
+
+    static List<CommandExecution> invalidProgramInGroup() {
+        Command command = new GroupCommandBuilder()
+                .id("groupCmdId")
+                .subCommand()
+                .program("echoo")
+                .args("hello")
+                .add()
+                .subCommand()
+                .program("echo")
+                .args("sub2")
+                .add()
+                .build();
+        return Collections.singletonList(new CommandExecution(command, 1));
+    }
+
+    static List<CommandExecution> invalidProgramInList() {
+        return Arrays.asList(invalidProgram().get(0), CommandExecutionsTestFactory.simpleCmd().get(0));
+    }
 }

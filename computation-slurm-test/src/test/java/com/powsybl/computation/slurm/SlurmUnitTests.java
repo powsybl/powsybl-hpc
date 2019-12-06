@@ -118,60 +118,6 @@ public class SlurmUnitTests {
     }
 
     @Test
-    public void testInvalidProgram() throws InterruptedException {
-        TestAttribute testAttribute = new TestAttribute(Type.TO_WAIT, "invalidProgram");
-        Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
-            @Override
-            public List<CommandExecution> before(Path workingDir) {
-                return invalidProgram();
-            }
-
-            @Override
-            public Void after(Path workingDir, ExecutionReport report) {
-                assertErrors(testAttribute.testName, report);
-                return null;
-            }
-        };
-        baseTest(testAttribute, supplier);
-    }
-
-    @Test
-    public void testInvalidProgramInGroup() throws InterruptedException {
-        TestAttribute testAttribute = new TestAttribute(Type.TO_WAIT, "invalidProgramInGroup");
-        Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
-            @Override
-            public List<CommandExecution> before(Path workingDir) {
-                return invalidProgramInGroup();
-            }
-
-            @Override
-            public Void after(Path workingDir, ExecutionReport report) {
-                assertErrors(testAttribute.testName, report);
-                return null;
-            }
-        };
-        baseTest(testAttribute, supplier);
-    }
-
-    @Test
-    public void testInvalidProgramInList() throws InterruptedException {
-        TestAttribute testAttribute = new TestAttribute(Type.TO_WAIT, "invalidProgramInList");
-        Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
-            @Override
-            public List<CommandExecution> before(Path workingDir) {
-                return invalidProgramInList();
-            }
-
-            @Override
-            public Void after(Path workingDir, ExecutionReport report) {
-                assertErrors(testAttribute.testName, report);
-                return null;
-            }
-        };
-        baseTest(testAttribute, supplier);
-    }
-
-    @Test
     public void testLongProgramToCancel() throws InterruptedException {
         TestAttribute testAttribute = new TestAttribute(Type.TO_CANCEL, "longProgramToCancel");
         Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
@@ -280,11 +226,6 @@ public class SlurmUnitTests {
 
     private void assertErrors(String testName, ExecutionReport report) {
         System.out.println("---------" + testName + "----------");
-        System.out.println("Errors should exists:" + !report.getErrors().isEmpty());
-        if (report.getErrors().isEmpty()) {
-            failed = true;
-        }
-        System.out.println("------------------------------------");
     }
 
     private static class TestAttribute {
@@ -314,34 +255,6 @@ public class SlurmUnitTests {
         boolean isShortScontrolTime() {
             return shortScontrolTime;
         }
-    }
-
-    private static List<CommandExecution> invalidProgram() {
-        Command cmd = new SimpleCommandBuilder()
-                .id("invalidProgram")
-                .program("echoo")
-                .args("hello")
-                .build();
-        return Collections.singletonList(new CommandExecution(cmd, 1));
-    }
-
-    private static List<CommandExecution> invalidProgramInGroup() {
-        Command command = new GroupCommandBuilder()
-                .id("groupCmdId")
-                .subCommand()
-                .program("echoo")
-                .args("hello")
-                .add()
-                .subCommand()
-                .program("echo")
-                .args("sub2")
-                .add()
-                .build();
-        return Collections.singletonList(new CommandExecution(command, 1));
-    }
-
-    private static List<CommandExecution> invalidProgramInList() {
-        return Arrays.asList(invalidProgram().get(0), CommandExecutionsTestFactory.simpleCmd().get(0));
     }
 
     private static List<CommandExecution> longProgramToCancel() {
