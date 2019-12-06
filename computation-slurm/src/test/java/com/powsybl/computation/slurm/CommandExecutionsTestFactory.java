@@ -160,4 +160,33 @@ public final class CommandExecutionsTestFactory {
     static List<CommandExecution> invalidProgramInList() {
         return Arrays.asList(invalidProgram().get(0), CommandExecutionsTestFactory.simpleCmd().get(0));
     }
+
+    static List<CommandExecution> longProgramInList(int c1, int c2, int c3) {
+        Command command1 = new SimpleCommandBuilder()
+                .id("tLP")
+                .program("sleep")
+                .args("10s")
+                .build();
+        Command command2 = new SimpleCommandBuilder()
+                .id("tLP2")
+                .program("sleep")
+                .args("10s")
+                .build();
+        Command command3 = new SimpleCommandBuilder()
+                .id("tLP3")
+                .program("sleep")
+                .args("10s")
+                .build();
+        return Arrays.asList(new CommandExecution(command1, c1),
+                new CommandExecution(command2, c2),
+                new CommandExecution(command3, c3));
+    }
+
+    static List<CommandExecution> longProgramInList() {
+        return longProgramInList(1, 1, 1);
+    }
+
+    static List<CommandExecution> mixedPrograms() {
+        return longProgramInList(1, 5, 2);
+    }
 }

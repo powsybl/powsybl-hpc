@@ -121,4 +121,6 @@ public class SlurmOtherCaseTest extends SlurmUnitTests {
             fail();
         }
     }
+
+    // FIXME missing a shutdown test
 }
