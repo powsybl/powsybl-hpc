@@ -9,8 +9,9 @@ package com.powsybl.computation.slurm;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -64,9 +65,9 @@ public class ScontrolMonitor implements Runnable {
                         case DEADLINE:
                         case CANCELLED:
                             unmoral = true;
-                            LOGGER.info("JobId: {} is {}", id, jobState);
-                            Optional<CompletableFuture> unormalFuture = taskStore.getCompletableFutureByJobId(id);
-                            unormalFuture.ifPresent(completableFuture -> completableFuture.cancel(true));
+                            String msg = "JobId: " + id + " is " + jobState;
+                            LOGGER.info(msg);
+                            taskStore.cancelCallable(id, new SlurmException(msg));
                             break;
                         case COMPLETE:
                             // this monitor found task finished before flagDirMonitor

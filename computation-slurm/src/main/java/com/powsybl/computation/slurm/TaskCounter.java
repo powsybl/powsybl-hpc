@@ -22,7 +22,11 @@ class TaskCounter {
     }
 
     void await() throws InterruptedException {
-        latch.await();
+        try {
+            latch.await();
+        } catch (InterruptedException e) {
+            throw new InterruptedException("cancelled during await");
+        }
     }
 
     void countDown() {

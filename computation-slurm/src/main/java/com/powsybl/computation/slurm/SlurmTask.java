@@ -13,7 +13,6 @@ import org.slf4j.LoggerFactory;
 
 import java.nio.file.Path;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -27,10 +26,11 @@ public class SlurmTask {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SlurmTask.class);
 
-    private final WorkingDirectory directory;
-    private final List<CommandExecution> executions;
-    private final CompletableFuture completableFuture;
-    private final TaskCounter counter;
+    private UUID callableId;
+    private WorkingDirectory directory;
+    private CommandExecutor commandExecutor;
+    private List<CommandExecution> executions;
+    private TaskCounter counter;
 
     private Long firstJobId;
     private List<Long> masters;
@@ -39,10 +39,13 @@ public class SlurmTask {
 
     private Set<Long> tracingIds = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
-    SlurmTask(WorkingDirectory directory, List<CommandExecution> executions, CompletableFuture completableFuture) {
+    private volatile boolean cancel = false;
+
+    SlurmTask(UUID callableId, CommandExecutor commandExecutor, WorkingDirectory directory, List<CommandExecution> executions) {
+        this.callableId = Objects.requireNonNull(callableId);
+        this.commandExecutor = Objects.requireNonNull(commandExecutor);
         this.directory = Objects.requireNonNull(directory);
         this.executions = Objects.requireNonNull(executions);
-        this.completableFuture = Objects.requireNonNull(completableFuture);
         int sum = executions.stream().mapToInt(CommandExecution::getExecutionCount).sum();
         this.counter = new TaskCounter(sum);
     }
@@ -54,6 +57,10 @@ public class SlurmTask {
      */
     String getId() {
         return directory.toPath().getFileName().toString();
+    }
+
+    public UUID getCallableId() {
+        return callableId;
     }
 
     Path getWorkingDirPath() {
@@ -88,10 +95,6 @@ public class SlurmTask {
 
     CommandExecution getCommand(int i) {
         return executions.get(i);
-    }
-
-    CompletableFuture getCompletableFuture() {
-        return completableFuture;
     }
 
     boolean contains(Long id) {
@@ -196,6 +199,32 @@ public class SlurmTask {
 
     Set<Long> getTracingIds() {
         return tracingIds;
+    }
+
+    void error() {
+        LOGGER.debug("Error detected.");
+        cancel();
+    }
+
+    void cancel() {
+        cancel = true;
+        counter.cancel();
+        if (!getToCancelIds().isEmpty()) {
+            LOGGER.debug("Cancel first batch ids");
+            getToCancelIds().forEach(this::scancel);
+        } else {
+            LOGGER.warn("Nothing to cancel.");
+        }
+    }
+
+    public boolean isCancel() {
+        return cancel;
+    }
+
+    private void scancel(Long jobId) {
+        LOGGER.debug("Scancel {}", jobId);
+        tracingIds.remove(jobId);
+        commandExecutor.execute("scancel " + jobId);
     }
 
     // ===============================

@@ -10,8 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
-import java.util.concurrent.*;
-import java.util.stream.Collectors;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author Yichen Tang <yichen.tang at rte-france.com>
@@ -20,44 +19,46 @@ class TaskStore {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TaskStore.class);
 
+    // TODO why two map? use UUID instead of dir str
     private Map<String, SlurmTask> taskByDir = new ConcurrentHashMap<>();
-    private Map<CompletableFuture, SlurmTask> taskByFuture = new ConcurrentHashMap<>();
-
-    private final StoreCleaner cleaner;
-
-    TaskStore(int cleanTime) {
-        cleaner = new StoreCleaner(cleanTime);
-        cleaner.start();
-    }
+    private Map<UUID, SlurmException> exceptionMap = new ConcurrentHashMap<>();
 
     void add(SlurmTask task) {
         taskByDir.put(task.getId(), task);
-        taskByFuture.put(task.getCompletableFuture(), task);
     }
 
-    public Map<String, SlurmTask> getTaskByDir() {
-        return taskByDir;
-    }
-
-    private Optional<SlurmTask> getTask(String workingDir) {
+    Optional<SlurmTask> getTask(String workingDir) {
         return Optional.ofNullable(taskByDir.get(workingDir));
-    }
-
-    Optional<SlurmTask> getTask(CompletableFuture future) {
-        return Optional.ofNullable(taskByFuture.get(future));
     }
 
     Optional<TaskCounter> getTaskCounter(String workingDir) {
         return getTask(workingDir).map(SlurmTask::getCounter);
     }
 
-    Optional<TaskCounter> getTaskCounter(CompletableFuture future) {
-        return getTask(future).map(SlurmTask::getCounter);
+    void cancelCallableAndCleanup(UUID callableId) {
+        LOGGER.debug("Cancel and clean callableId:" + callableId);
+        getTaskByCallableId(callableId).ifPresent(SlurmTask::cancel);
+        getTaskByCallableId(callableId).ifPresent(task -> taskByDir.remove(task.getId()));
     }
 
-    // TODO use task
-    Optional<CompletableFuture> getCompletableFuture(String workingDirName) {
-        return getTask(workingDirName).map(SlurmTask::getCompletableFuture);
+    boolean finallyCleanCallable(UUID callableId) {
+        LOGGER.debug("Clean " + callableId);
+        getTaskByCallableId(callableId).ifPresent(task -> taskByDir.remove(task.getId()));
+        return true;
+    }
+
+    private Optional<SlurmTask> getTaskByCallableId(UUID callableId) {
+        return taskByDir.values().stream().filter(task -> task.getCallableId().equals(callableId))
+                .findFirst();
+    }
+
+    boolean isCancelled(UUID callableId) {
+        Boolean isCancelled = getTaskByCallableId(callableId).map(SlurmTask::isCancel).orElseThrow(() -> new RuntimeException("Fail to call isCancel() on " + callableId));
+        LOGGER.debug("Callable '{}' cancelled: {}", callableId, isCancelled);
+        if (isCancelled) {
+            cancelCallableAndCleanup(callableId);
+        }
+        return isCancelled;
     }
 
     boolean untracing(long id) {
@@ -80,45 +81,42 @@ class TaskStore {
         return tracingIds;
     }
 
-    Set<TaskCounter> getTaskCounters() {
-        return taskByDir.values().stream()
-                .map(SlurmTask::getCounter).collect(Collectors.toSet());
+    void cancelCallable(long id, SlurmException slurmException) {
+        taskByDir.values().stream().filter(task -> task.contains(id))
+                .findFirst()
+                .map(SlurmTask::getCallableId)
+                .ifPresent(uuid -> {
+                    System.out.println("in put " + uuid);
+                    exceptionMap.put(uuid, slurmException);
+                    cancelCallableAndCleanup(uuid);
+                });
     }
 
-    Optional<CompletableFuture> getCompletableFutureByJobId(long id) {
-        return taskByDir.values().stream().filter(task -> task.contains(id))
-                .findFirst().map(SlurmTask::getCompletableFuture);
+    Optional<SlurmException> getException(UUID callableId) {
+        SlurmException exception = exceptionMap.get(callableId);
+        if (exception != null) {
+            exceptionMap.remove(callableId);
+            return Optional.of(exception);
+        }
+        return Optional.empty();
+    }
+
+    void cancelAll() {
+        LOGGER.info("Cancelling all tasks...");
+        taskByDir.values().forEach(SlurmTask::cancel);
+    }
+
+    // ========================
+    // === integration test ===
+    // ========================
+    Map<String, SlurmTask> getTaskByDir() {
+        return taskByDir;
     }
 
     boolean isEmpty() {
+        System.out.println("taskByDir empty:" + taskByDir.isEmpty());
+        System.out.println("exceptionMap empty:" + exceptionMap.isEmpty());
         return taskByDir.isEmpty()
-                && taskByFuture.isEmpty();
-    }
-
-    class StoreCleaner {
-
-        private final int cleanTime;
-        ScheduledExecutorService scheduledExecutorService;
-
-        StoreCleaner(int cleanTime) {
-            this.cleanTime = cleanTime;
-            scheduledExecutorService = Executors.newScheduledThreadPool(1);
-        }
-
-        void start() {
-            scheduledExecutorService.scheduleAtFixedRate(this::clean, cleanTime, cleanTime, TimeUnit.SECONDS);
-        }
-
-        void clean() {
-            taskByDir.entrySet().stream().filter(e ->
-                    e.getValue().getCompletableFuture().isDone())
-                    .map(Map.Entry::getKey)
-                    .collect(Collectors.toSet())
-                    .forEach(id -> taskByDir.remove(id));
-            taskByFuture.keySet().stream()
-                    .filter(CompletableFuture::isDone)
-                    .collect(Collectors.toSet())
-                    .forEach(f -> taskByFuture.remove(f));
-        }
+                && exceptionMap.isEmpty();
     }
 }

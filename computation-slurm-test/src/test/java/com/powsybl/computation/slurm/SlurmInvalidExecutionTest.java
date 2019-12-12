@@ -10,6 +10,7 @@ import com.powsybl.computation.AbstractExecutionHandler;
 import com.powsybl.computation.CommandExecution;
 import com.powsybl.computation.ComputationParameters;
 import com.powsybl.computation.ExecutionReport;
+import org.assertj.core.api.Assertions;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -17,6 +18,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.function.Supplier;
 
 import static com.powsybl.computation.slurm.CommandExecutionsTestFactory.*;
@@ -33,10 +35,10 @@ public class SlurmInvalidExecutionTest extends AbstractIntegrationTests {
         try (SlurmComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
             CompletableFuture<String> completableFuture = computationManager.execute(EMPTY_ENV, supplier.get(), parameters);
             System.out.println("to wait finish");
-            String join = completableFuture.join();
-            assertEquals("OK", join);
-            // TODO should thrown CompletionException
-//            Assertions.assertThatThrownBy(completableFuture::join).isInstanceOf(CompletionException.class);
+            // As there are errors, the after() would throw exception(in this test)
+            Assertions.assertThatThrownBy(completableFuture::join)
+                    .isInstanceOf(CompletionException.class)
+                    .hasMessageContaining("com.powsybl.commons.PowsyblException: Error during the execution in directory");
             if (checkClean) {
                 assertIsCleanedAfterWait(computationManager.getTaskStore());
             }
@@ -57,6 +59,17 @@ public class SlurmInvalidExecutionTest extends AbstractIntegrationTests {
             }
         };
         baseTest(supplier, true);
+    }
+
+    @Test
+    public void testInvalidProgramCheckClean() {
+        Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractCheckErrorsExecutionHandler() {
+            @Override
+            public List<CommandExecution> before(Path workingDir) {
+                return invalidProgram();
+            }
+        };
+        baseTest(supplier, ComputationParameters.empty(), true);
     }
 
     @Test
@@ -83,11 +96,12 @@ public class SlurmInvalidExecutionTest extends AbstractIntegrationTests {
 
     abstract static class AbstractCheckErrorsExecutionHandler extends AbstractExecutionHandler<String> {
         @Override
-        public String after(Path workingDir, ExecutionReport report) {
+        public String after(Path workingDir, ExecutionReport report) throws IOException {
             System.out.println("Errors should exists, actual exists:" + !report.getErrors().isEmpty());
             if (report.getErrors().isEmpty()) {
                 return "KO";
             }
+            super.after(workingDir, report);
             return "OK";
         }
     }

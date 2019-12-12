@@ -9,6 +9,8 @@ package com.powsybl.computation.slurm;
 import com.powsybl.computation.AbstractExecutionHandler;
 import com.powsybl.computation.CommandExecution;
 import com.powsybl.computation.ComputationParameters;
+import com.powsybl.computation.ExecutionReport;
+import org.assertj.core.api.Assertions;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -16,6 +18,7 @@ import org.junit.Test;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
@@ -33,7 +36,8 @@ public class SlurmCancelExecutionTest extends AbstractIntegrationTests {
         try (SlurmComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
             CompletableFuture<String> completableFuture = computationManager.execute(EMPTY_ENV, supplier.get(), parameters);
             System.out.println("CompletableFuture would be cancelled in 5 seconds...");
-            // TODO add a test before finished submit
+            // TODO add a test during submit
+            // TODO add a test before submit
             Thread.sleep(5000);
             boolean cancel = completableFuture.cancel(true);
             System.out.println("Cancelled:" + cancel);
@@ -41,7 +45,10 @@ public class SlurmCancelExecutionTest extends AbstractIntegrationTests {
             if (checkClean) {
                 assertIsCleanedAfterWait(computationManager.getTaskStore());
             }
-            // TODO should throw CancellationException
+            Assertions.assertThatThrownBy(completableFuture::join)
+                    .isInstanceOf(CancellationException.class);
+            // TODO detailed msg getCause is null
+//                    .hasMessageContaining("Interrupted cancelled during await");
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
             failed = true;
@@ -52,19 +59,24 @@ public class SlurmCancelExecutionTest extends AbstractIntegrationTests {
 
     @Test
     public void testLongProgramToCancel() {
-        Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractExecutionHandler<String>() {
+        Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractFailInAfterHandler() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
                 return longProgram(10);
             }
 
+            @Override
+            public String after(Path workingDir, ExecutionReport report) {
+                failed = true;
+                return "KO";
+            }
         };
         baseTest(supplier, true);
     }
 
     @Test
     public void testLongProgramInListToCancel() {
-        Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractExecutionHandler<String>() {
+        Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractFailInAfterHandler() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
                 return longProgramInList();
@@ -74,14 +86,24 @@ public class SlurmCancelExecutionTest extends AbstractIntegrationTests {
     }
 
     @Test
+    // FIXME no exit point in console??? Cancelled during submitting
     public void testMixedProgramsToCancel() {
-        Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractExecutionHandler<String>() {
+        Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractFailInAfterHandler() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
                 return mixedPrograms();
             }
         };
         baseTest(supplier, true);
+    }
+
+    abstract class AbstractFailInAfterHandler extends AbstractExecutionHandler<String> {
+        @Override
+        public String after(Path workingDir, ExecutionReport report) {
+            System.out.println("------------SHOULD NOT EXECUTED------------");
+            failed = true;
+            return "KO";
+        }
     }
 
 }

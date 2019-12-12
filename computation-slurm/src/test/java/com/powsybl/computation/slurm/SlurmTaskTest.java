@@ -10,11 +10,7 @@ import com.powsybl.commons.io.WorkingDirectory;
 import org.junit.Test;
 
 import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
+import java.util.*;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
@@ -25,14 +21,19 @@ import static org.mockito.Mockito.when;
  */
 public class SlurmTaskTest {
 
-    static SlurmTask mockSubmittedTask(CompletableFuture cf) {
+    static SlurmTask mockSubmittedTask() {
+        return mockSubmittedTask(mock(CommandExecutor.class));
+    }
+
+    static SlurmTask mockSubmittedTask(CommandExecutor commandExecutor) {
         // jimfs not support tmp dir
         WorkingDirectory workingDirectory = mock(WorkingDirectory.class);
         Path tmpPath = mock(Path.class);
         when(workingDirectory.toPath()).thenReturn(tmpPath);
         when(tmpPath.getFileName()).thenReturn(tmpPath);
         when(tmpPath.toString()).thenReturn("workingDir_1234");
-        SlurmTask task = new SlurmTask(workingDirectory, Collections.emptyList(), cf);
+        UUID uuid = UUID.randomUUID();
+        SlurmTask task = new SlurmTask(uuid, commandExecutor, workingDirectory, Collections.emptyList());
         // 1←2
         // ↑
         // 3←4,5
@@ -51,7 +52,7 @@ public class SlurmTaskTest {
 
     @Test
     public void testIdsRelationship() {
-        SlurmTask task = mockSubmittedTask(mock(CompletableFuture.class));
+        SlurmTask task = mockSubmittedTask();
         List<Long> masters = task.getMasters();
         assertTrue(1L == task.getFirstJobId());
         assertEquals(Arrays.asList(1L, 3L, 6L), masters);
@@ -67,7 +68,9 @@ public class SlurmTaskTest {
 
     @Test
     public void testCounterSum() {
-        SlurmTask task = new SlurmTask(mock(WorkingDirectory.class), CommandExecutionsTestFactory.md5sumLargeFile(), mock(CompletableFuture.class));
+        CommandExecutor commandExecutor = mock(CommandExecutor.class);
+        UUID uuid = UUID.randomUUID();
+        SlurmTask task = new SlurmTask(uuid, commandExecutor, mock(WorkingDirectory.class), CommandExecutionsTestFactory.md5sumLargeFile());
         assertEquals(2, task.getCommandCount());
         assertEquals(3, task.getCommand(0).getExecutionCount());
         assertEquals(1, task.getCommand(1).getExecutionCount());
@@ -77,7 +80,9 @@ public class SlurmTaskTest {
 
     @Test
     public void testCommonUnzipJob() {
-        SlurmTask task = new SlurmTask(mock(WorkingDirectory.class), Collections.emptyList(), mock(CompletableFuture.class));
+        CommandExecutor commandExecutor = mock(CommandExecutor.class);
+        UUID uuid = UUID.randomUUID();
+        SlurmTask task = new SlurmTask(uuid, commandExecutor, mock(WorkingDirectory.class), Collections.emptyList());
         // 1←2
         // ↑
         // 3 (common unzip job)
@@ -99,7 +104,9 @@ public class SlurmTaskTest {
 
     @Test
     public void testSubmitting() {
-        SlurmTask task = new SlurmTask(mock(WorkingDirectory.class), Collections.emptyList(), mock(CompletableFuture.class));
+        CommandExecutor commandExecutor = mock(CommandExecutor.class);
+        UUID uuid = UUID.randomUUID();
+        SlurmTask task = new SlurmTask(uuid, commandExecutor, mock(WorkingDirectory.class), Collections.emptyList());
         // 1←2
         // ↑
         // 3←4,5
@@ -120,7 +127,7 @@ public class SlurmTaskTest {
         assertEquals(Arrays.asList(3L, 4L, 5L), task.getPreJobIds());
         task.newBatch(6L);
 
-        SlurmTask task2 = new SlurmTask(mock(WorkingDirectory.class), Collections.emptyList(), mock(CompletableFuture.class));
+        SlurmTask task2 = new SlurmTask(uuid, commandExecutor, mock(WorkingDirectory.class), Collections.emptyList());
         // 1←2
         // ↑
         // 3 (common unzip job)

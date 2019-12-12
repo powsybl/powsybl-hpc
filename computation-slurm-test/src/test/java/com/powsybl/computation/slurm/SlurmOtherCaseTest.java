@@ -43,14 +43,16 @@ public class SlurmOtherCaseTest extends AbstractIntegrationTests {
         try (SlurmComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
             CompletableFuture<String> completableFuture = computationManager.execute(EMPTY_ENV, supplier.get(), ComputationParameters.empty());
             System.out.println("Go to cancel on server");
-            // TODO should thrown CompletionException
-            String join = completableFuture.join();
-            assertNull(join);
-            assertTrue(completableFuture.isCancelled());
+            Assertions.assertThatThrownBy(completableFuture::join)
+                    .isInstanceOf(CompletionException.class);
+            // TODO detail msg
+//                    .hasMessageContaining("is CANCELLED");
             assertIsCleanedAfterWait(computationManager.getTaskStore());
         } catch (IOException e) {
             e.printStackTrace();
             failed = true;
+        } catch (CompletionException ce) {
+            System.out.println("in ce");
         }
         // assert on main thread
         assertFalse(failed);
@@ -117,12 +119,13 @@ public class SlurmOtherCaseTest extends AbstractIntegrationTests {
 
         try (SlurmComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
             CompletableFuture<String> execute = computationManager.execute(EMPTY_ENV, supplier.get(), parameters);
-            Assertions.assertThatThrownBy(execute::join)
-                    .isInstanceOf(CompletionException.class)
-                    .hasMessageContaining("Invalid qos specification");
+            execute.join();
             assertIsCleanedAfterWait(computationManager.getTaskStore());
         } catch (IOException e) {
             fail();
+        } catch (CompletionException ce) {
+            Throwable[] suppressed = ce.getCause().getSuppressed();
+            assertTrue(suppressed[0].getMessage().contains("Invalid qos specification"));
         }
     }
 

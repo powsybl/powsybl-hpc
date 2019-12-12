@@ -30,6 +30,7 @@ public abstract class AbstractIntegrationTests {
 
     static final Logger LOGGER = LoggerFactory.getLogger(AbstractIntegrationTests.class);
     static final ExecutionEnvironment EMPTY_ENV = new ExecutionEnvironment(Collections.emptyMap(), "unit_test_", false);
+    private static final ch.qos.logback.classic.Logger SCM_LOGGER = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(SlurmComputationManager.class);
 
     SlurmComputationConfig slurmConfig;
 
@@ -58,7 +59,9 @@ public abstract class AbstractIntegrationTests {
 
     static void assertIsCleanedAfterWait(TaskStore store) {
         try {
-            TimeUnit.SECONDS.sleep(15);
+            int seconds = 15;
+            LOGGER.debug("Waiting " + seconds + " seconds to check clean...");
+            TimeUnit.SECONDS.sleep(seconds);
             assertTrue(store.isEmpty());
         } catch (InterruptedException e) {
             fail();

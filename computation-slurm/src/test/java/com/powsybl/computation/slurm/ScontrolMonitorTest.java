@@ -54,15 +54,12 @@ public class ScontrolMonitorTest {
 
     @Before
     public void setup() {
-        SlurmComputationManager.Mycf mycf;
         slurm = mock(SlurmComputationManager.class);
-        mycf = new SlurmComputationManager.Mycf(slurm);
-        mycf.setThread(new Thread());
-        ts = new TaskStore(15);
-        ts.add(SlurmTaskTest.mockSubmittedTask(mycf));
+        ts = new TaskStore();
+        cm = mock(CommandExecutor.class);
+        ts.add(SlurmTaskTest.mockSubmittedTask(cm));
         Whitebox.setInternalState(slurm, "taskStore", ts);
         when(slurm.getTaskStore()).thenReturn(ts);
-        cm = mock(CommandExecutor.class);
         Whitebox.setInternalState(slurm, "commandRunner", cm);
         when(slurm.getCommandRunner()).thenReturn(cm);
     }
