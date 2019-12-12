@@ -20,13 +20,13 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.LongStream;
 import java.util.zip.GZIPOutputStream;
 
 import static com.powsybl.computation.slurm.CommandExecutionsTestFactory.*;
@@ -44,16 +44,64 @@ public class SlurmNormalExecutionTest extends SlurmIntegrationTests {
     }
 
     private void baseTest(Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters) {
-        try (ComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
-            CompletableFuture<String> completableFuture = computationManager.execute(EMPTY_ENV, supplier.get(), parameters);
+        AbstractExecutionHandler<String> handler = supplier.get();
+        SlurmTask task = null;
+        try (SlurmComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
+            CompletableFuture<String> completableFuture = computationManager.execute(EMPTY_ENV, handler, parameters);
             System.out.println("to wait finish");
             String join = completableFuture.join();
             assertEquals("OK", join);
+            Map<String, SlurmTask> taskByDir = computationManager.getTaskStore().getTaskByDir();
+            task = taskByDir.entrySet().stream().findFirst().get().getValue();
+            System.out.println(task.firstJobId);
+            System.out.println(task.masters);
+            System.out.println(task.subTaskMap);
         } catch (IOException e) {
             e.printStackTrace();
             fail();
         }
         assertFalse(failed);
+        assertTaskRelations(task);
+    }
+
+    private static List<Long> findExpectedIdRelations(SlurmTask task) {
+        List<CommandExecution> executions = task.getExecutions();
+        List<Long> list = new ArrayList<>();
+        for (int i = 0; i < executions.size(); i++) {
+            CommandExecution ce = executions.get(i);
+            if (ce.getCommand().getInputFiles().stream()
+                    .anyMatch(inputFile -> !inputFile.dependsOnExecutionNumber() && inputFile.getPreProcessor() != null)) {
+                list.add(0L);
+            }
+            list.add((long) ce.getExecutionCount());
+        }
+        return list;
+    }
+
+    private static void assertTaskRelations(SlurmTask task) {
+        assertTaskRelations(task, findExpectedIdRelations(task));
+    }
+
+    private static void assertTaskRelations(SlurmTask task, List<Long> expected) {
+        Long diff = task.firstJobId;
+        assertEquals(expected.size(), task.masters.size());
+        for (int i = 0; i < expected.size(); i ++) {
+            assertTrue(task.masters.contains(diff));
+            long expectedBatchCount = expected.get(i);
+            List<Long> expectedBatchIds = calExpectedBatchIds(expectedBatchCount, diff);
+            List<Long> batchIds = task.subTaskMap.get(diff).batchIds;
+            assertEquals(expectedBatchIds, batchIds);
+            if (batchIds.size() == 0) {
+                diff = diff + 1;
+            } else {
+                diff = batchIds.get(batchIds.size() - 1) + 1;
+            }
+        }
+    }
+
+    private static List<Long> calExpectedBatchIds(long expectedBatchCount, long diff) {
+        return LongStream.range(1, expectedBatchCount).map(l -> l + diff)
+                .boxed().collect(Collectors.toList());
     }
 
     @Test

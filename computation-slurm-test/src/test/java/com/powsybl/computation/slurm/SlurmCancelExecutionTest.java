@@ -83,4 +83,33 @@ public class SlurmCancelExecutionTest extends SlurmIntegrationTests {
         };
         baseTest(supplier);
     }
+
+    @Test
+    public void testCancelFirstAfterDone() throws InterruptedException {
+        // test only scancel the first job id even it is already done, the following job would be cancelled
+        // automatically by slurm with "kill-on-invalid-dep" option
+// An output example
+//        49711             cFAD1   cccccopf     it          8  COMPLETED      0:0
+//        49711.batch       batch                it          8  COMPLETED      0:0
+//        49712             cFAD2   cccccopf     it          8     FAILED      1:0
+//        49712.batch       batch                it          8     FAILED      1:0
+        Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
+            @Override
+            public List<CommandExecution> before(Path workingDir) {
+                return cancelFirstJobAfterDone();
+            }
+        };
+        baseTest(supplier);
+    }
+
+    @Test
+    public void testCancelFirstWithBatches() throws InterruptedException {
+        Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
+            @Override
+            public List<CommandExecution> before(Path workingDir) {
+                return cancelFirstWithBatches();
+            }
+        };
+        baseTest(supplier);
+    }
 }

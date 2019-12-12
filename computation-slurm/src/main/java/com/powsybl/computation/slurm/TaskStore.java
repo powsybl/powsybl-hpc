@@ -23,126 +23,49 @@ class TaskStore {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TaskStore.class);
 
-    // workingDir<--->Task of computation
-    private Map<String, TaskCounter> workingDirTaskMap = new HashMap<>();
-    private Map<String, Long> workingDirFirstJobMap = new HashMap<>();
-    private Map<CompletableFuture, String> futureWorkingDirMap = new HashMap<>();
-    private Map<String, CompletableFuture> workingDirFutureMap = new HashMap<>();
-    private ReadWriteLock taskLock = new ReentrantReadWriteLock();
-
-    private Map<Long, Long> jobDependencies = new HashMap<>();
-    private ReadWriteLock jobDependencyLock = new ReentrantReadWriteLock();
-
-    private Map<Long, List<Long>> batchIds = new HashMap<>();
-    private ReadWriteLock batchIdsLock = new ReentrantReadWriteLock();
+    private Map<String, SlurmTask> taskByDir = new ConcurrentHashMap<>();
+    private Map<CompletableFuture, SlurmTask> taskByFuture = new ConcurrentHashMap<>();
 
     private Set<Long> tracingIds = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
-    TaskCounter getTaskCounter(String workingDir) {
-        taskLock.readLock().lock();
-        try {
-            return workingDirTaskMap.get(workingDir);
-        } finally {
-            taskLock.readLock().unlock();
-        }
+    void add(SlurmTask task) {
+        String dir = task.getDirectory().toPath().getFileName().toString();
+        taskByDir.put(dir, task);
+        taskByFuture.put(task.getCompletableFuture(), task);
     }
 
-    TaskCounter getTaskCounter(CompletableFuture future) {
-        taskLock.readLock().lock();
-        try {
-            String workingDir = futureWorkingDirMap.get(future);
-            return workingDirTaskMap.get(workingDir);
-        } finally {
-            taskLock.readLock().unlock();
-        }
+    public Map<String, SlurmTask> getTaskByDir() {
+        return taskByDir;
     }
 
-    Long getFirstJobId(CompletableFuture future) {
-        taskLock.readLock().lock();
-        try {
-            String workingDir = futureWorkingDirMap.get(future);
-            return workingDirFirstJobMap.get(workingDir);
-        } finally {
-            taskLock.readLock().unlock();
-        }
+    private Optional<SlurmTask> getTask(String workingDir) {
+        return Optional.ofNullable(taskByDir.get(workingDir));
     }
 
-    CompletableFuture getCompletableFuture(String workingDirName) {
-        taskLock.readLock().lock();
-        try {
-            return workingDirFutureMap.get(workingDirName);
-        } finally {
-            taskLock.readLock().unlock();
-        }
+    Optional<SlurmTask> getTask(CompletableFuture future) {
+        return Optional.ofNullable(taskByFuture.get(future));
     }
 
-    List<Long> getDependentJobs(Long jobId) {
-        jobDependencyLock.readLock().lock();
-        try {
-            List<Long> ids = new ArrayList<>();
-            Long jobId2 = jobId;
-            while ((jobId2 = jobDependencies.get(jobId2)) != null) {
-                ids.add(jobId2);
-            }
-            return ids;
-        } finally {
-            jobDependencyLock.readLock().unlock();
-        }
+    Optional<TaskCounter> getTaskCounter(String workingDir) {
+        return getTask(workingDir).map(SlurmTask::getCounter);
     }
 
-    void insert(String workingDirName, TaskCounter taskCounter, Long firstJobId) {
-        taskLock.writeLock().lock();
-        try {
-            workingDirTaskMap.put(workingDirName, taskCounter);
-            workingDirFirstJobMap.put(workingDirName, firstJobId);
-        } finally {
-            taskLock.writeLock().unlock();
-        }
-        trace(firstJobId);
+    Optional<TaskCounter> getTaskCounter(CompletableFuture future) {
+        return getTask(future).map(SlurmTask::getCounter);
     }
 
-    void insert(String workingDirName, CompletableFuture future) {
-        taskLock.writeLock().lock();
-        try {
-            futureWorkingDirMap.put(future, workingDirName);
-            workingDirFutureMap.put(workingDirName, future);
-        } finally {
-            taskLock.writeLock().unlock();
-        }
+    /**
+     * Get a set of submitting or submitted but not finished task's first job id.
+     * @return
+     */
+    Set<Long> getTracingFirstIds() {
+        return taskByDir.values().stream()
+                .flatMap(task -> task.getToCancelIds().stream()).collect(Collectors.toSet());
     }
 
-    void insertDependency(Long preJobId, Long jobId) {
-        jobDependencyLock.writeLock().lock();
-        try {
-            jobDependencies.put(preJobId, jobId);
-            LOGGER.debug("DependencyId: {} -> {}", preJobId, jobId);
-        } finally {
-            jobDependencyLock.writeLock().unlock();
-        }
-        trace(jobId);
-    }
-
-    void insertBatchIds(Long masterJobId, Long jobId) {
-        if (!masterJobId.equals(jobId)) {
-            batchIdsLock.writeLock().lock();
-            try {
-                batchIds.computeIfAbsent(masterJobId, k -> new ArrayList<>()).add(jobId);
-                LOGGER.debug("batchIds: {} -> {}", masterJobId, jobId);
-            } finally {
-                batchIdsLock.writeLock().unlock();
-            }
-            trace(jobId);
-        }
-    }
-
-    List<Long> getBatchIds(Long masterJobId) {
-        batchIdsLock.readLock().lock();
-        try {
-            List<Long> longs = batchIds.get(masterJobId);
-            return longs == null ? Collections.emptyList() : longs;
-        } finally {
-            batchIdsLock.readLock().unlock();
-        }
+    // TODO use task
+    Optional<CompletableFuture> getCompletableFuture(String workingDirName) {
+        return getTask(workingDirName).map(SlurmTask::getCompletableFuture);
     }
 
     private void trace(long id) {
@@ -159,157 +82,16 @@ class TaskStore {
     }
 
     Set<TaskCounter> getTaskCounters() {
-        return new HashSet<>(workingDirTaskMap.values());
+        return taskByDir.values().stream()
+                .map(SlurmTask::getCounter).collect(Collectors.toSet());
     }
 
     void remove(CompletableFuture future) {
-        Long firstJobId = removeTaskMaps(future);
-        removeIds(firstJobId);
-    }
-
-    private Long removeTaskMaps(CompletableFuture future) {
-        String dir;
-        Long firstJob;
-        taskLock.readLock().lock();
-        try {
-            dir = futureWorkingDirMap.get(future);
-            firstJob = workingDirFirstJobMap.get(dir);
-        } finally {
-            taskLock.readLock().unlock();
-        }
-        taskLock.writeLock().lock();
-        try {
-            workingDirFirstJobMap.remove(dir);
-            workingDirTaskMap.remove(dir);
-            futureWorkingDirMap.remove(future);
-            workingDirFutureMap.remove(dir);
-            return firstJob;
-        } finally {
-            taskLock.writeLock().unlock();
-        }
-    }
-
-    private Set<Long> removeIds(Long firstId) {
-        Set<Long> toRemoveMasterIds = new HashSet<>();
-        Set<Long> allIdsFromFirstId = new HashSet<>();
-        toRemoveMasterIds.add(firstId);
-        jobDependencyLock.writeLock().lock();
-        try {
-            Long toRemove = firstId;
-            while (toRemove != null) {
-                toRemoveMasterIds.add(toRemove);
-                toRemove = jobDependencies.remove(toRemove);
-            }
-        } finally {
-            jobDependencyLock.writeLock().unlock();
-        }
-        allIdsFromFirstId.addAll(toRemoveMasterIds);
-        batchIdsLock.writeLock().lock();
-        try {
-            toRemoveMasterIds.forEach(masterId -> {
-                List<Long> remove = batchIds.remove(masterId);
-                if (remove != null && !remove.isEmpty()) {
-                    allIdsFromFirstId.addAll(remove);
-                }
-            });
-            return allIdsFromFirstId;
-        } finally {
-            batchIdsLock.writeLock().unlock();
-        }
     }
 
     Optional<CompletableFuture> getCompletableFutureByJobId(long id) {
-        // try with first id
-        Optional<CompletableFuture> completableFuture = getFutureByFirstId(id);
-        if (completableFuture.isPresent()) {
-            return completableFuture;
-        }
-        // try with master id
-        completableFuture = getFutureByMasterId(id);
-        if (completableFuture.isPresent()) {
-            return completableFuture;
-        }
-        // try with batch id
-        completableFuture = getFutureByBatchId(id);
-        return completableFuture;
+        return taskByDir.values().stream().filter(task -> task.contains(id))
+                .findFirst().map(SlurmTask::getCompletableFuture);
     }
 
-    private Optional<CompletableFuture> getFutureByFirstId(long firstJobId) {
-        taskLock.readLock().lock();
-        try {
-            return workingDirFirstJobMap.entrySet()
-                    .stream()
-                    .filter(e -> e.getValue() == firstJobId)
-                    .findFirst()
-                    .map(Map.Entry::getKey)
-                    .map(workingDirFutureMap::get);
-        } finally {
-            taskLock.readLock().unlock();
-        }
-    }
-
-    private Optional<CompletableFuture> getFutureByMasterId(long masterId) {
-        OptionalLong option = getFirstId(masterId);
-        if (option.isPresent()) {
-            return getFutureByFirstId(option.getAsLong());
-        } else {
-            return Optional.empty();
-        }
-    }
-
-    private OptionalLong getFirstId(long masterId) {
-        // is already a first job id
-        Optional<CompletableFuture> completableFuture = getFutureByFirstId(masterId);
-        if (completableFuture.isPresent()) {
-            return OptionalLong.of(masterId);
-        }
-        Map<Long, Long> inverted;
-        jobDependencyLock.readLock().lock();
-        try {
-            // check is master id
-            if (jobDependencies.values().contains(masterId)) {
-                inverted = jobDependencies.entrySet().stream()
-                        .filter(entry -> entry.getKey() < masterId) // pruned
-                        .collect(Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey)); // inverted
-            } else {
-                return OptionalLong.empty();
-            }
-        } finally {
-            jobDependencyLock.readLock().unlock();
-        }
-
-        Long tmp;
-        Long firstJob = masterId;
-        do {
-            tmp = firstJob;
-            firstJob = inverted.get(tmp);
-        } while (firstJob != null);
-
-        return OptionalLong.of(tmp);
-    }
-
-    private Optional<CompletableFuture> getFutureByBatchId(long batchId) {
-        OptionalLong optMasterId = getMasterId(batchId);
-        if (optMasterId.isPresent()) {
-            return getFutureByMasterId(optMasterId.getAsLong());
-        }
-        return Optional.empty();
-    }
-
-    private OptionalLong getMasterId(long batchId) {
-        Optional<Map.Entry<Long, List<Long>>> max;
-        batchIdsLock.readLock().lock();
-        try {
-            max = batchIds.entrySet().stream()
-                    .filter(entry -> entry.getKey() < batchId)
-                    .max(Comparator.comparingLong(Map.Entry::getKey));
-        } finally {
-            batchIdsLock.readLock().unlock();
-        }
-
-        if (max.isPresent() && (max.get().getValue().contains(batchId))) {
-            return OptionalLong.of(max.get().getKey());
-        }
-        return OptionalLong.empty();
-    }
 }

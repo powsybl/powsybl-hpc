@@ -107,6 +107,11 @@ class SbatchCmdBuilder {
         return this;
     }
 
+    private SbatchCmdBuilder killOnInvalidDep() {
+        sbatchArgsByName.put("kill-on-invalid-dep", "yes");
+        return this;
+    }
+
     SbatchCmdBuilder script(String name) {
         this.script = Objects.requireNonNull(name);
         return this;
@@ -148,6 +153,7 @@ class SbatchCmdBuilder {
     }
 
     SbatchCmd build() {
+        killOnInvalidDep();
         validate();
         return new SbatchCmd(sbatchArgsByName, sbatchArgsByCharacter, sbatchOptions, script);
     }

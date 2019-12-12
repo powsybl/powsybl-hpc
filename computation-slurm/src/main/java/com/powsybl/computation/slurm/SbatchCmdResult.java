@@ -9,13 +9,13 @@ package com.powsybl.computation.slurm;
 /**
  * @author Yichen Tang <yichen.tang at rte-france.com>
  */
-public class SbatchCmdResult extends AbstractSlurmCmdResult {
+class SbatchCmdResult extends AbstractSlurmCmdResult {
 
     SbatchCmdResult(CommandResult commandResult) {
         super(commandResult);
     }
 
-    long getSubmittedJobId() throws SlurmCmdNonZeroException {
+    Long getSubmittedJobId() throws SlurmCmdNonZeroException {
         if (isOk()) {
             String jobId = commandResult.getStdOut().replaceAll("[^0-9]", "");
             return Long.valueOf(jobId);

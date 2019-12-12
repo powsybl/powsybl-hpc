@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import static com.powsybl.computation.slurm.CommandExecutionsTestFactory.longProgram;
+import static com.powsybl.computation.slurm.CommandExecutionsTestFactory.makeSlurmBusy;
 import static org.junit.Assert.*;
 
 /**
@@ -54,12 +55,12 @@ public class SlurmOtherCaseTest extends SlurmIntegrationTests {
         assertFalse(failed);
     }
 
-    private void makeSlurmBusy() {
+    private void runMakeSlurmBusy() {
         Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
                 // FIXME get total resources on slurm
-                return CommandExecutionsTestFactory.makeSlurmBusy(3);
+                return makeSlurmBusy(3);
             }
         };
         try (SlurmComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
@@ -73,7 +74,7 @@ public class SlurmOtherCaseTest extends SlurmIntegrationTests {
 
     @Test
     public void testDeadline() throws InterruptedException {
-        Thread makeSlurmBusyThread = new Thread(this::makeSlurmBusy);
+        Thread makeSlurmBusyThread = new Thread(this::runMakeSlurmBusy);
         makeSlurmBusyThread.start();
         TimeUnit.SECONDS.sleep(10);
         Supplier<AbstractExecutionHandler<Void>> deadlineTest = () -> new AbstractExecutionHandler<Void>() {
@@ -122,5 +123,19 @@ public class SlurmOtherCaseTest extends SlurmIntegrationTests {
         }
     }
 
-    // FIXME missing a shutdown test
+    // FIXME shutdown and check programmatically
+    @Test
+    public void testStopSendingAfterShutdown() {
+        try (SlurmComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
+            CompletableFuture<Void> execute = computationManager.execute(EMPTY_ENV, new AbstractExecutionHandler<Void>() {
+                @Override
+                public List<CommandExecution> before(Path path) throws IOException {
+                    return makeSlurmBusy(5);
+                }
+            }, ComputationParameters.empty());
+            execute.join();
+        } catch (IOException e) {
+            fail();
+        }
+    }
 }
