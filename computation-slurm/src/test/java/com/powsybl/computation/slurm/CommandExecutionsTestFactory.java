@@ -93,12 +93,100 @@ public final class CommandExecutionsTestFactory {
         return Collections.singletonList(new CommandExecution(command, 1));
     }
 
-    static List<CommandExecution> makeSlurmBusy() {
+    static List<CommandExecution> makeSlurmBusy(int count) {
         Command command = new SimpleCommandBuilder()
                 .id("makeBusy")
                 .program("sleep")
                 .arg("60s")
                 .build();
-        return Collections.singletonList(new CommandExecution(command, 42));
+        return Collections.singletonList(new CommandExecution(command, count));
+    }
+
+    static List<CommandExecution> twoSimpleCmd() {
+        Command command1 = new SimpleCommandBuilder()
+                .id("simpleCmdId")
+                .program("sleep")
+                .args("10s")
+                .build();
+        Command command2 = new SimpleCommandBuilder()
+                .id("cmd2")
+                .program("echo")
+                .args("hello", ">", "output")
+                .build();
+        return Arrays.asList(new CommandExecution(command1, 1), new CommandExecution(command2, 1));
+    }
+
+    static List<CommandExecution> md5sumLargeFile() {
+        Command command1 = new SimpleCommandBuilder()
+                .id("c1")
+                .program("md5sum")
+                .inputFiles(new InputFile("2GFile.gz", FilePreProcessor.FILE_GUNZIP))
+                .args("2GFile")
+                .build();
+        Command command2 = new SimpleCommandBuilder()
+                .id("c2")
+                .inputFiles(new InputFile("4GFile.gz", FilePreProcessor.FILE_GUNZIP))
+                .program("md5sum")
+                .args("4GFile")
+                .build();
+        return Arrays.asList(new CommandExecution(command1, 3),
+                new CommandExecution(command2, 1));
+    }
+
+    static List<CommandExecution> invalidProgram() {
+        Command cmd = new SimpleCommandBuilder()
+                .id("invalidProgram")
+                .program("echoo")
+                .args("hello")
+                .build();
+        return Collections.singletonList(new CommandExecution(cmd, 1));
+    }
+
+    static List<CommandExecution> invalidProgramInGroup() {
+        Command command = new GroupCommandBuilder()
+                .id("groupCmdId")
+                .subCommand()
+                .program("echoo")
+                .args("hello")
+                .add()
+                .subCommand()
+                .program("echo")
+                .args("sub2")
+                .add()
+                .build();
+        return Collections.singletonList(new CommandExecution(command, 1));
+    }
+
+    static List<CommandExecution> invalidProgramInList() {
+        return Arrays.asList(invalidProgram().get(0), CommandExecutionsTestFactory.simpleCmd().get(0));
+    }
+
+    static List<CommandExecution> longProgramInList(int c1, int c2, int c3) {
+        Command command1 = new SimpleCommandBuilder()
+                .id("tLP")
+                .program("sleep")
+                .args("10s")
+                .build();
+        Command command2 = new SimpleCommandBuilder()
+                .id("tLP2")
+                .program("sleep")
+                .args("10s")
+                .build();
+        Command command3 = new SimpleCommandBuilder()
+                .id("tLP3")
+                .program("sleep")
+                .args("10s")
+                .build();
+        return Arrays.asList(new CommandExecution(command1, c1),
+                new CommandExecution(command2, c2),
+                new CommandExecution(command3, c3));
+    }
+
+    static List<CommandExecution> longProgramInList() {
+        return longProgramInList(1, 1, 1);
+    }
+
+    static List<CommandExecution> mixedPrograms() {
+        return longProgramInList(1, 5, 2);
     }
 }

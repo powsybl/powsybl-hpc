@@ -626,7 +626,7 @@ public class SlurmComputationManager implements ComputationManager {
             closeStarted = true;
             if (!isClosed) {
                 LOGGER.info("Shutdown slurm...");
-                LOGGER.info("Cancel current subbmited jobs");
+                LOGGER.info("Cancel current submitted jobs");
                 Set<Long> tracingIds = new HashSet<>(getTaskStore().getTracingIds());
                 tracingIds.forEach(this::scancel);
                 // count down task to avoid InterruptedException
