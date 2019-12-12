@@ -1,7 +1,6 @@
 # PowSyBl HPC
 
-[![Build Status](https://api.travis-ci.com/powsybl/powsybl-hpc.svg?branch=master)](https://travis-ci.com/powsybl/powsybl-hpc)
-[![Build status](https://ci.appveyor.com/api/projects/status/31voc0cipop3fb4l/branch/master?svg=true)](https://ci.appveyor.com/project/powsybl/powsybl-hpc/branch/master)
+[![Actions Status](https://github.com/powsybl/powsybl-hpc/workflows/CI/badge.svg)](https://github.com/powsybl/powsybl-hpc/actions)
 [![Coverage Status](https://sonarcloud.io/api/project_badges/measure?project=com.powsybl%3Apowsybl-hpc&metric=coverage)](https://sonarcloud.io/component_measures?id=com.powsybl%3Apowsybl-hpc&metric=coverage)
 [![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=com.powsybl%3Apowsybl-hpc&metric=alert_status)](https://sonarcloud.io/dashboard?id=com.powsybl%3Apowsybl-hpc)
 [![MPL-2.0 License](https://img.shields.io/badge/license-MPL_2.0-blue.svg)](https://www.mozilla.org/en-US/MPL/2.0/)
