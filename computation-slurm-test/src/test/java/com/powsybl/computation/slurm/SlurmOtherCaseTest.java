@@ -30,7 +30,7 @@ import static org.junit.Assert.*;
  * @author Yichen TANG <yichen.tang at rte-france.com>
  */
 @Ignore
-public class SlurmOtherCaseTest extends SlurmIntegrationTests {
+public class SlurmOtherCaseTest extends AbstractIntegrationTests {
 
     @Test
     public void testLongProgramToCancelExternal() {
@@ -137,5 +137,10 @@ public class SlurmOtherCaseTest extends SlurmIntegrationTests {
         } catch (IOException e) {
             fail();
         }
+    }
+
+    @Override
+    void baseTest(Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters, boolean checkClean) {
+        // do nothing
     }
 }

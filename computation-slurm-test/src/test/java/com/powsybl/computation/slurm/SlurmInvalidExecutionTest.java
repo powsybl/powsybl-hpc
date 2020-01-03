@@ -23,20 +23,20 @@ import static org.junit.Assert.*;
  * @author Yichen TANG <yichen.tang at rte-france.com>
  */
 @Ignore
-public class SlurmInvalidExecutionTest extends SlurmIntegrationTests {
+public class SlurmInvalidExecutionTest extends AbstractIntegrationTests {
 
-    private void baseTest(Supplier<AbstractExecutionHandler<String>> supplier) {
-        baseTest(supplier, ComputationParameters.empty());
-    }
-
-    private void baseTest(Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters) {
-        try (ComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
+    @Override
+    void baseTest(Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters, boolean checkClean) {
+        try (SlurmComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
             CompletableFuture<String> completableFuture = computationManager.execute(EMPTY_ENV, supplier.get(), parameters);
             System.out.println("to wait finish");
             String join = completableFuture.join();
             assertEquals("OK", join);
             // TODO should thrown CompletionException
 //            Assertions.assertThatThrownBy(completableFuture::join).isInstanceOf(CompletionException.class);
+            if (checkClean) {
+                assertIsCleanedAfterWait(computationManager.getTaskStore());
+            }
         } catch (IOException e) {
             e.printStackTrace();
             fail();
@@ -54,6 +54,17 @@ public class SlurmInvalidExecutionTest extends SlurmIntegrationTests {
             }
         };
         baseTest(supplier);
+    }
+
+    @Test
+    public void testInvalidProgramCheckClean() {
+        Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractCheckErrorsExecutionHandler() {
+            @Override
+            public List<CommandExecution> before(Path workingDir) {
+                return invalidProgram();
+            }
+        };
+        baseTest(supplier, ComputationParameters.empty(), true);
     }
 
     @Test

@@ -8,6 +8,8 @@ package com.powsybl.computation.slurm;
 
 import com.powsybl.commons.config.ModuleConfig;
 import com.powsybl.commons.config.YamlModuleConfigRepository;
+import com.powsybl.computation.AbstractExecutionHandler;
+import com.powsybl.computation.ComputationParameters;
 import com.powsybl.computation.ExecutionEnvironment;
 import org.junit.Before;
 import org.slf4j.Logger;
@@ -15,13 +17,18 @@ import org.slf4j.LoggerFactory;
 
 import java.nio.file.Paths;
 import java.util.Collections;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
+
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * @author Yichen TANG <yichen.tang at rte-france.com>
  */
-public class SlurmIntegrationTests {
+public abstract class AbstractIntegrationTests {
 
-    static final Logger LOGGER = LoggerFactory.getLogger(SlurmIntegrationTests.class);
+    static final Logger LOGGER = LoggerFactory.getLogger(AbstractIntegrationTests.class);
     static final ExecutionEnvironment EMPTY_ENV = new ExecutionEnvironment(Collections.emptyMap(), "unit_test_", false);
 
     SlurmComputationConfig slurmConfig;
@@ -46,6 +53,25 @@ public class SlurmIntegrationTests {
      */
     private static SlurmComputationConfig generateSlurmConfigWithShortScontrolTime(ModuleConfig config) {
         return new SlurmComputationConfig(generateSsh(config), config.getStringProperty("remote-dir"),
-                Paths.get(config.getStringProperty("local-dir")), 5, 1);
+                Paths.get(config.getStringProperty("local-dir")), 5, 1, 10);
     }
+
+    static void assertIsCleanedAfterWait(TaskStore store) {
+        try {
+            TimeUnit.SECONDS.sleep(15);
+            assertTrue(store.isEmpty());
+        } catch (InterruptedException e) {
+            fail();
+        }
+    }
+
+    void baseTest(Supplier<AbstractExecutionHandler<String>> supplier) {
+        baseTest(supplier, ComputationParameters.empty());
+    }
+
+    void baseTest(Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters) {
+        baseTest(supplier, parameters, false);
+    }
+
+    abstract void baseTest(Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters, boolean checkClean) ;
 }

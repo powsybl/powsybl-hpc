@@ -46,14 +46,14 @@ class FlagFilesMonitor implements Runnable {
                     // ex: mydone_workingDirxxxxxx_taskid
                     int lastIdx = line.lastIndexOf('_');
                     String workingDirName = line.substring(idx + 1, lastIdx);
-                    TaskCounter taskCounter = taskStore.getTaskCounter(workingDirName);
+                    TaskCounter taskCounter = taskStore.getTaskCounter(workingDirName).get();
                     if (taskCounter != null) {
                         LOGGER.debug("{} found", line);
                         taskCounter.countDown();
                         commandRunner.execute("rm " + flagDir + "/" + line);
                         // cancel following jobs(which depends on this job) if there are errors
                         if (line.startsWith("myerror_")) {
-                            taskStore.getCompletableFuture(workingDirName).cancel(true);
+                            taskStore.getCompletableFuture(workingDirName).get().cancel(true);
                         } else if (line.startsWith("mydone_")) {
                             String id = line.substring(lastIdx + 1);
                             taskStore.untracing(Long.parseLong(id));

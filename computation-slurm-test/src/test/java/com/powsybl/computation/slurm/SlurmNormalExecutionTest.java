@@ -37,13 +37,9 @@ import static org.junit.Assert.*;
  */
 @Ignore
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-public class SlurmNormalExecutionTest extends SlurmIntegrationTests {
+public class SlurmNormalExecutionTest extends AbstractIntegrationTests {
 
-    private void baseTest(Supplier<AbstractExecutionHandler<String>> supplier) {
-        baseTest(supplier, ComputationParameters.empty());
-    }
-
-    private void baseTest(Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters) {
+    void baseTest(Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters, boolean checkClean) {
         AbstractExecutionHandler<String> handler = supplier.get();
         SlurmTask task = null;
         try (SlurmComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
@@ -56,6 +52,9 @@ public class SlurmNormalExecutionTest extends SlurmIntegrationTests {
             System.out.println(task.firstJobId);
             System.out.println(task.masters);
             System.out.println(task.subTaskMap);
+            if (checkClean) {
+                assertIsCleanedAfterWait(computationManager.getTaskStore());
+            }
         } catch (IOException e) {
             e.printStackTrace();
             fail();
@@ -113,6 +112,17 @@ public class SlurmNormalExecutionTest extends SlurmIntegrationTests {
             }
         };
         baseTest(supplier);
+    }
+
+    @Test
+    public void testClean() {
+        Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractReturnOKExecutionHandler() {
+            @Override
+            public List<CommandExecution> before(Path path) {
+                return simpleCmdWithCount(7);
+            }
+        };
+        baseTest(supplier, ComputationParameters.empty(), true);
     }
 
     @Test

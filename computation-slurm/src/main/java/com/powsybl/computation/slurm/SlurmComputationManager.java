@@ -62,7 +62,7 @@ public class SlurmComputationManager implements ComputationManager {
 
     private final SlurmStatusManager statusManager;
 
-    private final TaskStore taskStore = new TaskStore();
+    private final TaskStore taskStore;
 
     private final ScheduledExecutorService flagsDirMonitorService = Executors.newScheduledThreadPool(1);
     private ScheduledFuture flagsDirMonitorFuture;
@@ -75,6 +75,7 @@ public class SlurmComputationManager implements ComputationManager {
 
     public SlurmComputationManager(SlurmComputationConfig config) throws IOException {
         this.config = requireNonNull(config);
+        this.taskStore = new TaskStore(config.getCleanInterval());
 
         executorService = Executors.newCachedThreadPool();
 
@@ -210,7 +211,6 @@ public class SlurmComputationManager implements ComputationManager {
                 LOGGER.error(e.toString(), e);
                 f.completeExceptionally(e);
             }
-            taskStore.remove(f);
         });
         return f;
     }
@@ -266,7 +266,6 @@ public class SlurmComputationManager implements ComputationManager {
             }
             SlurmTask task = optionalSlurmTask.get();
             mgr.scancelFirstJob(task.getFirstJobId(), task.getBatchesWithFirst());
-            mgr.taskStore.remove(this);
             return true;
         }
 

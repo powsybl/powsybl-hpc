@@ -44,6 +44,15 @@ public class SlurmTask {
     }
 
     /**
+     * The working directory and task is a one-to-one relationship.
+     * So it returns the directory name as ID.
+     * @return Returns working directory name as ID.
+     */
+    String getId() {
+        return getDirectory().toPath().getFileName().toString();
+    }
+
+    /**
      * Returns the first job id and it's batchIds
      * For array jobs can be cancelled just by calling on master jobId
      * but currently array_job in slurm is not used, so jobs should be cancelled one by one.

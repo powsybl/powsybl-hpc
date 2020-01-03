@@ -27,15 +27,12 @@ import static org.junit.Assert.assertFalse;
  * @author Yichen TANG <yichen.tang at rte-france.com>
  */
 @Ignore
-public class SlurmCancelExecutionTest extends SlurmIntegrationTests {
+public class SlurmCancelExecutionTest extends AbstractIntegrationTests {
 
-    private void baseTest(Supplier<AbstractExecutionHandler<Void>> supplier) throws InterruptedException {
-        baseTest(supplier, ComputationParameters.empty());
-    }
-
-    private void baseTest(Supplier<AbstractExecutionHandler<Void>> supplier, ComputationParameters parameters) throws InterruptedException {
+    @Override
+    void baseTest(Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters, boolean checkClean) {
         try (ComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
-            CompletableFuture<Void> completableFuture = computationManager.execute(EMPTY_ENV, supplier.get(), parameters);
+            CompletableFuture<String> completableFuture = computationManager.execute(EMPTY_ENV, supplier.get(), parameters);
             System.out.println("CompletableFuture would be cancelled in 5 seconds...");
             // TODO add a test before finished submit
             Thread.sleep(5000);
@@ -43,7 +40,7 @@ public class SlurmCancelExecutionTest extends SlurmIntegrationTests {
             System.out.println("Cancelled:" + cancel);
             Assert.assertTrue(cancel);
             // TODO should throw CancellationException
-        } catch (IOException e) {
+        } catch (IOException | InterruptedException e) {
             e.printStackTrace();
             failed = true;
         }
@@ -53,18 +50,19 @@ public class SlurmCancelExecutionTest extends SlurmIntegrationTests {
 
     @Test
     public void testLongProgramToCancel() throws InterruptedException {
-        Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
+        Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractExecutionHandler<String>() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
                 return longProgram(10);
             }
+
         };
         baseTest(supplier);
     }
 
     @Test
     public void testLongProgramInListToCancel() throws InterruptedException {
-        Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
+        Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractExecutionHandler<String>() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
                 return longProgramInList();
@@ -75,7 +73,7 @@ public class SlurmCancelExecutionTest extends SlurmIntegrationTests {
 
     @Test
     public void testMixedProgramsToCancel() throws InterruptedException {
-        Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
+        Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractExecutionHandler<String>() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
                 return mixedPrograms();
@@ -93,7 +91,7 @@ public class SlurmCancelExecutionTest extends SlurmIntegrationTests {
 //        49711.batch       batch                it          8  COMPLETED      0:0
 //        49712             cFAD2   cccccopf     it          8     FAILED      1:0
 //        49712.batch       batch                it          8     FAILED      1:0
-        Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
+        Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractExecutionHandler<String>() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
                 return cancelFirstJobAfterDone();
@@ -104,7 +102,7 @@ public class SlurmCancelExecutionTest extends SlurmIntegrationTests {
 
     @Test
     public void testCancelFirstWithBatches() throws InterruptedException {
-        Supplier<AbstractExecutionHandler<Void>> supplier = () -> new AbstractExecutionHandler<Void>() {
+        Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractExecutionHandler<String>() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
                 return cancelFirstWithBatches();

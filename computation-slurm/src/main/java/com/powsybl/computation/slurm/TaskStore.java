@@ -10,8 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.*;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
@@ -28,9 +27,15 @@ class TaskStore {
 
     private Set<Long> tracingIds = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
+    private final StoreCleaner cleaner;
+
+    TaskStore(int cleanTime) {
+        cleaner = new StoreCleaner(cleanTime);
+        cleaner.start();
+    }
+
     void add(SlurmTask task) {
-        String dir = task.getDirectory().toPath().getFileName().toString();
-        taskByDir.put(dir, task);
+        taskByDir.put(task.getId(), task);
         taskByFuture.put(task.getCompletableFuture(), task);
     }
 
@@ -86,12 +91,39 @@ class TaskStore {
                 .map(SlurmTask::getCounter).collect(Collectors.toSet());
     }
 
-    void remove(CompletableFuture future) {
-    }
-
     Optional<CompletableFuture> getCompletableFutureByJobId(long id) {
         return taskByDir.values().stream().filter(task -> task.contains(id))
                 .findFirst().map(SlurmTask::getCompletableFuture);
     }
 
+    boolean isEmpty() {
+        return taskByDir.isEmpty()
+                && taskByFuture.isEmpty();
+    }
+
+    class StoreCleaner {
+
+        private final int cleanTime;
+        ScheduledExecutorService scheduledExecutorService;
+        StoreCleaner(int cleanTime) {
+            this.cleanTime = cleanTime;
+            scheduledExecutorService = Executors.newScheduledThreadPool(1);
+        }
+
+        void start() {
+            scheduledExecutorService.scheduleAtFixedRate(this::clean, cleanTime, cleanTime, TimeUnit.SECONDS);
+        }
+
+        void clean() {
+            taskByDir.entrySet().stream().filter(e ->
+                    e.getValue().getCompletableFuture().isDone())
+                    .map(Map.Entry::getKey)
+                    .collect(Collectors.toSet())
+                    .forEach(id -> taskByDir.remove(id));
+            taskByFuture.keySet().stream()
+                    .filter(CompletableFuture::isDone)
+                    .collect(Collectors.toSet())
+                    .forEach(f -> taskByFuture.remove(f));
+        }
+    }
 }
