@@ -265,7 +265,7 @@ public class SlurmComputationManager implements ComputationManager {
                 return true;
             }
             SlurmTask task = optionalSlurmTask.get();
-            mgr.scancelFirstJob(task.getFirstJobId(), task.getBatchesWithFirst());
+            mgr.scancelFirstJob(task.getToCancelIds());
             return true;
         }
 
@@ -274,11 +274,9 @@ public class SlurmComputationManager implements ComputationManager {
         }
     }
 
-    private void scancelFirstJob(Long firstJobId, Set<Long> batches) {
-        LOGGER.debug("Cancel first job id: {}", firstJobId);
-        scancel(firstJobId);
+    private void scancelFirstJob(Set<Long> batches) {
         if (!batches.isEmpty()) {
-            LOGGER.debug("Cancel batch ids");
+            LOGGER.debug("Cancel first batch ids");
             batches.forEach(this::scancel);
         }
     }
@@ -301,7 +299,7 @@ public class SlurmComputationManager implements ComputationManager {
             taskStore.add(slurmTask);
 
             Map<Long, Command> jobIdCommandMap;
-            jobIdCommandMap = generateSbatchAndSubmit(slurmTask, parameters, remoteWorkingDir, environment, f);
+            jobIdCommandMap = generateSbatchAndSubmit(slurmTask, parameters, environment);
 
             // waiting task finish
             try {
@@ -360,14 +358,15 @@ public class SlurmComputationManager implements ComputationManager {
         return new SlurmExecutionReport(errors, workingDir);
     }
 
-    private Map<Long, Command> generateSbatchAndSubmit(SlurmTask task, ComputationParameters parameters, Path workingDir,
-                                                       ExecutionEnvironment environment, CompletableFuture<?> future)
+    private Map<Long, Command> generateSbatchAndSubmit(SlurmTask task, ComputationParameters parameters,
+                                                       ExecutionEnvironment environment)
             throws IOException {
         Map<Long, Command> jobIdCommandMap = new HashMap<>();
-
+        Path workingDir = task.getWorkingDirPath();
+        CompletableFuture future = task.getCompletableFuture();
         outerSendingLoop:
-        for (int commandIdx = 0; commandIdx < task.getExecutions().size(); commandIdx++) {
-            CommandExecution commandExecution = task.getExecutions().get(commandIdx);
+        for (int commandIdx = 0; commandIdx < task.getCommandCount(); commandIdx++) {
+            CommandExecution commandExecution = task.getCommand(commandIdx);
             Command command = commandExecution.getCommand();
             SbatchCmd cmd;
             if (LOGGER.isDebugEnabled()) {
@@ -386,7 +385,7 @@ public class SlurmComputationManager implements ComputationManager {
                 copyShellToRemoteWorkingDir(shell, UNZIP_INPUTS_COMMAND_ID + "_" + commandIdx, workingDir);
                 cmd = buildSbatchCmd(workingDir, UNZIP_INPUTS_COMMAND_ID, commandIdx, task.getPreJobIds(), parameters);
                 if (isSendAllowed(future)) {
-                    Long jobId = launchSbatch(cmd);
+                    long jobId = launchSbatch(cmd);
                     task.newCommonUnzipJob(jobId);
                 } else {
                     logNotSendReason(future);
@@ -403,7 +402,7 @@ public class SlurmComputationManager implements ComputationManager {
                 prepareBatch(command, executionIndex, environment, commandExecution, workingDir);
                 cmd = buildSbatchCmd(workingDir, command.getId(), executionIndex, task.getPreJobIds(), parameters);
                 if (isSendAllowed(future)) {
-                    Long jobId = launchSbatch(cmd);
+                    long jobId = launchSbatch(cmd);
                     task.newBatch(jobId);
                 } else {
                     logNotSendReason(future);
@@ -411,7 +410,7 @@ public class SlurmComputationManager implements ComputationManager {
                 }
             }
 
-            jobIdCommandMap.put(task.currentMaster, command);
+            jobIdCommandMap.put(task.getCurrentMaster(), command);
             // finish binding batches
             task.setCurrentMasterNull();
         }
@@ -479,10 +478,10 @@ public class SlurmComputationManager implements ComputationManager {
         return builder.build();
     }
 
-    private Long launchSbatch(SbatchCmd cmd) {
+    private long launchSbatch(SbatchCmd cmd) {
         try {
             SbatchCmdResult sbatchResult = cmd.send(commandRunner);
-            Long submittedJobId = sbatchResult.getSubmittedJobId();
+            long submittedJobId = sbatchResult.getSubmittedJobId();
             LOGGER.debug("Submitted: {}, with jobId:{}", cmd, submittedJobId);
             return submittedJobId;
         } catch (SlurmCmdNonZeroException e) {

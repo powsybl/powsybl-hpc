@@ -73,5 +73,9 @@ public abstract class AbstractIntegrationTests {
         baseTest(supplier, parameters, false);
     }
 
-    abstract void baseTest(Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters, boolean checkClean) ;
+    void baseTest(Supplier<AbstractExecutionHandler<String>> supplier, boolean checkClean) {
+        baseTest(supplier, ComputationParameters.empty(), checkClean);
+    }
+
+    abstract void baseTest(Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters, boolean checkClean);
 }

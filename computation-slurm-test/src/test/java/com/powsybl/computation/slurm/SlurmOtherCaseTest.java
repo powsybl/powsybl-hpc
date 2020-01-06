@@ -47,6 +47,7 @@ public class SlurmOtherCaseTest extends AbstractIntegrationTests {
             String join = completableFuture.join();
             assertNull(join);
             assertTrue(completableFuture.isCancelled());
+            assertIsCleanedAfterWait(computationManager.getTaskStore());
         } catch (IOException e) {
             e.printStackTrace();
             failed = true;
@@ -93,6 +94,7 @@ public class SlurmOtherCaseTest extends AbstractIntegrationTests {
                 System.out.println("Tring to get result, should throw CompletionException");
                 Void join = completableFuture.join();
             }).isInstanceOf(CompletionException.class);
+            assertIsCleanedAfterWait(computationManager.getTaskStore());
         } catch (IOException e) {
             e.printStackTrace();
             failed = true;
@@ -118,6 +120,7 @@ public class SlurmOtherCaseTest extends AbstractIntegrationTests {
             Assertions.assertThatThrownBy(execute::join)
                     .isInstanceOf(CompletionException.class)
                     .hasMessageContaining("Invalid qos specification");
+            assertIsCleanedAfterWait(computationManager.getTaskStore());
         } catch (IOException e) {
             fail();
         }

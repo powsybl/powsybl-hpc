@@ -6,7 +6,10 @@
  */
 package com.powsybl.computation.slurm;
 
-import com.powsybl.computation.*;
+import com.powsybl.computation.AbstractExecutionHandler;
+import com.powsybl.computation.CommandExecution;
+import com.powsybl.computation.ComputationParameters;
+import com.powsybl.computation.ExecutionReport;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -53,18 +56,7 @@ public class SlurmInvalidExecutionTest extends AbstractIntegrationTests {
                 return invalidProgram();
             }
         };
-        baseTest(supplier);
-    }
-
-    @Test
-    public void testInvalidProgramCheckClean() {
-        Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractCheckErrorsExecutionHandler() {
-            @Override
-            public List<CommandExecution> before(Path workingDir) {
-                return invalidProgram();
-            }
-        };
-        baseTest(supplier, ComputationParameters.empty(), true);
+        baseTest(supplier, true);
     }
 
     @Test
@@ -75,7 +67,7 @@ public class SlurmInvalidExecutionTest extends AbstractIntegrationTests {
                 return invalidProgramInList();
             }
         };
-        baseTest(supplier);
+        baseTest(supplier, true);
     }
 
     @Test
@@ -86,7 +78,7 @@ public class SlurmInvalidExecutionTest extends AbstractIntegrationTests {
                 return invalidProgramInGroup();
             }
         };
-        baseTest(supplier);
+        baseTest(supplier, true);
     }
 
     abstract static class AbstractCheckErrorsExecutionHandler extends AbstractExecutionHandler<String> {

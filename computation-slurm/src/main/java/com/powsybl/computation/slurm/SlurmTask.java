@@ -7,17 +7,18 @@
 package com.powsybl.computation.slurm;
 
 import com.powsybl.commons.io.WorkingDirectory;
-import com.powsybl.computation.Command;
 import com.powsybl.computation.CommandExecution;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 
 /**
- * Represents a submitted task.
+ * This class contains those job ids relationship in Slurm platform for one task.
  * It has a correspondent working directory and the CompletableFuture as return value.
  * @author Yichen TANG <yichen.tang at rte-france.com>
  */
@@ -25,15 +26,17 @@ public class SlurmTask {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SlurmTask.class);
 
-    WorkingDirectory directory;
-    List<CommandExecution> executions;
-    CompletableFuture completableFuture;
-    TaskCounter counter;
+    private final WorkingDirectory directory;
+    private final List<CommandExecution> executions;
+    private final CompletableFuture completableFuture;
+    private final TaskCounter counter;
 
-    Long firstJobId;
-    List<Long> masters;
-    Map<Long, SubTask> subTaskMap;
-    Long currentMaster;
+    private Long firstJobId;
+    private List<Long> masters;
+    private Map<Long, SubTask> subTaskMap;
+    private Long currentMaster;
+
+    private Set<Long> tracingIds = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     SlurmTask(WorkingDirectory directory, List<CommandExecution> executions, CompletableFuture completableFuture) {
         this.directory = Objects.requireNonNull(directory);
@@ -49,7 +52,11 @@ public class SlurmTask {
      * @return Returns working directory name as ID.
      */
     String getId() {
-        return getDirectory().toPath().getFileName().toString();
+        return directory.toPath().getFileName().toString();
+    }
+
+    Path getWorkingDirPath() {
+        return directory.toPath();
     }
 
     /**
@@ -66,7 +73,7 @@ public class SlurmTask {
         return set;
     }
 
-    Set<Long> getBatchesWithFirst() {
+    private Set<Long> getBatchesWithFirst() {
         return new HashSet<>(subTaskMap.get(firstJobId).batchIds);
     }
 
@@ -74,16 +81,16 @@ public class SlurmTask {
         return firstJobId;
     }
 
-    WorkingDirectory getDirectory() {
-        return directory;
-    }
-
     TaskCounter getCounter() {
         return counter;
     }
 
-    List<CommandExecution> getExecutions() {
-        return executions;
+    int getCommandCount() {
+        return executions.size();
+    }
+
+    CommandExecution getCommand(int i) {
+        return executions.get(i);
     }
 
     CompletableFuture getCompletableFuture() {
@@ -101,11 +108,15 @@ public class SlurmTask {
         return subTaskMap.values().stream().flatMap(SubTask::getBatchStream).anyMatch(l -> l.equals(id));
     }
 
+    Long getCurrentMaster() {
+        return currentMaster;
+    }
+
     /**
      * If first job id is null, this masterId would take account as first job id.
      * @param masterId
      */
-    void newMaster(Long masterId) {
+    private void newMaster(Long masterId) {
         setFirstJobIfIsNull(masterId);
         currentMaster = masterId;
     }
@@ -115,10 +126,14 @@ public class SlurmTask {
      * @param masterId
      */
     void newCommonUnzipJob(Long masterId) {
+        Objects.requireNonNull(masterId);
+        tracingIds.add(masterId);
+        LOGGER.debug("tracing common unzip job:{}", masterId);
         setFirstJobIfIsNull(masterId);
         currentMaster = null;
     }
 
+    // TODO rename to dependent jobs
     List<Long> getPreJobIds() {
         if (masters == null) {
             return Collections.emptyList();
@@ -163,6 +178,8 @@ public class SlurmTask {
      */
     void newBatch(Long batchId) {
         Objects.requireNonNull(batchId);
+        tracingIds.add(batchId);
+        LOGGER.debug("tracing job:{}", batchId);
         if (masters == null || currentMaster == null) {
             newMaster(batchId);
         } else {
@@ -175,21 +192,46 @@ public class SlurmTask {
         currentMaster = null;
     }
 
-    class SubTask {
-        Long masterId;
-        List<Long> batchIds;
+    // methods used in task store
+    boolean untracing(long id) {
+        boolean remove = tracingIds.remove(id);
+        if (remove) {
+            tracingIds = new HashSet<>();
+        }
+        return remove;
+    }
 
-        SubTask(Long masterId) {
+    Set<Long> getTracingIds() {
+        return tracingIds;
+    }
+
+    // ===============================
+    // ==== for unit test methods ====
+    // ===============================
+    List<Long> getMasters() {
+        return masters;
+    }
+
+    List<Long> getBatches(Long masterId) {
+        return subTaskMap.get(masterId).batchIds;
+    }
+
+    private static final class SubTask {
+
+        private Long masterId;
+        private List<Long> batchIds;
+
+        private SubTask(Long masterId) {
             this.masterId = Objects.requireNonNull(masterId);
             batchIds = new ArrayList<>();
         }
 
-        boolean add(Long batchId) {
+        private boolean add(Long batchId) {
             LOGGER.debug("batchIds: {} -> {}", masterId, batchId);
             return batchIds.add(batchId);
         }
 
-        Stream<Long> getBatchStream() {
+        private Stream<Long> getBatchStream() {
             return batchIds.stream();
         }
 

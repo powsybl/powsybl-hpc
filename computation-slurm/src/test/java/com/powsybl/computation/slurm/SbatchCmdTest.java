@@ -35,13 +35,13 @@ public class SbatchCmdTest {
                 .script("submit.sh")
                 .array(3)
                 .build();
-        assertEquals("sbatch --job-name=array3 --array=0-2 submit.sh", cmd.toString());
+        assertEquals("sbatch --job-name=array3 --array=0-2 --kill-on-invalid-dep=yes submit.sh", cmd.toString());
         builder = new SbatchCmdBuilder();
         cmd = builder.jobName("array1")
                 .script("submit.sh")
                 .array(1)
                 .build();
-        assertEquals("sbatch --job-name=array1 --array=0 submit.sh", cmd.toString());
+        assertEquals("sbatch --job-name=array1 --array=0 --kill-on-invalid-dep=yes submit.sh", cmd.toString());
     }
 
     @Test
@@ -61,13 +61,13 @@ public class SbatchCmdTest {
                 .script("submit.sh")
                 .aftercorr(Collections.singletonList(1111L))
                 .build();
-        assertEquals("sbatch --job-name=jobname --dependency=aftercorr:1111 submit.sh", cmd.toString());
+        assertEquals("sbatch --job-name=jobname --dependency=aftercorr:1111 --kill-on-invalid-dep=yes submit.sh", cmd.toString());
         builder = new SbatchCmdBuilder();
         cmd = builder.jobName("jobname")
                 .script("submit.sh")
                 .aftercorr(Arrays.asList(1111L, 2222L, 3333L))
                 .build();
-        assertEquals("sbatch --job-name=jobname --dependency=aftercorr:1111:2222:3333 submit.sh", cmd.toString());
+        assertEquals("sbatch --job-name=jobname --dependency=aftercorr:1111:2222:3333 --kill-on-invalid-dep=yes submit.sh", cmd.toString());
     }
 
     @Test
@@ -78,7 +78,7 @@ public class SbatchCmdTest {
                 .array(1)
                 .oversubscribe()
                 .build();
-        assertEquals("sbatch --job-name=array1 --array=0 --oversubscribe submit.sh", cmd.toString());
+        assertEquals("sbatch --job-name=array1 --array=0 --kill-on-invalid-dep=yes --oversubscribe submit.sh", cmd.toString());
     }
 
     @Test
@@ -87,13 +87,13 @@ public class SbatchCmdTest {
                 .script("foo.sh")
                 .timeout("2:00")
                 .build();
-        assertEquals("sbatch --job-name=foo --time=2:00 foo.sh", cmd.toString());
+        assertEquals("sbatch --job-name=foo --kill-on-invalid-dep=yes --time=2:00 foo.sh", cmd.toString());
         String nullDuration = null;
         SbatchCmd nullableTimeout = new SbatchCmdBuilder().jobName("foo")
                 .script("foo.sh")
                 .timeout(nullDuration)
                 .build();
-        assertEquals("sbatch --job-name=foo --time=UNLIMITED foo.sh", nullableTimeout.toString());
+        assertEquals("sbatch --job-name=foo --kill-on-invalid-dep=yes --time=UNLIMITED foo.sh", nullableTimeout.toString());
     }
 
     @Test
@@ -103,7 +103,7 @@ public class SbatchCmdTest {
                 .script("submit.sh")
                 .qos("value_qos")
                 .build();
-        assertEquals("sbatch --job-name=testQos --qos=value_qos submit.sh", cmd.toString());
+        assertEquals("sbatch --job-name=testQos --qos=value_qos --kill-on-invalid-dep=yes submit.sh", cmd.toString());
     }
 
     @Test
@@ -113,7 +113,7 @@ public class SbatchCmdTest {
                 .script("submit.sh")
                 .deadline(10)
                 .build();
-        assertEquals("sbatch --job-name=dead --deadline=`date -d \"10 seconds\" \"+%Y-%m-%dT%H:%M:%S\"` submit.sh", cmd.toString());
+        assertEquals("sbatch --job-name=dead --kill-on-invalid-dep=yes --deadline=`date -d \"10 seconds\" \"+%Y-%m-%dT%H:%M:%S\"` submit.sh", cmd.toString());
     }
 
     @Test
@@ -125,7 +125,7 @@ public class SbatchCmdTest {
                     .script("submit.sh")
                     .workDir(dir)
                     .build();
-            assertEquals("sbatch -D /tmp/foo --job-name=testDir submit.sh", cmd.toString());
+            assertEquals("sbatch -D /tmp/foo --job-name=testDir --kill-on-invalid-dep=yes submit.sh", cmd.toString());
         }
     }
 }

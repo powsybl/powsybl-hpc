@@ -85,9 +85,9 @@ public class SlurmComputationConfig {
     /**
      * Configuration for a remote access to a Slurm infrastructure, through SSH.
      */
-    // TODO
-    SlurmComputationConfig(SshConfig sshConfig, String workingDir, Path localDir, int pollingInSecond, int scontrolInMinute
-            , int cleanIntervalInSeconds) {
+    // TODO uniform time units
+    SlurmComputationConfig(SshConfig sshConfig, String workingDir, Path localDir, int pollingInSecond,
+                           int scontrolInMinute, int cleanIntervalInSeconds) {
         this.sshConfig = requireNonNull(sshConfig);
         this.workingDir = requireNonNull(workingDir);
         this.localDir = requireNonNull(localDir);

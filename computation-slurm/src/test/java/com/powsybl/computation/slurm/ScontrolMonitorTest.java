@@ -11,6 +11,7 @@ import org.junit.Test;
 import org.mockito.Matchers;
 import org.mockito.internal.util.reflection.Whitebox;
 
+import java.util.stream.IntStream;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -47,10 +48,11 @@ public class ScontrolMonitorTest {
         ScontrolMonitor monitor = new ScontrolMonitor(slurm);
         monitor.run();
         assertTrue(ts.getTracingIds().isEmpty());
-        // check scancel all 6 jobs only once
-        for (int i = 1; i < 7; i++) {
-            verify(cm, times(1)).execute("scancel " + i);
-        }
+        // check scancel all first jobs(1 and 2) only once
+        verify(cm, times(1)).execute("scancel 1");
+        verify(cm, times(1)).execute("scancel 2");
+        // no need to send scancel on following jobs
+        IntStream.range(3, 7).forEach(i -> verify(cm, never()).execute("scancel " + i));
     }
 
     @Before
@@ -59,7 +61,8 @@ public class ScontrolMonitorTest {
         slurm = mock(SlurmComputationManager.class);
         mycf = new SlurmComputationManager.Mycf(slurm);
         mycf.setThread(new Thread());
-//        ts = TaskStoreTest.generateTaskStore(mycf, false);
+        ts = new TaskStore(15);
+        ts.add(SlurmTaskTest.mockSubmittedTask(mycf));
         Whitebox.setInternalState(slurm, "taskStore", ts);
         when(slurm.getTaskStore()).thenReturn(ts);
         cm = mock(CommandExecutor.class);

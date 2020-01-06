@@ -8,7 +8,6 @@ package com.powsybl.computation.slurm;
 
 import com.powsybl.computation.AbstractExecutionHandler;
 import com.powsybl.computation.CommandExecution;
-import com.powsybl.computation.ComputationManager;
 import com.powsybl.computation.ComputationParameters;
 import org.junit.Assert;
 import org.junit.Ignore;
@@ -31,7 +30,7 @@ public class SlurmCancelExecutionTest extends AbstractIntegrationTests {
 
     @Override
     void baseTest(Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters, boolean checkClean) {
-        try (ComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
+        try (SlurmComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
             CompletableFuture<String> completableFuture = computationManager.execute(EMPTY_ENV, supplier.get(), parameters);
             System.out.println("CompletableFuture would be cancelled in 5 seconds...");
             // TODO add a test before finished submit
@@ -39,6 +38,9 @@ public class SlurmCancelExecutionTest extends AbstractIntegrationTests {
             boolean cancel = completableFuture.cancel(true);
             System.out.println("Cancelled:" + cancel);
             Assert.assertTrue(cancel);
+            if (checkClean) {
+                assertIsCleanedAfterWait(computationManager.getTaskStore());
+            }
             // TODO should throw CancellationException
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
@@ -49,7 +51,7 @@ public class SlurmCancelExecutionTest extends AbstractIntegrationTests {
     }
 
     @Test
-    public void testLongProgramToCancel() throws InterruptedException {
+    public void testLongProgramToCancel() {
         Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractExecutionHandler<String>() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
@@ -57,33 +59,33 @@ public class SlurmCancelExecutionTest extends AbstractIntegrationTests {
             }
 
         };
-        baseTest(supplier);
+        baseTest(supplier, true);
     }
 
     @Test
-    public void testLongProgramInListToCancel() throws InterruptedException {
+    public void testLongProgramInListToCancel() {
         Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractExecutionHandler<String>() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
                 return longProgramInList();
             }
         };
-        baseTest(supplier);
+        baseTest(supplier, true);
     }
 
     @Test
-    public void testMixedProgramsToCancel() throws InterruptedException {
+    public void testMixedProgramsToCancel() {
         Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractExecutionHandler<String>() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
                 return mixedPrograms();
             }
         };
-        baseTest(supplier);
+        baseTest(supplier, true);
     }
 
     @Test
-    public void testCancelFirstAfterDone() throws InterruptedException {
+    public void testCancelFirstAfterDone() {
         // test only scancel the first job id even it is already done, the following job would be cancelled
         // automatically by slurm with "kill-on-invalid-dep" option
 // An output example
@@ -97,11 +99,11 @@ public class SlurmCancelExecutionTest extends AbstractIntegrationTests {
                 return cancelFirstJobAfterDone();
             }
         };
-        baseTest(supplier);
+        baseTest(supplier, true);
     }
 
     @Test
-    public void testCancelFirstWithBatches() throws InterruptedException {
+    public void testCancelFirstWithBatches() {
         Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractExecutionHandler<String>() {
             @Override
             public List<CommandExecution> before(Path workingDir) {

@@ -11,8 +11,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 
 /**
@@ -24,8 +22,6 @@ class TaskStore {
 
     private Map<String, SlurmTask> taskByDir = new ConcurrentHashMap<>();
     private Map<CompletableFuture, SlurmTask> taskByFuture = new ConcurrentHashMap<>();
-
-    private Set<Long> tracingIds = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     private final StoreCleaner cleaner;
 
@@ -73,17 +69,24 @@ class TaskStore {
         return getTask(workingDirName).map(SlurmTask::getCompletableFuture);
     }
 
-    private void trace(long id) {
-        LOGGER.debug("tracing {}", id);
-        tracingIds.add(id);
-    }
-
     boolean untracing(long id) {
-        return tracingIds.remove(id);
+        Collection<SlurmTask> tasks = taskByDir.values();
+        for (SlurmTask t : tasks) {
+            boolean untracing = t.untracing(id);
+            if (untracing) {
+                LOGGER.debug("Untracing: {}", id);
+                return true;
+            }
+        }
+        return false;
     }
 
     Set<Long> getTracingIds() {
-        return new HashSet<>(tracingIds);
+        Set<Long> tracingIds = new HashSet<>();
+        taskByDir.values().stream()
+                .map(SlurmTask::getTracingIds)
+                .forEach(tracingIds::addAll);
+        return tracingIds;
     }
 
     Set<TaskCounter> getTaskCounters() {
@@ -105,6 +108,7 @@ class TaskStore {
 
         private final int cleanTime;
         ScheduledExecutorService scheduledExecutorService;
+
         StoreCleaner(int cleanTime) {
             this.cleanTime = cleanTime;
             scheduledExecutorService = Executors.newScheduledThreadPool(1);

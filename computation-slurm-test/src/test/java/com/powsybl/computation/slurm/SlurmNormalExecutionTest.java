@@ -49,9 +49,11 @@ public class SlurmNormalExecutionTest extends AbstractIntegrationTests {
             assertEquals("OK", join);
             Map<String, SlurmTask> taskByDir = computationManager.getTaskStore().getTaskByDir();
             task = taskByDir.entrySet().stream().findFirst().get().getValue();
-            System.out.println(task.firstJobId);
-            System.out.println(task.masters);
-            System.out.println(task.subTaskMap);
+            System.out.println("First:" + task.getFirstJobId());
+            System.out.println("Masters:" + task.getMasters());
+            for (long master : task.getMasters()) {
+                System.out.println(master + "->" + task.getBatches(master));
+            }
             if (checkClean) {
                 assertIsCleanedAfterWait(computationManager.getTaskStore());
             }
@@ -64,10 +66,9 @@ public class SlurmNormalExecutionTest extends AbstractIntegrationTests {
     }
 
     private static List<Long> findExpectedIdRelations(SlurmTask task) {
-        List<CommandExecution> executions = task.getExecutions();
         List<Long> list = new ArrayList<>();
-        for (int i = 0; i < executions.size(); i++) {
-            CommandExecution ce = executions.get(i);
+        for (int i = 0; i < task.getCommandCount(); i++) {
+            CommandExecution ce = task.getCommand(i);
             if (ce.getCommand().getInputFiles().stream()
                     .anyMatch(inputFile -> !inputFile.dependsOnExecutionNumber() && inputFile.getPreProcessor() != null)) {
                 list.add(0L);
@@ -82,24 +83,24 @@ public class SlurmNormalExecutionTest extends AbstractIntegrationTests {
     }
 
     private static void assertTaskRelations(SlurmTask task, List<Long> expected) {
-        Long diff = task.firstJobId;
-        assertEquals(expected.size(), task.masters.size());
-        for (int i = 0; i < expected.size(); i ++) {
-            assertTrue(task.masters.contains(diff));
+        Long actualMasterId = task.getFirstJobId();
+        assertEquals(expected.size(), task.getMasters().size());
+        for (int i = 0; i < expected.size(); i++) {
+            assertTrue(task.getMasters().contains(actualMasterId));
             long expectedBatchCount = expected.get(i);
-            List<Long> expectedBatchIds = calExpectedBatchIds(expectedBatchCount, diff);
-            List<Long> batchIds = task.subTaskMap.get(diff).batchIds;
+            List<Long> expectedBatchIds = calExpectedBatchIds(expectedBatchCount, actualMasterId);
+            List<Long> batchIds = task.getBatches(actualMasterId);
             assertEquals(expectedBatchIds, batchIds);
             if (batchIds.size() == 0) {
-                diff = diff + 1;
+                actualMasterId = actualMasterId + 1;
             } else {
-                diff = batchIds.get(batchIds.size() - 1) + 1;
+                actualMasterId = batchIds.get(batchIds.size() - 1) + 1;
             }
         }
     }
 
-    private static List<Long> calExpectedBatchIds(long expectedBatchCount, long diff) {
-        return LongStream.range(1, expectedBatchCount).map(l -> l + diff)
+    private static List<Long> calExpectedBatchIds(long expectedBatchCount, long actualMasterId) {
+        return LongStream.range(1, expectedBatchCount).map(l -> l + actualMasterId)
                 .boxed().collect(Collectors.toList());
     }
 
