@@ -46,21 +46,21 @@ class FlagFilesMonitor implements Runnable {
                     // ex: mydone_workingDirxxxxxx_taskid
                     int lastIdx = line.lastIndexOf('_');
                     String workingDirName = line.substring(idx + 1, lastIdx);
-                    TaskCounter taskCounter = taskStore.getTaskCounter(workingDirName).get();
-                    if (taskCounter != null) {
+                    taskStore.getTaskCounter(workingDirName).ifPresent(taskCounter -> {
                         LOGGER.debug("{} found", line);
                         taskCounter.countDown();
                         commandRunner.execute("rm " + flagDir + "/" + line);
                         // cancel following jobs(which depends on this job) if there are errors
                         if (line.startsWith("myerror_")) {
-                            taskStore.getCompletableFuture(workingDirName).get().cancel(true);
+                            taskStore.getCompletableFuture(workingDirName)
+                                    .ifPresent(cf -> cf.cancel(true));
                         } else if (line.startsWith("mydone_")) {
                             String id = line.substring(lastIdx + 1);
                             taskStore.untracing(Long.parseLong(id));
                         } else {
                             LOGGER.warn("Unexcepted file found in flagDir: {}", line);
                         }
-                    }
+                    });
                 }
             }
         } catch (Throwable t) {
