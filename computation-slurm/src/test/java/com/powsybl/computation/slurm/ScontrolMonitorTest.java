@@ -48,11 +48,8 @@ public class ScontrolMonitorTest {
         ScontrolMonitor monitor = new ScontrolMonitor(slurm);
         monitor.run();
         assertTrue(ts.getTracingIds().isEmpty());
-        // check scancel all first jobs(1 and 2) only once
-        verify(cm, times(1)).execute("scancel 1");
-        verify(cm, times(1)).execute("scancel 2");
-        // no need to send scancel on following jobs
-        IntStream.range(3, 7).forEach(i -> verify(cm, never()).execute("scancel " + i));
+        // check scancel only once
+        IntStream.range(1, 7).forEach(i -> verify(cm, times(1)).execute("scancel " + i));
     }
 
     @Before

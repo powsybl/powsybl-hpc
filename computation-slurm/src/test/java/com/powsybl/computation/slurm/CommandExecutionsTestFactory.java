@@ -199,13 +199,10 @@ public final class CommandExecutionsTestFactory {
         Command command2 = new SimpleCommandBuilder()
                 .id("cFAD2")
                 .program("sleep")
-                .args("10s")
+                .args("60s")
                 .build();
         return Arrays.asList(new CommandExecution(command1, 1),
                 new CommandExecution(command2, 1));
     }
 
-    static List<CommandExecution> cancelFirstWithBatches() {
-        return longProgramInList(5, 1, 1);
-    }
 }

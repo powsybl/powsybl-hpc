@@ -15,6 +15,7 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -60,21 +61,17 @@ public class SlurmTask {
     }
 
     /**
-     * Returns the first job id and it's batchIds
+     * Returns the all ids.
      * For array jobs can be cancelled just by calling on master jobId
      * but currently array_job in slurm is not used, so jobs should be cancelled one by one.
-     * As "kill-on-invalid-dep" is used by default, all following job could be cancelled automatically
-     * But except for batch job binding to the first job.
      */
     Set<Long> getToCancelIds() {
         Set<Long> set = new HashSet<>();
-        set.add(firstJobId);
-        set.addAll(getBatchesWithFirst());
+        set.addAll(masters);
+        Set<Long> subIds = getMasters().stream().flatMap(mId -> subTaskMap.get(mId).getBatchStream())
+                .collect(Collectors.toSet());
+        set.addAll(subIds);
         return set;
-    }
-
-    private Set<Long> getBatchesWithFirst() {
-        return new HashSet<>(subTaskMap.get(firstJobId).batchIds);
     }
 
     Long getFirstJobId() {

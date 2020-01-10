@@ -58,7 +58,7 @@ public class SlurmTaskTest {
         assertEquals(new HashSet<>(Arrays.asList(1L, 2L, 3L, 4L, 5L, 6L)), task.getTracingIds());
         assertTrue(task.contains(3L));
         assertFalse(task.contains(33L));
-        assertEquals(new HashSet<>(Arrays.asList(1L, 2L)), task.getToCancelIds());
+        assertEquals(new HashSet<>(Arrays.asList(1L, 2L, 3L, 4L, 5L, 6L)), task.getToCancelIds());
 
         // sub task
         assertEquals(Arrays.asList(4L, 5L), task.getBatches(3L));

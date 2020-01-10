@@ -55,15 +55,6 @@ class TaskStore {
         return getTask(future).map(SlurmTask::getCounter);
     }
 
-    /**
-     * Get a set of submitting or submitted but not finished task's first job id.
-     * @return
-     */
-    Set<Long> getTracingFirstIds() {
-        return taskByDir.values().stream()
-                .flatMap(task -> task.getToCancelIds().stream()).collect(Collectors.toSet());
-    }
-
     // TODO use task
     Optional<CompletableFuture> getCompletableFuture(String workingDirName) {
         return getTask(workingDirName).map(SlurmTask::getCompletableFuture);
