@@ -6,6 +6,8 @@
  */
 package com.powsybl.computation.slurm;
 
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.powsybl.computation.AbstractExecutionHandler;
 import com.powsybl.computation.CommandExecution;
 import com.powsybl.computation.ComputationParameters;
@@ -92,10 +94,8 @@ public class SlurmOtherCaseTest extends AbstractIntegrationTests {
             builder.setDeadline("longProgram", 12);
             ComputationParameters computationParameters = builder.build();
             CompletableFuture<Void> completableFuture = computationManager.execute(EMPTY_ENV, deadlineTest.get(), computationParameters);
-            Assertions.assertThatThrownBy(() -> {
-                System.out.println("Tring to get result, should throw CompletionException");
-                Void join = completableFuture.join();
-            }).isInstanceOf(CompletionException.class);
+            Assertions.assertThatThrownBy(completableFuture::join)
+                    .isInstanceOf(CompletionException.class);
             assertIsCleanedAfterWait(computationManager.getTaskStore());
         } catch (IOException e) {
             e.printStackTrace();
@@ -116,16 +116,20 @@ public class SlurmOtherCaseTest extends AbstractIntegrationTests {
         ComputationParameters parameters = new ComputationParametersBuilder().setTimeout("longProgram", 60).build();
         SlurmComputationParameters slurmComputationParameters = new SlurmComputationParameters(parameters, "THIS_QOS_SHOULD_NOT_EXIST_IN_SLURM");
         parameters.addExtension(SlurmComputationParameters.class, slurmComputationParameters);
-
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        addApprender(appender);
         try (SlurmComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
             CompletableFuture<String> execute = computationManager.execute(EMPTY_ENV, supplier.get(), parameters);
             execute.join();
             assertIsCleanedAfterWait(computationManager.getTaskStore());
+            assertTrue(appender.list.stream().anyMatch(e -> e.getFormattedMessage().contains("exit point 2: Error by slurm")));
         } catch (IOException e) {
             fail();
         } catch (CompletionException ce) {
             Throwable[] suppressed = ce.getCause().getSuppressed();
             assertTrue(suppressed[0].getMessage().contains("Invalid qos specification"));
+        } finally {
+            removeApprender(appender);
         }
     }
 

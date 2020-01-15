@@ -6,6 +6,8 @@
  */
 package com.powsybl.computation.slurm;
 
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.powsybl.computation.*;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
@@ -42,6 +44,8 @@ public class SlurmNormalExecutionTest extends AbstractIntegrationTests {
     void baseTest(Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters, boolean checkClean) {
         AbstractExecutionHandler<String> handler = supplier.get();
         SlurmTask task = null;
+        ListAppender<ILoggingEvent> normalAppender = new ListAppender<>();
+        addApprender(normalAppender);
         try (SlurmComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
             CompletableFuture<String> completableFuture = computationManager.execute(EMPTY_ENV, handler, parameters);
             System.out.println("to wait finish");
@@ -57,9 +61,13 @@ public class SlurmNormalExecutionTest extends AbstractIntegrationTests {
             if (checkClean) {
                 assertIsCleanedAfterWait(computationManager.getTaskStore());
             }
+            assertTrue(normalAppender.list.stream()
+                    .anyMatch(e -> e.getFormattedMessage().contains("exit point 3: Normal")));
         } catch (IOException e) {
             e.printStackTrace();
             fail();
+        } finally {
+            removeApprender(normalAppender);
         }
         assertFalse(failed);
         assertTaskRelations(task);

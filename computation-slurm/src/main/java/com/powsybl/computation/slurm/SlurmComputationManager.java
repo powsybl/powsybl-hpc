@@ -306,6 +306,15 @@ public class SlurmComputationManager implements ComputationManager {
         return new SlurmExecutionReport(errors, workingDir);
     }
 
+    // We still need to check the cancel flag in task, because the interrupted exception is not re-thrown
+    // in underlying jsch library.
+    private void checkCancelledDuringSubmitting(UUID callableId) throws InterruptedException {
+        if (taskStore.isCancelled(callableId)) {
+            LOGGER.debug("cancelled during submitting");
+            throw new InterruptedException("cancelled during submitting");
+        }
+    }
+
     private Map<Long, Command> generateSbatchAndSubmit(SlurmTask task, ComputationParameters parameters,
                                                        ExecutionEnvironment environment)
             throws IOException, InterruptedException {
@@ -314,10 +323,7 @@ public class SlurmComputationManager implements ComputationManager {
         UUID callableId = task.getCallableId();
         outerSendingLoop:
         for (int commandIdx = 0; commandIdx < task.getCommandCount(); commandIdx++) {
-            if (taskStore.isCancelled(callableId)) {
-                LOGGER.debug("cancelled during submitting");
-                throw new InterruptedException("cancelled during submitting");
-            }
+            checkCancelledDuringSubmitting(callableId);
             CommandExecution commandExecution = task.getCommand(commandIdx);
             Command command = commandExecution.getCommand();
             SbatchCmd cmd;
@@ -332,10 +338,7 @@ public class SlurmComputationManager implements ComputationManager {
                     LOGGER.info(CLOSE_START_NO_MORE_SEND_INFO);
                     break outerSendingLoop;
                 }
-                if (taskStore.isCancelled(callableId)) {
-                    LOGGER.debug("cancelled during submitting");
-                    throw new InterruptedException("cancelled during submitting");
-                }
+                checkCancelledDuringSubmitting(callableId);
                 SbatchScriptGenerator sbatchScriptGenerator = new SbatchScriptGenerator(flagDir);
                 List<String> shell = sbatchScriptGenerator.unzipCommonInputFiles(command);
                 copyShellToRemoteWorkingDir(shell, UNZIP_INPUTS_COMMAND_ID + "_" + commandIdx, workingDir);
@@ -350,10 +353,7 @@ public class SlurmComputationManager implements ComputationManager {
                     LOGGER.info(CLOSE_START_NO_MORE_SEND_INFO);
                     break outerSendingLoop;
                 }
-                if (taskStore.isCancelled(callableId)) {
-                    LOGGER.debug("cancelled during submitting");
-                    throw new InterruptedException("cancelled during submitting");
-                }
+                checkCancelledDuringSubmitting(callableId);
                 prepareBatch(command, executionIndex, environment, commandExecution, workingDir);
                 cmd = buildSbatchCmd(workingDir, command.getId(), executionIndex, task.getPreJobIds(), parameters);
                 long jobId = launchSbatch(cmd);
@@ -365,19 +365,6 @@ public class SlurmComputationManager implements ComputationManager {
             task.setCurrentMasterNull();
         }
         return jobIdCommandMap;
-    }
-
-    private boolean isSendAllowed(CompletableFuture future) {
-        return !future.isCancelled() && !closeStarted;
-    }
-
-    private void logNotSendReason(CompletableFuture future) {
-        if (closeStarted) {
-            LOGGER.info(CLOSE_START_NO_MORE_SEND_INFO);
-        }
-        if (future.isCancelled()) {
-            LOGGER.warn("Future cancelled. {}", future);
-        }
     }
 
     private void prepareBatch(Command command, int executionIndex, ExecutionEnvironment environment, CommandExecution commandExecution, Path remoteWorkingDir) throws IOException {

@@ -204,11 +204,11 @@ public class SlurmTask {
     void error() {
         LOGGER.debug("Error detected.");
         cancel();
+        getCounter().cancel();
     }
 
     void cancel() {
         cancel = true;
-        counter.cancel();
         if (!getToCancelIds().isEmpty()) {
             LOGGER.debug("Cancel first batch ids");
             getToCancelIds().forEach(this::scancel);

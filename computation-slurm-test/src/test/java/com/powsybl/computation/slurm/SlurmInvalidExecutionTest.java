@@ -6,6 +6,8 @@
  */
 package com.powsybl.computation.slurm;
 
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.powsybl.computation.AbstractExecutionHandler;
 import com.powsybl.computation.CommandExecution;
 import com.powsybl.computation.ComputationParameters;
@@ -32,6 +34,8 @@ public class SlurmInvalidExecutionTest extends AbstractIntegrationTests {
 
     @Override
     void baseTest(Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters, boolean checkClean) {
+        ListAppender<ILoggingEvent> testAppender = new ListAppender<>();
+        addApprender(testAppender);
         try (SlurmComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
             CompletableFuture<String> completableFuture = computationManager.execute(EMPTY_ENV, supplier.get(), parameters);
             System.out.println("to wait finish");
@@ -42,9 +46,13 @@ public class SlurmInvalidExecutionTest extends AbstractIntegrationTests {
             if (checkClean) {
                 assertIsCleanedAfterWait(computationManager.getTaskStore());
             }
+            assertTrue(testAppender.list.stream()
+                    .anyMatch(e -> e.getFormattedMessage().contains("exit point 4: other exception")));
         } catch (IOException e) {
             e.printStackTrace();
             fail();
+        } finally {
+            removeApprender(testAppender);
         }
         // assert on main thread
         assertFalse(failed);

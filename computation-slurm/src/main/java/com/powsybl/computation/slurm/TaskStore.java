@@ -84,11 +84,12 @@ class TaskStore {
     void cancelCallable(long id, SlurmException slurmException) {
         taskByDir.values().stream().filter(task -> task.contains(id))
                 .findFirst()
-                .map(SlurmTask::getCallableId)
-                .ifPresent(uuid -> {
-                    System.out.println("in put " + uuid);
-                    exceptionMap.put(uuid, slurmException);
-                    cancelCallableAndCleanup(uuid);
+                .ifPresent(task -> {
+                    UUID callableId = task.getCallableId();
+                    System.out.println("in put " + callableId);
+                    exceptionMap.put(callableId, slurmException);
+                    cancelCallableAndCleanup(callableId);
+                    task.getCounter().cancel();
                 });
     }
 

@@ -6,6 +6,8 @@
  */
 package com.powsybl.computation.slurm;
 
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.powsybl.commons.config.ModuleConfig;
 import com.powsybl.commons.config.YamlModuleConfigRepository;
 import com.powsybl.computation.AbstractExecutionHandler;
@@ -81,4 +83,14 @@ public abstract class AbstractIntegrationTests {
     }
 
     abstract void baseTest(Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters, boolean checkClean);
+
+    static void addApprender(ListAppender<ILoggingEvent> appender) {
+        appender.start();
+        SCM_LOGGER.addAppender(appender);
+    }
+
+    static void removeApprender(ListAppender<ILoggingEvent> appender) {
+        appender.stop();
+        SCM_LOGGER.detachAppender(appender);
+    }
 }
