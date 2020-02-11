@@ -191,11 +191,7 @@ public class SlurmTask {
 
     // methods used in task store
     boolean untracing(long id) {
-        boolean remove = tracingIds.remove(id);
-        if (remove) {
-            tracingIds = new HashSet<>();
-        }
-        return remove;
+        return tracingIds.remove(id);
     }
 
     Set<Long> getTracingIds() {

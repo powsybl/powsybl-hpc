@@ -145,4 +145,13 @@ public class SlurmTaskTest {
         List<Long> masters = task2.getMasters();
         assertEquals(Arrays.asList(1L, 3L, 4L, 6L), masters);
     }
+
+    @Test
+    public void testUntracing() {
+        SlurmTask task = mockSubmittedTask(mock(CompletableFuture.class));
+        assertTrue(task.untracing(1L));
+        assertTrue(task.untracing(2L));
+        assertEquals(new HashSet<>(Arrays.asList(3L, 4L, 5L, 6L)), task.getTracingIds());
+        assertFalse(task.untracing(1L));
+    }
 }
