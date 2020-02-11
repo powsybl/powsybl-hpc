@@ -75,8 +75,8 @@ public class SlurmNormalExecutionTest extends AbstractIntegrationTests {
 
     private static List<Long> findExpectedIdRelations(SlurmTask task) {
         List<Long> list = new ArrayList<>();
-        for (int i = 0; i < task.getCommandCount(); i++) {
-            CommandExecution ce = task.getCommand(i);
+        for (int i = 0; i < task.getCommandExecutionSize(); i++) {
+            CommandExecution ce = task.getCommandExecution(i);
             if (ce.getCommand().getInputFiles().stream()
                     .anyMatch(inputFile -> !inputFile.dependsOnExecutionNumber() && inputFile.getPreProcessor() != null)) {
                 list.add(0L);

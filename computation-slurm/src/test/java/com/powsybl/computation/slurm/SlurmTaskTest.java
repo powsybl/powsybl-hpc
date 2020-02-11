@@ -43,6 +43,7 @@ public class SlurmTaskTest {
         task.newBatch(2L);
         task.setCurrentMasterNull();
         task.newBatch(3L);
+        assertTrue(3L == task.getCurrentMaster());
         task.newBatch(4L);
         task.newBatch(5L);
         task.setCurrentMasterNull();
@@ -58,6 +59,7 @@ public class SlurmTaskTest {
         assertEquals(Arrays.asList(1L, 3L, 6L), masters);
         assertEquals(new HashSet<>(Arrays.asList(1L, 2L, 3L, 4L, 5L, 6L)), task.getTracingIds());
         assertTrue(task.contains(3L));
+        assertFalse(task.contains(0L));
         assertFalse(task.contains(33L));
         assertEquals(new HashSet<>(Arrays.asList(1L, 2L, 3L, 4L, 5L, 6L)), task.getToCancelIds());
 
@@ -71,11 +73,11 @@ public class SlurmTaskTest {
         CommandExecutor commandExecutor = mock(CommandExecutor.class);
         UUID uuid = UUID.randomUUID();
         SlurmTask task = new SlurmTask(uuid, commandExecutor, mock(WorkingDirectory.class), CommandExecutionsTestFactory.md5sumLargeFile());
-        assertEquals(2, task.getCommandCount());
-        assertEquals(3, task.getCommand(0).getExecutionCount());
-        assertEquals(1, task.getCommand(1).getExecutionCount());
+        assertEquals(2, task.getCommandExecutionSize());
+        assertEquals(3, task.getCommandExecution(0).getExecutionCount());
+        assertEquals(1, task.getCommandExecution(1).getExecutionCount());
         // 3 + 1, common unzip job is not accounted
-        assertEquals(4, task.getCounter().getJobCount());
+        assertEquals(4, task.getJobCount());
     }
 
     @Test
@@ -100,6 +102,9 @@ public class SlurmTaskTest {
         task.newBatch(6L);
         List<Long> masters = task.getMasters();
         assertEquals(Arrays.asList(1L, 3L, 4L, 6L), masters);
+        assertFalse(task.isCancel());
+        task.error();
+        assertTrue(task.isCancel());
     }
 
     @Test
@@ -155,10 +160,38 @@ public class SlurmTaskTest {
 
     @Test
     public void testUntracing() {
-        SlurmTask task = mockSubmittedTask(mock(CompletableFuture.class));
+        SlurmTask task = mockSubmittedTask();
         assertTrue(task.untracing(1L));
         assertTrue(task.untracing(2L));
         assertEquals(new HashSet<>(Arrays.asList(3L, 4L, 5L, 6L)), task.getTracingIds());
         assertFalse(task.untracing(1L));
     }
+
+    @Test
+    public void baseTest() {
+        CommandExecutor commandExecutor = mock(CommandExecutor.class);
+        UUID uuid = UUID.randomUUID();
+        WorkingDirectory directory = mock(WorkingDirectory.class);
+        Path path = mock(Path.class);
+        when(directory.toPath()).thenReturn(path);
+        SlurmTask task = new SlurmTask(uuid, commandExecutor, directory, Collections.emptyList());
+        assertEquals(path, task.getWorkingDirPath());
+    }
+
+    @Test
+    public void testCancel() {
+        SlurmTask task = mockSubmittedTask();
+        assertFalse(task.isCancel());
+        task.cancel();
+        assertTrue(task.isCancel());
+    }
+
+    @Test
+    public void testError() {
+        SlurmTask task = mockSubmittedTask();
+        assertFalse(task.isCancel());
+        task.error();
+        assertTrue(task.isCancel());
+    }
+
 }

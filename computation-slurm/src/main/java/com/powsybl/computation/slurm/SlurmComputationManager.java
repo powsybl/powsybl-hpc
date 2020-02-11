@@ -245,7 +245,7 @@ public class SlurmComputationManager implements ComputationManager {
                 LOGGER.debug("Waiting finish...");
                 // waiting task finish
                 // TODO check NPE
-                slurmTask.getCounter().await();
+                slurmTask.await();
 
                 Optional<SlurmException> optionalSlurmException = taskStore.getException(callableId);
                 if (optionalSlurmException.isPresent()) {
@@ -322,9 +322,9 @@ public class SlurmComputationManager implements ComputationManager {
         Path workingDir = task.getWorkingDirPath();
         UUID callableId = task.getCallableId();
         outerSendingLoop:
-        for (int commandIdx = 0; commandIdx < task.getCommandCount(); commandIdx++) {
+        for (int commandIdx = 0; commandIdx < task.getCommandExecutionSize(); commandIdx++) {
             checkCancelledDuringSubmitting(callableId);
-            CommandExecution commandExecution = task.getCommand(commandIdx);
+            CommandExecution commandExecution = task.getCommandExecution(commandIdx);
             Command command = commandExecution.getCommand();
             SbatchCmd cmd;
             if (LOGGER.isDebugEnabled()) {

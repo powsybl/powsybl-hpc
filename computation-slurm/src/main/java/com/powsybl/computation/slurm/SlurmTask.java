@@ -73,6 +73,9 @@ public class SlurmTask {
      * but currently array_job in slurm is not used, so jobs should be cancelled one by one.
      */
     Set<Long> getToCancelIds() {
+        if (masters == null || masters.isEmpty()) {
+            return Collections.emptySet();
+        }
         Set<Long> set = new HashSet<>();
         set.addAll(masters);
         Set<Long> subIds = getMasters().stream().flatMap(mId -> subTaskMap.get(mId).getBatchStream())
@@ -89,11 +92,19 @@ public class SlurmTask {
         return counter;
     }
 
-    int getCommandCount() {
+    void await() throws InterruptedException {
+        counter.await();
+    }
+
+    int getJobCount() {
+        return counter.getJobCount();
+    }
+
+    int getCommandExecutionSize() {
         return executions.size();
     }
 
-    CommandExecution getCommand(int i) {
+    CommandExecution getCommandExecution(int i) {
         return executions.get(i);
     }
 
@@ -217,7 +228,7 @@ public class SlurmTask {
         }
     }
 
-    public boolean isCancel() {
+    boolean isCancel() {
         return cancel;
     }
 
