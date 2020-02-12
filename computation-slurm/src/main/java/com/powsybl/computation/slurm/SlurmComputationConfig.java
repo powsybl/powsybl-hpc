@@ -35,7 +35,6 @@ public class SlurmComputationConfig {
     private final int pollingInSecond;
     // TODO change to second
     private final int scontrolInMinute;
-    private final int cleanInSecond;
 
     private final SshConfig sshConfig;
 
@@ -87,25 +86,23 @@ public class SlurmComputationConfig {
      */
     // TODO uniform time units
     SlurmComputationConfig(SshConfig sshConfig, String workingDir, Path localDir, int pollingInSecond,
-                           int scontrolInMinute, int cleanIntervalInSeconds) {
+                           int scontrolInMinute) {
         this.sshConfig = requireNonNull(sshConfig);
         this.workingDir = requireNonNull(workingDir);
         this.localDir = requireNonNull(localDir);
         this.pollingInSecond = pollingInSecond;
         this.scontrolInMinute = scontrolInMinute;
-        this.cleanInSecond = cleanIntervalInSeconds;
     }
 
     /**
      * Configuration for a local access to a Slurm infrastructure.
      */
-    SlurmComputationConfig(String workingDir, Path localDir, int pollingInSecond, int scontrolInMinute, int cleanIntervalInSeconds) {
+    SlurmComputationConfig(String workingDir, Path localDir, int pollingInSecond, int scontrolInMinute) {
         this.sshConfig = null;
         this.workingDir = requireNonNull(workingDir);
         this.localDir = requireNonNull(localDir);
         this.pollingInSecond = pollingInSecond;
         this.scontrolInMinute = scontrolInMinute;
-        this.cleanInSecond = cleanIntervalInSeconds;
     }
 
     public static SlurmComputationConfig load() {
@@ -120,7 +117,6 @@ public class SlurmComputationConfig {
         Path localDir = config.getPathProperty("local-dir");
         int pollingInSecond = config.getIntProperty("polling-time", DEFAULT_POLLING);
         int scontrolInMinute = config.getIntProperty("scontrol-time", DEFAULT_SCONTROL_INTERVAL);
-        int cleanInSecond = config.getIntProperty("clean-time", DEFAULT_CLEAN_INTERVAL);
 
         if (remote) {
             String workingDir = config.getStringProperty("remote-dir");
@@ -133,11 +129,11 @@ public class SlurmComputationConfig {
             int maxRetry = config.getIntProperty("max-retry", DEFAULT_MAX_RETRY);
             SshConfig sshConfig = new SshConfig(host, port, userName, password, maxSshConnection, maxRetry);
 
-            return new SlurmComputationConfig(sshConfig, workingDir, localDir, pollingInSecond, scontrolInMinute, cleanInSecond);
+            return new SlurmComputationConfig(sshConfig, workingDir, localDir, pollingInSecond, scontrolInMinute);
         } else {
             String workingDir = config.getStringProperty("working-dir");
 
-            return new SlurmComputationConfig(workingDir, localDir, pollingInSecond, scontrolInMinute, cleanInSecond);
+            return new SlurmComputationConfig(workingDir, localDir, pollingInSecond, scontrolInMinute);
         }
     }
 
@@ -155,10 +151,6 @@ public class SlurmComputationConfig {
 
     public int getScontrolInterval() {
         return scontrolInMinute;
-    }
-
-    public int getCleanInterval() {
-        return cleanInSecond;
     }
 
     public boolean isRemote() {

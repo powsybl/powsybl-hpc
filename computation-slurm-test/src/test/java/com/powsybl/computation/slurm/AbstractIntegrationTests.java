@@ -56,7 +56,7 @@ public abstract class AbstractIntegrationTests {
      */
     private static SlurmComputationConfig generateSlurmConfigWithShortScontrolTime(ModuleConfig config) {
         return new SlurmComputationConfig(generateSsh(config), config.getStringProperty("remote-dir"),
-                Paths.get(config.getStringProperty("local-dir")), 5, 1, 10);
+                Paths.get(config.getStringProperty("local-dir")), 5, 1);
     }
 
     static void assertIsCleanedAfterWait(TaskStore store) {
