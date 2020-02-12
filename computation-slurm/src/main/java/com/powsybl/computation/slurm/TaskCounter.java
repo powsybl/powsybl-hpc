@@ -12,9 +12,12 @@ import java.util.concurrent.CountDownLatch;
  * @author Yichen Tang <yichen.tang at rte-france.com>
  */
 class TaskCounter {
+
+    private final int jobCount;
     private volatile CountDownLatch latch;
 
     TaskCounter(int totalJobs) {
+        jobCount = totalJobs;
         latch = new CountDownLatch(totalJobs);
     }
 
@@ -30,5 +33,9 @@ class TaskCounter {
         while (latch.getCount() > 0) {
             latch.countDown();
         }
+    }
+
+    int getJobCount() {
+        return jobCount;
     }
 }

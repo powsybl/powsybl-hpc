@@ -20,13 +20,13 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.LongStream;
 import java.util.zip.GZIPOutputStream;
 
 import static com.powsybl.computation.slurm.CommandExecutionsTestFactory.*;
@@ -37,23 +37,71 @@ import static org.junit.Assert.*;
  */
 @Ignore
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-public class SlurmNormalExecutionTest extends SlurmIntegrationTests {
+public class SlurmNormalExecutionTest extends AbstractIntegrationTests {
 
-    private void baseTest(Supplier<AbstractExecutionHandler<String>> supplier) {
-        baseTest(supplier, ComputationParameters.empty());
-    }
-
-    private void baseTest(Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters) {
-        try (ComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
-            CompletableFuture<String> completableFuture = computationManager.execute(EMPTY_ENV, supplier.get(), parameters);
+    void baseTest(Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters, boolean checkClean) {
+        AbstractExecutionHandler<String> handler = supplier.get();
+        SlurmTask task = null;
+        try (SlurmComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
+            CompletableFuture<String> completableFuture = computationManager.execute(EMPTY_ENV, handler, parameters);
             System.out.println("to wait finish");
             String join = completableFuture.join();
             assertEquals("OK", join);
+            Map<String, SlurmTask> taskByDir = computationManager.getTaskStore().getTaskByDir();
+            task = taskByDir.entrySet().stream().findFirst().get().getValue();
+            System.out.println("First:" + task.getFirstJobId());
+            System.out.println("Masters:" + task.getMasters());
+            for (long master : task.getMasters()) {
+                System.out.println(master + "->" + task.getBatches(master));
+            }
+            if (checkClean) {
+                assertIsCleanedAfterWait(computationManager.getTaskStore());
+            }
         } catch (IOException e) {
             e.printStackTrace();
             fail();
         }
         assertFalse(failed);
+        assertTaskRelations(task);
+    }
+
+    private static List<Long> findExpectedIdRelations(SlurmTask task) {
+        List<Long> list = new ArrayList<>();
+        for (int i = 0; i < task.getCommandCount(); i++) {
+            CommandExecution ce = task.getCommand(i);
+            if (ce.getCommand().getInputFiles().stream()
+                    .anyMatch(inputFile -> !inputFile.dependsOnExecutionNumber() && inputFile.getPreProcessor() != null)) {
+                list.add(0L);
+            }
+            list.add((long) ce.getExecutionCount());
+        }
+        return list;
+    }
+
+    private static void assertTaskRelations(SlurmTask task) {
+        assertTaskRelations(task, findExpectedIdRelations(task));
+    }
+
+    private static void assertTaskRelations(SlurmTask task, List<Long> expected) {
+        Long actualMasterId = task.getFirstJobId();
+        assertEquals(expected.size(), task.getMasters().size());
+        for (int i = 0; i < expected.size(); i++) {
+            assertTrue(task.getMasters().contains(actualMasterId));
+            long expectedBatchCount = expected.get(i);
+            List<Long> expectedBatchIds = calExpectedBatchIds(expectedBatchCount, actualMasterId);
+            List<Long> batchIds = task.getBatches(actualMasterId);
+            assertEquals(expectedBatchIds, batchIds);
+            if (batchIds.size() == 0) {
+                actualMasterId = actualMasterId + 1;
+            } else {
+                actualMasterId = batchIds.get(batchIds.size() - 1) + 1;
+            }
+        }
+    }
+
+    private static List<Long> calExpectedBatchIds(long expectedBatchCount, long actualMasterId) {
+        return LongStream.range(1, expectedBatchCount).map(l -> l + actualMasterId)
+                .boxed().collect(Collectors.toList());
     }
 
     @Test
@@ -65,6 +113,17 @@ public class SlurmNormalExecutionTest extends SlurmIntegrationTests {
             }
         };
         baseTest(supplier);
+    }
+
+    @Test
+    public void testClean() {
+        Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractReturnOKExecutionHandler() {
+            @Override
+            public List<CommandExecution> before(Path path) {
+                return simpleCmdWithCount(7);
+            }
+        };
+        baseTest(supplier, ComputationParameters.empty(), true);
     }
 
     @Test

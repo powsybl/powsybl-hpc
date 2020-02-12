@@ -9,7 +9,7 @@ package com.powsybl.computation.slurm;
 /**
  * @author Yichen Tang <yichen.tang at rte-france.com>
  */
-public class SbatchCmdResult extends AbstractSlurmCmdResult {
+class SbatchCmdResult extends AbstractSlurmCmdResult {
 
     SbatchCmdResult(CommandResult commandResult) {
         super(commandResult);
@@ -18,7 +18,7 @@ public class SbatchCmdResult extends AbstractSlurmCmdResult {
     long getSubmittedJobId() throws SlurmCmdNonZeroException {
         if (isOk()) {
             String jobId = commandResult.getStdOut().replaceAll("[^0-9]", "");
-            return Long.valueOf(jobId);
+            return Long.parseLong(jobId);
         } else {
             throw new SlurmCmdNonZeroException("Sbatch failed:" + toString() +
                     "\nexitcode:" + commandResult.getExitCode() +
