@@ -31,10 +31,6 @@ class TaskStore {
         return Optional.ofNullable(taskByDir.get(workingDir));
     }
 
-    Optional<TaskCounter> getTaskCounter(String workingDir) {
-        return getTask(workingDir).map(SlurmTask::getCounter);
-    }
-
     void cancelCallableAndCleanup(UUID callableId) {
         LOGGER.debug("Cancel and clean callableId:" + callableId);
         getTaskByCallableId(callableId).ifPresent(SlurmTask::cancel);

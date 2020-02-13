@@ -59,7 +59,7 @@ public class SlurmTask {
         return directory.toPath().getFileName().toString();
     }
 
-    public UUID getCallableId() {
+    UUID getCallableId() {
         return callableId;
     }
 

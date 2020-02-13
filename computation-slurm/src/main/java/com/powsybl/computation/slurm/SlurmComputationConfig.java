@@ -26,7 +26,6 @@ public class SlurmComputationConfig {
     // MinJobAge : The minimum age of a completed job before its record is purged from Slurm's active database.
     // The default value is 300 seconds.
     private static final int DEFAULT_SCONTROL_INTERVAL = 4; // "scontrol" command to check job state
-    private static final int DEFAULT_CLEAN_INTERVAL = 300; // 5 mins
     private static final int DEFAULT_PORT = 22;
     private static final boolean DEFAULT_REMOTE = true;
 

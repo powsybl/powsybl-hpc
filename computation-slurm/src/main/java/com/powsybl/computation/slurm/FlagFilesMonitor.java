@@ -24,13 +24,10 @@ class FlagFilesMonitor implements Runnable {
     private final TaskStore taskStore;
 
     FlagFilesMonitor(SlurmComputationManager slurmComputationManager) {
-        this(slurmComputationManager.getCommandRunner(), slurmComputationManager.getFlagDir(), slurmComputationManager.getTaskStore());
-    }
-
-    FlagFilesMonitor(CommandExecutor commandRunner, Path flagDir, TaskStore taskStore) {
-        this.commandRunner = Objects.requireNonNull(commandRunner);
-        this.flagDir = Objects.requireNonNull(flagDir);
-        this.taskStore = Objects.requireNonNull(taskStore);
+        Objects.requireNonNull(slurmComputationManager);
+        this.commandRunner = Objects.requireNonNull(slurmComputationManager.getCommandRunner());
+        this.flagDir = Objects.requireNonNull(slurmComputationManager.getFlagDir());
+        this.taskStore = Objects.requireNonNull(slurmComputationManager.getTaskStore());
     }
 
     @Override
@@ -46,7 +43,7 @@ class FlagFilesMonitor implements Runnable {
                     // ex: mydone_workingDirxxxxxx_taskid
                     int lastIdx = line.lastIndexOf('_');
                     String workingDirName = line.substring(idx + 1, lastIdx);
-                    taskStore.getTaskCounter(workingDirName).ifPresent(taskCounter -> {
+                    taskStore.getTask(workingDirName).map(SlurmTask::getCounter).ifPresent(taskCounter -> {
                         LOGGER.debug("{} found", line);
                         taskCounter.countDown();
                         commandRunner.execute("rm " + flagDir + "/" + line);

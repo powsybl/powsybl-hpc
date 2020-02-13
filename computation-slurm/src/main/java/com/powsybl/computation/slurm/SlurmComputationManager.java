@@ -108,6 +108,9 @@ public class SlurmComputationManager implements ComputationManager {
         LOGGER.info("FlagMonitor={};ScontrolMonitor={}", config.getPollingInterval(), config.getScontrolInterval());
     }
 
+    /**
+     * only for unit testing purposes
+     */
     SlurmComputationManager(SlurmComputationConfig config, ExecutorService executorService, CommandExecutor commandRunner,
                             FileSystem fileSystem, Path localDir) throws IOException {
         this.config = config;
@@ -123,7 +126,7 @@ public class SlurmComputationManager implements ComputationManager {
 
         statusManager = new SlurmStatusManager(commandRunner);
 
-        taskStore = new TaskStore(15);
+        taskStore = new TaskStore();
     }
 
     private void startWatchServices() {
