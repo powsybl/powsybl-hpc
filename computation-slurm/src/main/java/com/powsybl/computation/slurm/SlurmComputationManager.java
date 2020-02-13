@@ -24,12 +24,12 @@ import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.SecureRandom;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.powsybl.computation.slurm.SlurmConstants.BATCH_EXT;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -42,7 +42,6 @@ public class SlurmComputationManager implements ComputationManager {
 
     private static final String SACCT_NONZERO_JOB = "sacct --jobs=%s -n --format=\"jobid,exitcode\" | grep -v \"0:0\" | grep -v \"\\.\"";
     private static final Pattern DIGITAL_PATTERN = Pattern.compile("\\d+");
-    private static final String BATCH_EXT = ".batch";
     private static final String FLAGS_DIR_PREFIX = "myflags_"; // where flag files are created and be watched
     private static final String UNZIP_INPUTS_COMMAND_ID = "unzip_inputs_command";
 
@@ -96,10 +95,10 @@ public class SlurmComputationManager implements ComputationManager {
 
         checkSlurmInstall();
 
-        baseDir = fileSystem.getPath(config.getWorkingDir());
         localDir = Files.createDirectories(config.getLocalDir());
-        flagDir = initFlagDir(baseDir);
-        commonDir = initCommonDir(baseDir);
+        baseDir = fileSystem.getPath(config.getWorkingDir());
+        flagDir = initFlagDir();
+        commonDir = initCommonDir();
 
         startWatchServices();
 
@@ -109,6 +108,24 @@ public class SlurmComputationManager implements ComputationManager {
         LOGGER.info("FlagMonitor={};ScontrolMonitor={}", config.getPollingInterval(), config.getScontrolInterval());
     }
 
+    SlurmComputationManager(SlurmComputationConfig config, ExecutorService executorService, CommandExecutor commandRunner,
+                            FileSystem fileSystem, Path localDir) throws IOException {
+        this.config = config;
+        this.executorService = executorService;
+        this.commandRunner = commandRunner;
+
+        this.fileSystem = fileSystem;
+        this.localDir = localDir;
+        checkSlurmInstall();
+        baseDir = fileSystem.getPath(config.getWorkingDir());
+        flagDir = initFlagDir();
+        commonDir = initCommonDir();
+
+        statusManager = new SlurmStatusManager(commandRunner);
+
+        taskStore = new TaskStore(15);
+    }
+
     private void startWatchServices() {
         startFlagFilesMonitor();
         startScontrolMonitor();
@@ -116,8 +133,9 @@ public class SlurmComputationManager implements ComputationManager {
 
     private void checkSlurmInstall() {
         for (String program : new String[]{"squeue", "sinfo", "srun", "sbatch", "scontrol", "sacct"}) {
-            if (commandRunner.execute(program + " --help").getExitCode() != 0) {
-                throw new SlurmException("Slurm is not installed");
+            int exitCode = commandRunner.execute(program + " --help").getExitCode();
+            if (exitCode != 0) {
+                throw new SlurmException("Slurm is not installed. '" + program + " --help' failed with code " + exitCode);
             }
         }
     }
@@ -147,15 +165,11 @@ public class SlurmComputationManager implements ComputationManager {
         return fs;
     }
 
-    private static Path initFlagDir(Path baseDir) throws IOException {
-        Path p;
-        long n = new SecureRandom().nextLong();
-        n = n == -9223372036854775808L ? 0L : Math.abs(n);
-        p = baseDir.resolve(FLAGS_DIR_PREFIX + Long.toString(n));
-        return Files.createDirectories(p);
+    private Path initFlagDir() throws IOException {
+        return Files.createTempDirectory(baseDir, FLAGS_DIR_PREFIX);
     }
 
-    private WorkingDirectory initCommonDir(Path baseDir) throws IOException {
+    private WorkingDirectory initCommonDir() throws IOException {
         return new RemoteWorkingDir(baseDir, "itools_common_", false);
     }
 
@@ -184,7 +198,7 @@ public class SlurmComputationManager implements ComputationManager {
     @Override
     public String getVersion() {
         // get slurm version
-        return commandRunner.execute("scontrol --version").getStdOut();
+        return commandRunner.execute("scontrol --version").getStdOut().trim();
     }
 
     @Override
@@ -496,7 +510,7 @@ public class SlurmComputationManager implements ComputationManager {
 
     @Override
     public Executor getExecutor() {
-        return null;
+        return executorService;
     }
 
     @Override
