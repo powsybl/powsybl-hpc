@@ -13,6 +13,7 @@ final class SlurmConstants {
 
     static final String OUT_EXT = ".out";
     static final String ERR_EXT = ".err";
+    static final String BATCH_EXT = ".batch";
 
     enum JobState {
         PENDING,

@@ -21,9 +21,10 @@ import java.util.Objects;
  */
 class SlurmStatusManager {
 
+    // TODO timezone??
     private static final String TIME_CMD = "date +\"%Y-%m-%d %H:%M:%S\"";
     private static final String INFO_CORES_CMD = "sinfo -h -o %C";
-    private static final String QUEUE_CORES_PER_JOB = "squeue  -h --format=\"%C %j\"";
+    private static final String QUEUE_CORES_PER_JOB = "squeue -h --format=\"%C %j\"";
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss\n");
 
     private final CommandExecutor commandExecutor;
@@ -35,9 +36,9 @@ class SlurmStatusManager {
     SlurmComputationResourcesStatus getResourcesStatus() {
         // date
         String dateOutput = commandExecutor.execute(TIME_CMD).getStdOut();
+        DateTime time = DATE_TIME_FORMATTER.parseDateTime(dateOutput);
 
         // core
-        DateTime time = DATE_TIME_FORMATTER.parseDateTime(dateOutput);
         String coresInfoOutput = commandExecutor.execute(INFO_CORES_CMD).getStdOut();
         String[] splits = coresInfoOutput.split("/");
         int availCores = Integer.parseInt(splits[1]);
