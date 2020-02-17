@@ -11,10 +11,11 @@ import org.junit.Test;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.LongStream;
 
 import static com.powsybl.computation.slurm.CommandResultTestFactory.multilineOutput;
-import static com.powsybl.computation.slurm.SlurmTaskTest.mockSubmittedTask;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -35,7 +36,10 @@ public class FlagFilesMonitorTest {
                         "myerror_" + wdName + "_2")));
 
         TaskStore taskStore = mock(TaskStore.class);
-        SlurmTask task = mockSubmittedTask(runner);
+        SlurmTask task = mock(SlurmTask.class);
+        Set<Long> tracingIds = LongStream.range(1L, 7L).boxed().collect(Collectors.toSet());
+        when(task.getTracingIds()).thenReturn(tracingIds);
+        when(task.getCounter()).thenReturn(new TaskCounter(6));
         when(taskStore.getTask(eq(wdName))).thenReturn(Optional.of(task));
 
         Path flagDir = mock(Path.class);
@@ -50,13 +54,7 @@ public class FlagFilesMonitorTest {
 
         verify(runner, times(1)).execute(eq("rm /flagdir/mydone_workingDir_1234_1"));
         verify(runner, times(1)).execute(eq("rm /flagdir/myerror_workingDir_1234_2"));
-        verify(runner, times(1)).execute(eq("scancel 1"));
-        verify(runner, times(1)).execute(eq("scancel 2"));
-        verify(runner, times(1)).execute(eq("scancel 3"));
-        verify(runner, times(1)).execute(eq("scancel 4"));
-        verify(runner, times(1)).execute(eq("scancel 5"));
-        verify(runner, times(1)).execute(eq("scancel 6"));
-
-        assertTrue(task.getTracingIds().isEmpty());
+        verify(taskStore, times(1)).untracing(1L);
+        verify(task, times(1)).error();
     }
 }

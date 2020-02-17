@@ -9,14 +9,20 @@ package com.powsybl.computation.slurm;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Matchers;
-import org.mockito.internal.util.reflection.Whitebox;
 
-import java.util.stream.IntStream;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.LongStream;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.anyString;
-import static org.mockito.Mockito.*;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * @author Yichen Tang <yichen.tang at rte-france.com>
@@ -25,6 +31,7 @@ public class ScontrolMonitorTest {
 
     private SlurmComputationManager slurm;
     private TaskStore ts;
+    private SlurmTask task;
     private CommandExecutor cm;
 
     private CommandResult runningResult = new CommandResult(0, "JobState=RUNNING", "");
@@ -34,6 +41,7 @@ public class ScontrolMonitorTest {
     public void testAllRunning() {
         when(cm.execute(anyString())).thenReturn(runningResult);
         ScontrolMonitor monitor = new ScontrolMonitor(slurm);
+        assertFalse(ts.getTracingIds().isEmpty());
         monitor.run();
         assertFalse(ts.getTracingIds().isEmpty());
     }
@@ -49,7 +57,7 @@ public class ScontrolMonitorTest {
         monitor.run();
         assertTrue(ts.getTracingIds().isEmpty());
         // check scancel only once
-        IntStream.range(1, 7).forEach(i -> verify(cm, times(1)).execute("scancel " + i));
+        verify(task, times(1)).cancel();
     }
 
     @Before
@@ -57,10 +65,21 @@ public class ScontrolMonitorTest {
         slurm = mock(SlurmComputationManager.class);
         ts = new TaskStore();
         cm = mock(CommandExecutor.class);
-        ts.add(SlurmTaskTest.mockSubmittedTask(cm));
-        Whitebox.setInternalState(slurm, "taskStore", ts);
+        task = mockSlurmTask();
+        ts.add(task);
         when(slurm.getTaskStore()).thenReturn(ts);
-        Whitebox.setInternalState(slurm, "commandRunner", cm);
         when(slurm.getCommandRunner()).thenReturn(cm);
+    }
+
+    private SlurmTask mockSlurmTask() {
+        SlurmTask task = mock(SlurmTask.class);
+        Set<Long> tracingIds = LongStream.range(1L, 7L).boxed().collect(Collectors.toSet());
+        when(task.getId()).thenReturn("workingDir_1234");
+        UUID uuid = UUID.randomUUID();
+        when(task.getCallableId()).thenReturn(uuid);
+        when(task.getTracingIds()).thenReturn(tracingIds);
+        when(task.getCounter()).thenReturn(new TaskCounter(6));
+        when(task.contains(eq(3L))).thenReturn(true);
+        return task;
     }
 }
