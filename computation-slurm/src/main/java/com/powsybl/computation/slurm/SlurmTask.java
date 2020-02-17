@@ -207,9 +207,10 @@ public class SlurmTask {
                 m.find();
                 long jobId = Long.parseLong(m.group());
                 m.find();
-                int executionIdx = Integer.parseInt(m.group());
-                m.find();
                 int exitCode = Integer.parseInt(m.group());
+                // TODO failed in one batch
+                m.find();
+                int executionIdx = Integer.parseInt(m.group());
                 // error message ???
                 ExecutionError error = new ExecutionError(commandByJobId.get(jobId), executionIdx, exitCode);
                 errors.add(error);

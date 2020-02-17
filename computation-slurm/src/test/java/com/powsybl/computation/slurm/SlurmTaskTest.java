@@ -11,6 +11,7 @@ import com.google.common.jimfs.Jimfs;
 import com.powsybl.commons.io.WorkingDirectory;
 import com.powsybl.computation.ComputationParameters;
 import com.powsybl.computation.ExecutionEnvironment;
+import com.powsybl.computation.ExecutionError;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -96,6 +97,14 @@ public class SlurmTaskTest {
             e.printStackTrace();
             fail();
         }
+
+        when(commandExecutor.execute(startsWith("sacct"))).thenReturn(CommandResultTestFactory.simpleOutput("1 127:0"));
+        SlurmExecutionReport report = task.generateReport();
+        assertFalse(report.getErrors().isEmpty());
+        ExecutionError executionError = report.getErrors().get(0);
+        assertEquals("tLP", executionError.getCommand().getId());
+        assertEquals(127, executionError.getExitCode());
+        assertEquals(0, executionError.getIndex());
 
         // untracing
         assertTrue(task.untracing(1L));
