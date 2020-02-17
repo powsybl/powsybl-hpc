@@ -69,6 +69,9 @@ public class SlurmTaskTest {
         CommandExecutor commandExecutor = mock(CommandExecutor.class);
         UUID uuid = UUID.randomUUID();
         SlurmTask task = new SlurmTask(uuid, mockScm(commandExecutor), mockWd(), CommandExecutionsTestFactory.md5sumLargeFile(), ComputationParameters.empty(), ExecutionEnvironment.createDefault());
+        assertEquals(2, task.getCommandExecutionSize());
+        assertEquals(3, task.getCommandExecution(0).getExecutionCount());
+        assertEquals(1, task.getCommandExecution(1).getExecutionCount());
         // 3 + 1, common unzip job is not accounted
         assertEquals(4, task.getJobCount());
     }

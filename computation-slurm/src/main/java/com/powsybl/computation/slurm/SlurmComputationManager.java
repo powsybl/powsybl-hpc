@@ -219,14 +219,13 @@ public class SlurmComputationManager implements ComputationManager {
         return rCompletableFutureTask;
     }
 
-    private <R> R doExecute(UUID callableId, ExecutionEnvironment environment, ExecutionHandler<R> handler, ComputationParameters parameters) throws IOException, InterruptedException, ExecutionException {
+    private <R> R doExecute(UUID callableId, ExecutionEnvironment environment, ExecutionHandler<R> handler, ComputationParameters parameters) throws IOException, InterruptedException {
         Path remoteWorkingDir;
         try (WorkingDirectory remoteWorkingDirectory = new RemoteWorkingDir(baseDir, environment.getWorkingDirPrefix(), environment.isDebug())) {
             remoteWorkingDir = remoteWorkingDirectory.toPath();
 
             List<CommandExecution> commandExecutions = handler.before(remoteWorkingDir);
             SlurmExecutionReport report = null;
-            Map<Long, Command> jobIdCommandMap;
             SlurmException slurmExceptionForReport = null;
 
             try {

@@ -82,7 +82,7 @@ class TaskStore {
                 .findFirst()
                 .ifPresent(task -> {
                     UUID callableId = task.getCallableId();
-                    System.out.println("in put " + callableId);
+                    LOGGER.debug("A SlurmException {} found on Callable '{}'", slurmException, callableId);
                     exceptionMap.put(callableId, slurmException);
                     cancelCallableAndCleanup(callableId);
                     task.getCounter().cancel();
