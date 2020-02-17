@@ -11,6 +11,7 @@ import com.powsybl.computation.ComputationParameters;
 
 import javax.annotation.Nullable;
 import java.util.Optional;
+import java.util.OptionalInt;
 
 /**
  * @author Yichen TANG <yichen.tang at rte-france.com>
@@ -18,10 +19,26 @@ import java.util.Optional;
 public class SlurmComputationParameters extends AbstractExtension<ComputationParameters> {
 
     private final String qos;
+    private final Integer mem;
 
     public SlurmComputationParameters(ComputationParameters parameters, @Nullable String qos) {
+        this(parameters, qos, null);
+    }
+
+    /**
+     * Additionnal parameters for slurm
+     * @param parameters base parameters to extend
+     * @param qos name of the QOS
+     * @param mem memory usage limit (in MBytes)
+     */
+    public SlurmComputationParameters(ComputationParameters parameters, @Nullable String qos, Integer mem) {
         super(parameters);
         this.qos = qos;
+        this.mem = mem;
+    }
+
+    public OptionalInt getMem() {
+        return mem != null && mem >= 0 ? OptionalInt.of(mem) : OptionalInt.empty();
     }
 
     public Optional<String> getQos() {
