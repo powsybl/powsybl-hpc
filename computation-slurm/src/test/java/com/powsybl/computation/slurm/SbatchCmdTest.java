@@ -128,4 +128,14 @@ public class SbatchCmdTest {
             assertEquals("sbatch -D /tmp/foo --job-name=testDir --kill-on-invalid-dep=yes submit.sh", cmd.toString());
         }
     }
+
+    @Test
+    public void testMem() {
+        SbatchCmdBuilder builder = new SbatchCmdBuilder();
+        SbatchCmd cmd = builder.jobName("testMem")
+                .script("submit.sh")
+                .mem(20)
+                .build();
+        assertEquals("sbatch --job-name=testMem --mem=20M --kill-on-invalid-dep=yes submit.sh", cmd.toString());
+    }
 }
