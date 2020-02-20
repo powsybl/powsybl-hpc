@@ -15,8 +15,13 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystem;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -68,6 +73,8 @@ public class SbatchScriptGeneratorTest {
                 "echo \"te1st0\"",
                 "rc=$?; if [[ $rc != 0 ]]; then touch /tmp/flags/myerror_workingPath_12345_$SLURM_JOBID; exit $rc; fi",
                 "touch /tmp/flags/mydone_workingPath_12345_$SLURM_JOBID"), shell);
+
+        assertCommandExecutionToShell(commandExecutions.get(0), "simpleCmdWithCount3.batch");
     }
 
     @Test
@@ -82,6 +89,8 @@ public class SbatchScriptGeneratorTest {
                 "rc=$?; if [[ $rc != 0 ]]; then touch /tmp/flags/myerror_workingPath_12345_$SLURM_JOBID; exit $rc; fi",
                 "gzip out0",
                 "touch /tmp/flags/mydone_workingPath_12345_$SLURM_JOBID"), shell);
+
+        assertCommandExecutionToShell(commandExecutions.get(0), "myEchoSimpleCmdWithUnzipZip.batch");
     }
 
     @Test
@@ -130,6 +139,28 @@ public class SbatchScriptGeneratorTest {
                 "echo \"sub2\"",
                 "rc=$?; if [[ $rc != 0 ]]; then touch /tmp/flags/myerror_workingPath_12345_$SLURM_JOBID; exit $rc; fi",
                 "touch /tmp/flags/mydone_workingPath_12345_$SLURM_JOBID"), shell);
+    }
+
+    private void assertCommandExecutionToShell(CommandExecution commandExecution, String expected) {
+        SbatchScriptGenerator shellGenerator = new SbatchScriptGenerator(flagPath);
+        List<String> shell = shellGenerator.parser(commandExecution, workingPath, Collections.emptyMap(), false);
+        List<String> expectedShell = null;
+        try {
+            expectedShell = Files.readAllLines(Paths.get(this.getClass().getResource("/expectedShell/" + expected).toURI()), StandardCharsets.UTF_8);
+            System.out.println("---Actually---");
+            for (String s : shell) {
+                System.out.println(s);
+            }
+            System.out.println("---Expected---");
+            for (String s : expectedShell) {
+                System.out.println(s);
+            }
+            assertEquals(expectedShell, shell);
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+        }
     }
 
 }

@@ -36,13 +36,18 @@ public class SlurmOtherCaseTest extends AbstractIntegrationTests {
 
     @Test
     public void testLongProgramToCancelExternal() {
+//        testLongProgramToCancelExternal(batchConfig);
+        testLongProgramToCancelExternal(arrayConfig);
+    }
+
+    private void testLongProgramToCancelExternal(SlurmComputationConfig config) {
         Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractExecutionHandler<String>() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
                 return longProgram(200);
             }
         };
-        try (SlurmComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
+        try (SlurmComputationManager computationManager = new SlurmComputationManager(config)) {
             CompletableFuture<String> completableFuture = computationManager.execute(EMPTY_ENV, supplier.get(), ComputationParameters.empty());
             System.out.println("Go to interrupt on server");
             Assertions.assertThatThrownBy(completableFuture::join)
@@ -68,7 +73,7 @@ public class SlurmOtherCaseTest extends AbstractIntegrationTests {
                 return makeSlurmBusy(3);
             }
         };
-        try (SlurmComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
+        try (SlurmComputationManager computationManager = new SlurmComputationManager(batchConfig)) {
             CompletableFuture<Void> execute = computationManager.execute(EMPTY_ENV, supplier.get(), ComputationParameters.empty());
             System.out.println("MakeSlurmBusy submitted.");
             execute.join();
@@ -79,6 +84,11 @@ public class SlurmOtherCaseTest extends AbstractIntegrationTests {
 
     @Test
     public void testDeadline() throws InterruptedException {
+        testDeadline(batchConfig);
+        testDeadline(arrayConfig);
+    }
+
+    private void testDeadline(SlurmComputationConfig config) throws InterruptedException {
         Thread makeSlurmBusyThread = new Thread(this::runMakeSlurmBusy);
         makeSlurmBusyThread.start();
         TimeUnit.SECONDS.sleep(10);
@@ -88,7 +98,7 @@ public class SlurmOtherCaseTest extends AbstractIntegrationTests {
                 return longProgram(10);
             }
         };
-        try (SlurmComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
+        try (SlurmComputationManager computationManager = new SlurmComputationManager(config)) {
             // FIXME submit two jobs in same SCM
             ComputationParametersBuilder builder = new ComputationParametersBuilder();
             builder.setDeadline("longProgram", 12);
@@ -107,6 +117,11 @@ public class SlurmOtherCaseTest extends AbstractIntegrationTests {
     // sacctmgr show qos
     @Test
     public void testInvalidQos() {
+        testInvalidQos(batchConfig);
+        testInvalidQos(arrayConfig);
+    }
+
+    private void testInvalidQos(SlurmComputationConfig config) {
         Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractReturnOKExecutionHandler() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
@@ -118,7 +133,7 @@ public class SlurmOtherCaseTest extends AbstractIntegrationTests {
         parameters.addExtension(SlurmComputationParameters.class, slurmComputationParameters);
         ListAppender<ILoggingEvent> appender = new ListAppender<>();
         addApprender(appender);
-        try (SlurmComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
+        try (SlurmComputationManager computationManager = new SlurmComputationManager(config)) {
             CompletableFuture<String> execute = computationManager.execute(EMPTY_ENV, supplier.get(), parameters);
             execute.join();
             assertIsCleaned(computationManager.getTaskStore());
@@ -135,7 +150,7 @@ public class SlurmOtherCaseTest extends AbstractIntegrationTests {
     // FIXME shutdown and check programmatically
     @Test
     public void testStopSendingAfterShutdown() {
-        try (SlurmComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
+        try (SlurmComputationManager computationManager = new SlurmComputationManager(batchConfig)) {
             CompletableFuture<Void> execute = computationManager.execute(EMPTY_ENV, new AbstractExecutionHandler<Void>() {
                 @Override
                 public List<CommandExecution> before(Path path) throws IOException {
@@ -149,7 +164,7 @@ public class SlurmOtherCaseTest extends AbstractIntegrationTests {
     }
 
     @Override
-    void baseTest(Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters, boolean checkClean) {
+    void baseTest(SlurmComputationConfig config, Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters, boolean checkClean) {
         // do nothing
     }
 }

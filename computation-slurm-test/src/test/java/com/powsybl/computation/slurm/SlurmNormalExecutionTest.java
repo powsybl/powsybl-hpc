@@ -37,7 +37,8 @@ import static org.junit.Assert.*;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class SlurmNormalExecutionTest extends AbstractIntegrationTests {
 
-    void baseTest(Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters, boolean checkClean) {
+    @Override
+    public void baseTest(SlurmComputationConfig slurmConfig, Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters, boolean checkClean) {
         AbstractExecutionHandler<String> handler = supplier.get();
         ListAppender<ILoggingEvent> normalAppender = new ListAppender<>();
         addApprender(normalAppender);
