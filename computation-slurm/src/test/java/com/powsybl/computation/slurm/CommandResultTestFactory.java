@@ -6,6 +6,7 @@
  */
 package com.powsybl.computation.slurm;
 
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -26,5 +27,9 @@ final class CommandResultTestFactory {
 
     static CommandResult multilineOutput(List<String> msg) {
         return simpleOutput(String.join("\n", msg));
+    }
+
+    static CommandResult multilineOutput(String... msg) {
+        return multilineOutput(Arrays.asList(msg));
     }
 }

@@ -34,15 +34,10 @@ class SbatchCmdBuilder {
     }
 
     SbatchCmdBuilder array(int i) {
-        if (i < 0) {
+        if (i < 2) {
             throw new IllegalArgumentException(i + " is not validate for array.");
         }
-        if (i == 1) {
-            sbatchArgsByName.put("array", Integer.toString(0));
-        }
-        if (i != 1) {
-            sbatchArgsByName.put("array", "0-" + (i - 1));
-        }
+        sbatchArgsByName.put("array", "0-" + (i - 1));
         return this;
     }
 

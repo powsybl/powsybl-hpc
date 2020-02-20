@@ -42,7 +42,7 @@ public class SlurmOtherCaseTest extends AbstractIntegrationTests {
                 return longProgram(200);
             }
         };
-        try (SlurmComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
+        try (SlurmComputationManager computationManager = new SlurmComputationManager(batchConfig)) {
             CompletableFuture<String> completableFuture = computationManager.execute(EMPTY_ENV, supplier.get(), ComputationParameters.empty());
             System.out.println("Go to interrupt on server");
             Assertions.assertThatThrownBy(completableFuture::join)
@@ -68,7 +68,7 @@ public class SlurmOtherCaseTest extends AbstractIntegrationTests {
                 return makeSlurmBusy(3);
             }
         };
-        try (SlurmComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
+        try (SlurmComputationManager computationManager = new SlurmComputationManager(batchConfig)) {
             CompletableFuture<Void> execute = computationManager.execute(EMPTY_ENV, supplier.get(), ComputationParameters.empty());
             System.out.println("MakeSlurmBusy submitted.");
             execute.join();
@@ -88,7 +88,7 @@ public class SlurmOtherCaseTest extends AbstractIntegrationTests {
                 return longProgram(10);
             }
         };
-        try (SlurmComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
+        try (SlurmComputationManager computationManager = new SlurmComputationManager(batchConfig)) {
             // FIXME submit two jobs in same SCM
             ComputationParametersBuilder builder = new ComputationParametersBuilder();
             builder.setDeadline("longProgram", 12);
@@ -118,7 +118,7 @@ public class SlurmOtherCaseTest extends AbstractIntegrationTests {
         parameters.addExtension(SlurmComputationParameters.class, slurmComputationParameters);
         ListAppender<ILoggingEvent> appender = new ListAppender<>();
         addApprender(appender);
-        try (SlurmComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
+        try (SlurmComputationManager computationManager = new SlurmComputationManager(batchConfig)) {
             CompletableFuture<String> execute = computationManager.execute(EMPTY_ENV, supplier.get(), parameters);
             execute.join();
             assertIsCleaned(computationManager.getTaskStore());
@@ -135,7 +135,7 @@ public class SlurmOtherCaseTest extends AbstractIntegrationTests {
     // FIXME shutdown and check programmatically
     @Test
     public void testStopSendingAfterShutdown() {
-        try (SlurmComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
+        try (SlurmComputationManager computationManager = new SlurmComputationManager(batchConfig)) {
             CompletableFuture<Void> execute = computationManager.execute(EMPTY_ENV, new AbstractExecutionHandler<Void>() {
                 @Override
                 public List<CommandExecution> before(Path path) throws IOException {
@@ -149,7 +149,7 @@ public class SlurmOtherCaseTest extends AbstractIntegrationTests {
     }
 
     @Override
-    void baseTest(Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters, boolean checkClean) {
+    void baseTest(SlurmComputationConfig config, Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters, boolean checkClean) {
         // do nothing
     }
 }

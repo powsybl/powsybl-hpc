@@ -35,8 +35,8 @@ import static org.junit.Assert.assertTrue;
 public class SlurmCancelExecutionTest extends AbstractIntegrationTests {
 
     @Override
-    void baseTest(Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters, boolean checkClean) {
-        try (SlurmComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
+    void baseTest(SlurmComputationConfig config, Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters, boolean checkClean) {
+        try (SlurmComputationManager computationManager = new SlurmComputationManager(config)) {
             CompletableFuture<String> completableFuture = computationManager.execute(EMPTY_ENV, supplier.get(), parameters);
             System.out.println("CompletableFuture would be cancelled in 5 seconds...");
             // TODO add a test before submit

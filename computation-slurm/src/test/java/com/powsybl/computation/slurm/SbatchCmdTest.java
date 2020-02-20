@@ -39,9 +39,8 @@ public class SbatchCmdTest {
         builder = new SbatchCmdBuilder();
         cmd = builder.jobName("array1")
                 .script("submit.sh")
-                .array(1)
                 .build();
-        assertEquals("sbatch --job-name=array1 --array=0 --kill-on-invalid-dep=yes submit.sh", cmd.toString());
+        assertEquals("sbatch --job-name=array1 --kill-on-invalid-dep=yes submit.sh", cmd.toString());
     }
 
     @Test
@@ -75,10 +74,9 @@ public class SbatchCmdTest {
         SbatchCmdBuilder builder = new SbatchCmdBuilder();
         SbatchCmd cmd = builder.jobName("array1")
                 .script("submit.sh")
-                .array(1)
                 .oversubscribe()
                 .build();
-        assertEquals("sbatch --job-name=array1 --array=0 --kill-on-invalid-dep=yes --oversubscribe submit.sh", cmd.toString());
+        assertEquals("sbatch --job-name=array1 --kill-on-invalid-dep=yes --oversubscribe submit.sh", cmd.toString());
     }
 
     @Test
