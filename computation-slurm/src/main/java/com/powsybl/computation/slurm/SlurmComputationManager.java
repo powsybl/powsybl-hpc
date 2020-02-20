@@ -334,7 +334,7 @@ public class SlurmComputationManager implements ComputationManager {
                 return;
             }
 
-            SlurmExecutionReport report = generateReport(jobIdCommandMap, remoteWorkingDir);
+            SlurmExecutionReport report = generateReport(jobIdCommandMap, remoteWorkingDir, slurmTask);
 
             R result = handler.after(remoteWorkingDir, report);
             f.complete(result);
@@ -344,10 +344,10 @@ public class SlurmComputationManager implements ComputationManager {
         }
     }
 
-    private SlurmExecutionReport generateReport(Map<Long, Command> jobIdCommandMap, Path workingDir) {
+    private SlurmExecutionReport generateReport(Map<Long, Command> jobIdCommandMap, Path workingDir, SlurmTask task) {
         List<ExecutionError> errors = new ArrayList<>();
 
-        Set<Long> jobIds = jobIdCommandMap.keySet();
+        Set<Long> jobIds = task.getToCancelIds();
         String jobIdsStr = StringUtils.join(jobIds, ",");
         String sacct = String.format(SACCT_NONZERO_JOB, jobIdsStr);
         CommandResult sacctResult = commandRunner.execute(sacct);
@@ -359,13 +359,17 @@ public class SlurmComputationManager implements ComputationManager {
                 m.find();
                 long jobId = Long.parseLong(m.group());
                 m.find();
-                int executionIdx = Integer.parseInt(m.group());
-                m.find();
                 int exitCode = Integer.parseInt(m.group());
+                long mid = jobId;
+                int executionIdx = 0;
+                if (!jobIdCommandMap.containsKey(jobId)) {
+                    mid = task.getMasterId(jobId);
+                    executionIdx = (int) (jobId - mid);
+                }
                 // error message ???
-                ExecutionError error = new ExecutionError(jobIdCommandMap.get(jobId), executionIdx, exitCode);
+                ExecutionError error = new ExecutionError(jobIdCommandMap.get(mid), executionIdx, exitCode);
                 errors.add(error);
-                LOGGER.debug("{} error added ", jobId);
+                LOGGER.debug("{} error added ", error);
             }
         }
 

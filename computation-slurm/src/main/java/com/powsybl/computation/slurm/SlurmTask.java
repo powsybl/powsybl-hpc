@@ -78,6 +78,16 @@ public class SlurmTask {
         return firstJobId;
     }
 
+    Long getMasterId(Long batchId) {
+        for (Map.Entry<Long, SubTask> entry : subTaskMap.entrySet()) {
+            boolean contains = entry.getValue().batchIds.contains(batchId);
+            if (contains) {
+                return entry.getKey();
+            }
+        }
+        return null;
+    }
+
     TaskCounter getCounter() {
         return counter;
     }

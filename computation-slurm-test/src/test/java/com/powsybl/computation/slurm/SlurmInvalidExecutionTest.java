@@ -60,6 +60,21 @@ public class SlurmInvalidExecutionTest extends AbstractIntegrationTests {
     }
 
     @Test
+    public void testInvalidInBatch() {
+        Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractCheckErrorsExecutionHandler() {
+            @Override
+            public List<CommandExecution> before(Path workingDir) {
+                generateZipFileOnRemote("in0", workingDir.resolve("in0.zip"));
+                generateZipFileOnRemote("in1", workingDir.resolve("in1.zip"));
+                generateZipFileOnRemote("in2", workingDir.resolve("in2.zip"));
+                generateZipFileOnRemote("in3", workingDir.resolve("in3.zip"));
+                return CommandExecutionsTestFactory.myEchoSimpleCmdWithUnzipZip(4);
+            }
+        };
+        baseTest(supplier);
+    }
+
+    @Test
     public void testInvalidProgramInList() {
         Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractCheckErrorsExecutionHandler() {
             @Override

@@ -41,6 +41,11 @@ public final class CommandExecutionsTestFactory {
         return Collections.singletonList(commandExecution);
     }
 
+    /**
+     * The 4th batch would fail.
+     * @param executionCount
+     * @return
+     */
     static List<CommandExecution> myEchoSimpleCmdWithUnzipZip(int executionCount) {
         Command command = new SimpleCommandBuilder()
                 .id("myEcho")

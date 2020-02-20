@@ -7,16 +7,12 @@
 package com.powsybl.computation.slurm;
 
 import com.powsybl.computation.*;
-import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
-import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
-import org.apache.commons.io.IOUtils;
 import org.junit.FixMethodOrder;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -29,8 +25,13 @@ import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 import java.util.zip.GZIPOutputStream;
 
-import static com.powsybl.computation.slurm.CommandExecutionsTestFactory.*;
-import static org.junit.Assert.*;
+import static com.powsybl.computation.slurm.CommandExecutionsTestFactory.longProgram;
+import static com.powsybl.computation.slurm.CommandExecutionsTestFactory.md5sumLargeFile;
+import static com.powsybl.computation.slurm.CommandExecutionsTestFactory.simpleCmdWithCount;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * @author Yichen TANG <yichen.tang at rte-france.com>
@@ -259,18 +260,6 @@ public class SlurmNormalExecutionTest extends AbstractIntegrationTests {
             }
         };
         baseTest(supplier);
-    }
-
-    private static void generateZipFileOnRemote(String name, Path dest) {
-        try (InputStream inputStream = SlurmNormalExecutionTest.class.getResourceAsStream("/afile.txt");
-             ZipArchiveOutputStream zos = new ZipArchiveOutputStream(Files.newOutputStream(dest))) {
-            ZipArchiveEntry entry = new ZipArchiveEntry(name);
-            zos.putArchiveEntry(entry);
-            IOUtils.copy(inputStream, zos);
-            zos.closeArchiveEntry();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
     private void generateGzFileOnRemote(int sizeGb, Path dest) {
