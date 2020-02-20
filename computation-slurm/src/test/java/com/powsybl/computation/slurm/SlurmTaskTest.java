@@ -53,7 +53,7 @@ public class SlurmTaskTest {
     public void testIdsRelationship() {
         SlurmTask task = mockSubmittedTask(mock(CompletableFuture.class));
         List<Long> masters = task.getMasters();
-        assertTrue(1L == task.getFirstJobId());
+        assertEquals(1L, (long) task.getFirstJobId());
         assertEquals(Arrays.asList(1L, 3L, 6L), masters);
         assertEquals(new HashSet<>(Arrays.asList(1L, 2L, 3L, 4L, 5L, 6L)), task.getTracingIds());
         assertTrue(task.contains(3L));
@@ -63,6 +63,8 @@ public class SlurmTaskTest {
         // sub task
         assertEquals(Arrays.asList(4L, 5L), task.getBatches(3L));
         assertTrue(task.getBatches(6L).isEmpty());
+
+        assertEquals(3L, (long) task.getMasterId(4L));
     }
 
     @Test
