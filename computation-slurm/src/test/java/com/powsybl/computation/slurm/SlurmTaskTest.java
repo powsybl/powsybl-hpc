@@ -6,19 +6,13 @@
  */
 package com.powsybl.computation.slurm;
 
-import com.google.common.jimfs.Configuration;
-import com.google.common.jimfs.Jimfs;
 import com.powsybl.commons.io.WorkingDirectory;
 import com.powsybl.computation.ComputationParameters;
 import com.powsybl.computation.ExecutionEnvironment;
 import com.powsybl.computation.ExecutionError;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.nio.file.FileSystem;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 
@@ -34,20 +28,7 @@ import static org.mockito.Mockito.when;
 /**
  * @author Yichen TANG <yichen.tang at rte-france.com>
  */
-public class SlurmTaskTest {
-
-    private FileSystem fileSystem;
-    private Path flagPath;
-    private Path workingPath;
-
-    @Before
-    public void setUp() throws IOException {
-        fileSystem = Jimfs.newFileSystem(Configuration.unix());
-        flagPath = fileSystem.getPath("/tmp/flags");
-        workingPath = fileSystem.getPath("/home/test/workingPath_12345");
-        Files.createDirectories(workingPath);
-        Files.createDirectories(flagPath);
-    }
+public class SlurmTaskTest extends DefaultSlurmTaskTest {
 
     private void testIdsRelationship(SlurmTask task) {
         List<Long> masters = task.getMasters();
@@ -165,24 +146,6 @@ public class SlurmTaskTest {
         when(directory.toPath()).thenReturn(path);
         SlurmTask task = new SlurmTask(uuid, mockScm(commandExecutor), directory, Collections.emptyList(), ComputationParameters.empty(), ExecutionEnvironment.createDefault());
         assertEquals(path, task.getWorkingDirPath());
-    }
-
-    private SlurmComputationManager mockScm(CommandExecutor runner) {
-        SlurmComputationManager scm = mock(SlurmComputationManager.class);
-        when(scm.getFlagDir()).thenReturn(flagPath);
-        when(scm.getCommandRunner()).thenReturn(runner);
-        return scm;
-    }
-
-    private WorkingDirectory mockWd() {
-        WorkingDirectory workingDirectory = mock(WorkingDirectory.class);
-        when(workingDirectory.toPath()).thenReturn(workingPath);
-        return workingDirectory;
-    }
-
-    @After
-    public void tearDown() throws IOException {
-        fileSystem.close();
     }
 
 }

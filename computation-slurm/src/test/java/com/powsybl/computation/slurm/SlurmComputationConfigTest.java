@@ -36,6 +36,7 @@ public class SlurmComputationConfigTest {
     private static final int MAX_RETRY = 10;
     private static final int POLLING_INTERVAL = 30;
     private static final int SCONTROL_INTERVAL = 15;
+    private static final boolean ARRAY_JOB = false;
 
     private FileSystem fileSystem;
 
@@ -49,6 +50,9 @@ public class SlurmComputationConfigTest {
         InMemoryPlatformConfig platformConfig = new InMemoryPlatformConfig(fileSystem);
 
         moduleConfig = platformConfig.createModuleConfig("slurm-computation-manager");
+        moduleConfig.setStringProperty("polling-time", Integer.toString(POLLING_INTERVAL));
+        moduleConfig.setStringProperty("scontrol-time", Integer.toString(SCONTROL_INTERVAL));
+        moduleConfig.setStringProperty("array-job", Boolean.toString(ARRAY_JOB));
 
         // Remote configuration (default)
         moduleConfig.setStringProperty("hostname", HOSTNAME);
@@ -59,8 +63,6 @@ public class SlurmComputationConfigTest {
         moduleConfig.setStringProperty("local-dir", LOCAL_DIR);
         moduleConfig.setStringProperty("max-ssh-connection", Integer.toString(MAX_SSH_CONNECTION));
         moduleConfig.setStringProperty("max-retry", Integer.toString(MAX_RETRY));
-        moduleConfig.setStringProperty("polling-time", Integer.toString(POLLING_INTERVAL));
-        moduleConfig.setStringProperty("scontrol-time", Integer.toString(SCONTROL_INTERVAL));
 
         // Local configuration
         moduleConfig.setStringProperty("working-dir", WORKING_DIR);
@@ -106,5 +108,6 @@ public class SlurmComputationConfigTest {
         assertEquals(REMOTE_DIR, config.getWorkingDir());
         assertEquals(POLLING_INTERVAL, config.getPollingInterval());
         assertEquals(SCONTROL_INTERVAL, config.getScontrolInterval());
+        assertEquals(ARRAY_JOB, config.isArrayJob());
     }
 }

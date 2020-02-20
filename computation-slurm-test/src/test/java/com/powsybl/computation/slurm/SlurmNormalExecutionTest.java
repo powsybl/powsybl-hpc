@@ -42,7 +42,8 @@ import static org.junit.Assert.fail;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class SlurmNormalExecutionTest extends AbstractIntegrationTests {
 
-    void baseTest(Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters, boolean checkClean) {
+    @Override
+    void baseTest(SlurmComputationConfig slurmConfig, Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters, boolean checkClean) {
         AbstractExecutionHandler<String> handler = supplier.get();
         SlurmTask task = null;
         ListAppender<ILoggingEvent> normalAppender = new ListAppender<>();
@@ -56,8 +57,10 @@ public class SlurmNormalExecutionTest extends AbstractIntegrationTests {
             task = taskByDir.entrySet().stream().findFirst().get().getValue();
             System.out.println("First:" + task.getFirstJobId());
             System.out.println("Masters:" + task.getMasters());
-            for (long master : task.getMasters()) {
-                System.out.println(master + "->" + task.getBatches(master));
+            if (!slurmConfig.isArrayJob()) {
+                for (long master : task.getMasters()) {
+                    System.out.println(master + "->" + task.getBatches(master));
+                }
             }
             if (checkClean) {
                 assertIsCleanedAfterWait(computationManager.getTaskStore());
@@ -71,7 +74,9 @@ public class SlurmNormalExecutionTest extends AbstractIntegrationTests {
             removeApprender(normalAppender);
         }
         assertFalse(failed);
-        assertTaskRelations(task);
+        if (!slurmConfig.isArrayJob()) {
+            assertTaskRelations(task);
+        }
     }
 
     private static List<Long> findExpectedIdRelations(SlurmTask task) {
@@ -132,7 +137,7 @@ public class SlurmNormalExecutionTest extends AbstractIntegrationTests {
                 return simpleCmdWithCount(7);
             }
         };
-        baseTest(supplier, ComputationParameters.empty(), true);
+        baseTest(supplier, true);
     }
 
     @Test

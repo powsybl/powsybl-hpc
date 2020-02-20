@@ -51,8 +51,14 @@ class FlagFilesMonitor implements Runnable {
                         if (line.startsWith("myerror_")) {
                             task.error();
                         } else if (line.startsWith("mydone_")) {
-                            String id = line.substring(lastIdx + 1);
-                            taskStore.untracing(Long.parseLong(id));
+                            String substring = line.substring(lastIdx + 1);
+                            // TODO Is untracing still necessary ???
+                            if (substring.contains("-")) {
+                                System.out.println(substring);
+                            } else {
+                                String id = substring;
+                                taskStore.untracing(Long.parseLong(id));
+                            }
                         } else {
                             LOGGER.warn("Unexpected file found in flagDir: {}", line);
                         }

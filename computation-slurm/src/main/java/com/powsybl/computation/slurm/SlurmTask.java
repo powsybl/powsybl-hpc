@@ -31,34 +31,35 @@ import static com.powsybl.computation.slurm.SlurmConstants.BATCH_EXT;
  * It has a correspondent working directory and the CompletableFuture as return value.
  * @author Yichen TANG <yichen.tang at rte-france.com>
  */
-public class SlurmTask {
+class SlurmTask {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SlurmTask.class);
 
-    private static final String UNZIP_INPUTS_COMMAND_ID = "unzip_inputs_command";
-    private static final String CLOSE_START_NO_MORE_SEND_INFO = "SCM close started and no more send sbatch to slurm";
-    private static final String SACCT_NONZERO_JOB = "sacct --jobs=%s -n --format=\"jobid,exitcode\" | grep -v \"0:0\" | grep -v \"\\.\"";
-    private static final Pattern DIGITAL_PATTERN = Pattern.compile("\\d+");
+    protected static final String UNZIP_INPUTS_COMMAND_ID = "unzip_inputs_command";
+    protected static final String CLOSE_START_NO_MORE_SEND_INFO = "SCM close started and no more send sbatch to slurm";
+    protected static final String SACCT_NONZERO_JOB = "sacct --jobs=%s -n --format=\"jobid,exitcode\" | grep -v \"0:0\" | grep -v \"\\.\"";
+    protected static final Pattern DIGITAL_PATTERN = Pattern.compile("\\d+");
 
-    private UUID callableId;
-    private WorkingDirectory directory;
-    private Path workingDir;
-    private SlurmComputationManager scm;
-    private Path flagDir;
-    private CommandExecutor commandExecutor;
-    private List<CommandExecution> executions;
-    private ComputationParameters parameters;
-    private ExecutionEnvironment environment;
-    private TaskCounter counter;
+    protected final UUID callableId;
+    protected final WorkingDirectory directory;
+    protected final Path workingDir;
+    protected final SlurmComputationManager scm;
+    protected final Path flagDir;
+    protected final CommandExecutor commandExecutor;
+    protected final List<CommandExecution> executions;
+    protected final ComputationParameters parameters;
+    protected final ExecutionEnvironment environment;
+    protected TaskCounter counter;
 
-    private Map<Long, Command> commandByJobId;
+    protected Map<Long, Command> commandByJobId;
 
-    private Long firstJobId;
-    private List<Long> masters;
+    protected Long firstJobId;
+    protected List<Long> masters;
+
     private Map<Long, SubTask> subTaskMap;
     private Long currentMaster;
 
-    private Set<Long> tracingIds = Collections.newSetFromMap(new ConcurrentHashMap<>());
+    protected Set<Long> tracingIds = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     private volatile boolean cancel = false;
 
@@ -73,6 +74,11 @@ public class SlurmTask {
         this.executions = Objects.requireNonNull(executions);
         this.parameters = Objects.requireNonNull(parameters);
         this.environment = Objects.requireNonNull(environment);
+        initCounter();
+    }
+
+    protected void initCounter() {
+        // FIXME touch mydone only on the last command
         int sum = executions.stream().mapToInt(CommandExecution::getExecutionCount).sum();
         this.counter = new TaskCounter(sum);
     }
@@ -124,18 +130,14 @@ public class SlurmTask {
         }
     }
 
-    private SbatchCmd buildSbatchCmd(String commandId, int executionIndex, List<Long> preJobIds, ComputationParameters baseParams) {
-        // prepare sbatch cmd
-        String baseFileName = workingDir.resolve(commandId).toAbsolutePath().toString();
+    final SbatchCmdBuilder baseCmdBuilder(String commandId, List<Long> preJobIds, ComputationParameters baseParams) {
         SbatchCmdBuilder builder = new SbatchCmdBuilder()
-                .script(baseFileName + "_" + executionIndex + BATCH_EXT)
                 .jobName(commandId)
                 .workDir(workingDir)
+                // TODO not for array job
                 .nodes(1)
                 .ntasks(1)
-                .oversubscribe()
-                .output(baseFileName + "_" + executionIndex + SlurmConstants.OUT_EXT)
-                .error(baseFileName + "_" + executionIndex + SlurmConstants.ERR_EXT);
+                .oversubscribe();
         if (!preJobIds.isEmpty()) {
             builder.aftercorr(preJobIds);
         }
@@ -146,10 +148,20 @@ public class SlurmTask {
         }
         baseParams.getDeadline(commandId).ifPresent(builder::deadline);
         baseParams.getTimeout(commandId).ifPresent(builder::timeout);
+        return builder;
+    }
+
+    private SbatchCmd buildSbatchCmd(String commandId, int executionIndex, List<Long> preJobIds, ComputationParameters baseParams) {
+        // prepare sbatch cmd
+        String baseFileName = workingDir.resolve(commandId).toAbsolutePath().toString();
+        SbatchCmdBuilder builder = baseCmdBuilder(commandId, preJobIds, parameters)
+                .script(baseFileName + "_" + executionIndex + BATCH_EXT)
+                .output(baseFileName + "_" + executionIndex + SlurmConstants.OUT_EXT)
+                .error(baseFileName + "_" + executionIndex + SlurmConstants.ERR_EXT);
         return builder.build();
     }
 
-    private long launchSbatch(SbatchCmd cmd) {
+    final long launchSbatch(SbatchCmd cmd) {
         try {
             SbatchCmdResult sbatchResult = cmd.send(commandExecutor);
             long submittedJobId = sbatchResult.getSubmittedJobId();
@@ -162,7 +174,7 @@ public class SlurmTask {
 
     // We still need to check the cancel flag in task, because the interrupted exception is not re-thrown
     // in underlying jsch library.
-    private void checkCancelledDuringSubmitting() throws InterruptedException {
+    final void checkCancelledDuringSubmitting() throws InterruptedException {
         if (isCancel()) {
             LOGGER.debug("cancelled during submitting");
             throw new InterruptedException("cancelled during submitting");
@@ -174,15 +186,10 @@ public class SlurmTask {
         Map<String, String> executionVariables = CommandExecution.getExecutionVariables(environment.getVariables(), commandExecution);
         SbatchScriptGenerator scriptGenerator = new SbatchScriptGenerator(flagDir);
         List<String> shell = scriptGenerator.parser(command, executionIndex, workingDir, executionVariables);
-        if (executionIndex == -1) {
-            // array job not used yet
-            copyShellToRemoteWorkingDir(shell, command.getId());
-        } else {
-            copyShellToRemoteWorkingDir(shell, command.getId() + "_" + executionIndex);
-        }
+        copyShellToRemoteWorkingDir(shell, command.getId() + "_" + executionIndex);
     }
 
-    private void copyShellToRemoteWorkingDir(List<String> shell, String batchName) throws IOException {
+    final void copyShellToRemoteWorkingDir(List<String> shell, String batchName) throws IOException {
         StringBuilder sb = new StringBuilder();
         shell.forEach(line -> sb.append(line).append('\n'));
         String str = sb.toString();
@@ -193,36 +200,41 @@ public class SlurmTask {
         }
     }
 
-    SlurmExecutionReport generateReport() {
+    final SlurmExecutionReport generateReport() {
         List<ExecutionError> errors = new ArrayList<>();
 
         Set<Long> jobIds = getAllJobIds();
         String jobIdsStr = StringUtils.join(jobIds, ",");
         String sacct = String.format(SACCT_NONZERO_JOB, jobIdsStr);
+        System.out.println(sacct);
         CommandResult sacctResult = commandExecutor.execute(sacct);
         String sacctOutput = sacctResult.getStdOut();
         if (sacctOutput.length() > 0) {
             String[] lines = sacctOutput.split("\n");
             for (String line : lines) {
-                Matcher m = DIGITAL_PATTERN.matcher(line);
-                m.find();
-                long jobId = Long.parseLong(m.group());
-                m.find();
-                int exitCode = Integer.parseInt(m.group());
-                long mid = jobId;
-                int executionIdx = 0;
-                if (!commandByJobId.containsKey(jobId)) {
-                    mid = getMasterId(jobId);
-                    executionIdx = (int) (jobId - mid);
-                }
-                // error message ???
-                ExecutionError error = new ExecutionError(commandByJobId.get(mid), executionIdx, exitCode);
+                ExecutionError error = convertLineToError(line);
                 errors.add(error);
                 LOGGER.debug("{} error added ", error);
             }
         }
-
         return new SlurmExecutionReport(errors, workingDir);
+    }
+
+    protected ExecutionError convertLineToError(String line) {
+        Matcher m = DIGITAL_PATTERN.matcher(line);
+        m.find();
+        long jobId = Long.parseLong(m.group());
+        m.find();
+        int exitCode = Integer.parseInt(m.group());
+        long mid = jobId;
+        int executionIdx = 0;
+        if (!commandByJobId.containsKey(jobId)) {
+            mid = getMasterId(jobId);
+            // TODO find idx via subtask
+            executionIdx = (int) (jobId - mid);
+        }
+        // error message ???
+        return new ExecutionError(commandByJobId.get(mid), executionIdx, exitCode);
     }
 
     /**
@@ -259,7 +271,7 @@ public class SlurmTask {
         return set;
     }
 
-    Long getFirstJobId() {
+    final Long getFirstJobId() {
         return firstJobId;
     }
 
@@ -289,19 +301,19 @@ public class SlurmTask {
         counter.await();
     }
 
-    int getJobCount() {
+    final int getJobCount() {
         return counter.getJobCount();
     }
 
     boolean contains(Long id) {
+        return containsInMaster(id) || subTaskMap.values().stream().flatMap(SubTask::getBatchStream).anyMatch(l -> l.equals(id));
+    }
+
+    final boolean containsInMaster(Long id) {
         if (firstJobId > id) {
             return false;
         }
-        boolean containsInMaster = masters.stream().anyMatch(l -> l.equals(id));
-        if (containsInMaster) {
-            return true;
-        }
-        return subTaskMap.values().stream().flatMap(SubTask::getBatchStream).anyMatch(l -> l.equals(id));
+        return masters.stream().anyMatch(l -> l.equals(id));
     }
 
     /**
