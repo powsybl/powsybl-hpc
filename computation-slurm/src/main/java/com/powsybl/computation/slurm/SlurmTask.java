@@ -142,6 +142,7 @@ public class SlurmTask {
         SlurmComputationParameters extension = baseParams.getExtension(SlurmComputationParameters.class);
         if (extension != null) {
             extension.getQos().ifPresent(builder::qos);
+            extension.getMem().ifPresent(builder::mem);
         }
         baseParams.getDeadline(commandId).ifPresent(builder::deadline);
         baseParams.getTimeout(commandId).ifPresent(builder::timeout);
