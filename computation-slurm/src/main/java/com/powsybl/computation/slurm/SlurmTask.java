@@ -195,7 +195,7 @@ public class SlurmTask {
     SlurmExecutionReport generateReport() {
         List<ExecutionError> errors = new ArrayList<>();
 
-        Set<Long> jobIds = getToCancelIds();
+        Set<Long> jobIds = getAllJobIds();
         String jobIdsStr = StringUtils.join(jobIds, ",");
         String sacct = String.format(SACCT_NONZERO_JOB, jobIdsStr);
         CommandResult sacctResult = commandExecutor.execute(sacct);
@@ -242,11 +242,11 @@ public class SlurmTask {
     }
 
     /**
-     * Returns the all ids.
+     * Returns all job ids in slurm for this task. It contains batch ids if array_job is not used.
      * For array jobs can be cancelled just by calling on master jobId
      * but currently array_job in slurm is not used, so jobs should be cancelled one by one.
      */
-    Set<Long> getToCancelIds() {
+    Set<Long> getAllJobIds() {
         if (masters == null || masters.isEmpty()) {
             return Collections.emptySet();
         }
@@ -392,9 +392,9 @@ public class SlurmTask {
 
     void cancel() {
         cancel = true;
-        if (!getToCancelIds().isEmpty()) {
+        if (!getAllJobIds().isEmpty()) {
             LOGGER.debug("Cancel first batch ids");
-            getToCancelIds().forEach(this::scancel);
+            getAllJobIds().forEach(this::scancel);
         } else {
             LOGGER.warn("Nothing to cancel.");
         }
