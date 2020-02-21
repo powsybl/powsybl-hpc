@@ -78,7 +78,6 @@ public class ScontrolMonitorTest {
         UUID uuid = UUID.randomUUID();
         when(task.getCallableId()).thenReturn(uuid);
         when(task.getTracingIds()).thenReturn(tracingIds);
-        when(task.getCounter()).thenReturn(new TaskCounter(6));
         when(task.contains(eq(3L))).thenReturn(true);
         return task;
     }

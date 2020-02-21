@@ -43,18 +43,18 @@ class FlagFilesMonitor implements Runnable {
                     // ex: mydone_workingDirxxxxxx_taskid
                     int lastIdx = line.lastIndexOf('_');
                     String workingDirName = line.substring(idx + 1, lastIdx);
-                    taskStore.getTask(workingDirName).map(SlurmTask::getCounter).ifPresent(taskCounter -> {
+                    taskStore.getTask(workingDirName).ifPresent(task -> {
                         LOGGER.debug("{} found", line);
-                        taskCounter.countDown();
+                        task.countDown();
                         commandRunner.execute("rm " + flagDir + "/" + line);
                         // cancel following jobs(which depends on this job) if there are errors
                         if (line.startsWith("myerror_")) {
-                            taskStore.getTask(workingDirName).ifPresent(SlurmTask::error);
+                            task.error();
                         } else if (line.startsWith("mydone_")) {
                             String id = line.substring(lastIdx + 1);
                             taskStore.untracing(Long.parseLong(id));
                         } else {
-                            LOGGER.warn("Unexcepted file found in flagDir: {}", line);
+                            LOGGER.warn("Unexpected file found in flagDir: {}", line);
                         }
                     });
                 }

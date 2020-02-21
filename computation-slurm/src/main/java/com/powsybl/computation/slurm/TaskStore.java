@@ -85,7 +85,7 @@ class TaskStore {
                     LOGGER.debug("A SlurmException {} found on Callable '{}'", slurmException, callableId);
                     exceptionMap.put(callableId, slurmException);
                     cancelCallableAndCleanup(callableId);
-                    task.getCounter().cancel();
+                    task.countDownToZero();
                 });
     }
 

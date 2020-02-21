@@ -39,7 +39,6 @@ public class FlagFilesMonitorTest {
         SlurmTask task = mock(SlurmTask.class);
         Set<Long> tracingIds = LongStream.range(1L, 7L).boxed().collect(Collectors.toSet());
         when(task.getTracingIds()).thenReturn(tracingIds);
-        when(task.getCounter()).thenReturn(new TaskCounter(6));
         when(taskStore.getTask(eq(wdName))).thenReturn(Optional.of(task));
 
         Path flagDir = mock(Path.class);

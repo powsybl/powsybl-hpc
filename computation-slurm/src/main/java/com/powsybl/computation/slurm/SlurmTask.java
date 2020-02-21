@@ -277,6 +277,14 @@ public class SlurmTask {
         return counter;
     }
 
+    void countDown() {
+        counter.countDown();
+    }
+
+    void countDownToZero() {
+        counter.cancel();
+    }
+
     void await() throws InterruptedException {
         counter.await();
     }
@@ -388,7 +396,7 @@ public class SlurmTask {
     void error() {
         LOGGER.debug("Error detected.");
         cancel();
-        getCounter().cancel();
+        countDownToZero();
     }
 
     void cancel() {

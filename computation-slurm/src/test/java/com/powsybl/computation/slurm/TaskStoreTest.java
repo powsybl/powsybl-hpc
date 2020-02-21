@@ -64,7 +64,6 @@ public class TaskStoreTest {
         when(task.contains(1L)).thenReturn(true);
         when(task.contains(2L)).thenReturn(false);
         when(task.untracing(1L)).thenReturn(true);
-        when(task.getCounter()).thenReturn(new TaskCounter(3));
         return task;
     }
 }
