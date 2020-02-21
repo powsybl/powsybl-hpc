@@ -152,6 +152,11 @@ class SbatchCmdBuilder {
         return this;
     }
 
+    SbatchCmdBuilder mem(int mem) {
+        sbatchArgsByName.put("mem", String.format("%dM", mem));
+        return this;
+    }
+
     SbatchCmd build() {
         killOnInvalidDep();
         validate();

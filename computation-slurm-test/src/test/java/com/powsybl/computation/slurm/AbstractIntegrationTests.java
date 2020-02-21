@@ -13,10 +13,17 @@ import com.powsybl.commons.config.YamlModuleConfigRepository;
 import com.powsybl.computation.AbstractExecutionHandler;
 import com.powsybl.computation.ComputationParameters;
 import com.powsybl.computation.ExecutionEnvironment;
+import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
+import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
+import org.apache.commons.io.IOUtils;
 import org.junit.Before;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
@@ -92,5 +99,17 @@ public abstract class AbstractIntegrationTests {
     static void removeApprender(ListAppender<ILoggingEvent> appender) {
         appender.stop();
         SCM_LOGGER.detachAppender(appender);
+    }
+
+    static void generateZipFileOnRemote(String name, Path dest) {
+        try (InputStream inputStream = SlurmNormalExecutionTest.class.getResourceAsStream("/afile.txt");
+             ZipArchiveOutputStream zos = new ZipArchiveOutputStream(Files.newOutputStream(dest))) {
+            ZipArchiveEntry entry = new ZipArchiveEntry(name);
+            zos.putArchiveEntry(entry);
+            IOUtils.copy(inputStream, zos);
+            zos.closeArchiveEntry();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

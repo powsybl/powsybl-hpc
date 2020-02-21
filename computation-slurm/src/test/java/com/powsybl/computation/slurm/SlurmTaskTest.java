@@ -62,6 +62,8 @@ public class SlurmTaskTest {
         // sub task
         assertEquals(Arrays.asList(4L, 5L), task.getBatches(3L));
         assertTrue(task.getBatches(6L).isEmpty());
+
+        assertEquals(3L, (long) task.getMasterId(4L));
     }
 
     @Test

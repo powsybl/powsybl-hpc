@@ -195,7 +195,7 @@ public class SlurmTask {
     SlurmExecutionReport generateReport() {
         List<ExecutionError> errors = new ArrayList<>();
 
-        Set<Long> jobIds = commandByJobId.keySet();
+        Set<Long> jobIds = getToCancelIds();
         String jobIdsStr = StringUtils.join(jobIds, ",");
         String sacct = String.format(SACCT_NONZERO_JOB, jobIdsStr);
         CommandResult sacctResult = commandExecutor.execute(sacct);
@@ -208,13 +208,16 @@ public class SlurmTask {
                 long jobId = Long.parseLong(m.group());
                 m.find();
                 int exitCode = Integer.parseInt(m.group());
-                // TODO failed in one batch
-                m.find();
-                int executionIdx = Integer.parseInt(m.group());
+                long mid = jobId;
+                int executionIdx = 0;
+                if (!commandByJobId.containsKey(jobId)) {
+                    mid = getMasterId(jobId);
+                    executionIdx = (int) (jobId - mid);
+                }
                 // error message ???
-                ExecutionError error = new ExecutionError(commandByJobId.get(jobId), executionIdx, exitCode);
+                ExecutionError error = new ExecutionError(commandByJobId.get(mid), executionIdx, exitCode);
                 errors.add(error);
-                LOGGER.debug("{} error added ", jobId);
+                LOGGER.debug("{} error added ", error);
             }
         }
 
@@ -257,6 +260,16 @@ public class SlurmTask {
 
     Long getFirstJobId() {
         return firstJobId;
+    }
+
+    Long getMasterId(Long batchId) {
+        for (Map.Entry<Long, SubTask> entry : subTaskMap.entrySet()) {
+            boolean contains = entry.getValue().batchIds.contains(batchId);
+            if (contains) {
+                return entry.getKey();
+            }
+        }
+        return null;
     }
 
     TaskCounter getCounter() {

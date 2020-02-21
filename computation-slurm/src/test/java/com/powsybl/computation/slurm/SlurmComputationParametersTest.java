@@ -27,5 +27,9 @@ public class SlurmComputationParametersTest {
         assertFalse(empty.getQos().isPresent());
         SlurmComputationParameters empty2 = new SlurmComputationParameters(base, "   ");
         assertFalse(empty2.getQos().isPresent());
+        SlurmComputationParameters sut2 = new SlurmComputationParameters(base, "aQos", 50);
+        assertSame(base, sut2.getExtendable());
+        assertEquals(50, sut2.getMem().orElse(-1));
+        assertEquals(-1, new SlurmComputationParameters(base, "aQos", -5).getMem().orElse(-1));
     }
 }
