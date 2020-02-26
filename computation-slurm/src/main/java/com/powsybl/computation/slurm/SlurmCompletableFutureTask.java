@@ -28,9 +28,10 @@ public class SlurmCompletableFutureTask<R> extends CompletableFutureTask<R> {
 
     @Override
     public boolean cancel(boolean mayInterruptIfRunning) {
+        boolean cancel = super.cancel(mayInterruptIfRunning);
         if (mayInterruptIfRunning) {
             taskStore.cancelCallableAndCleanup(uuid);
         }
-        return super.cancel(mayInterruptIfRunning);
+        return cancel;
     }
 }
