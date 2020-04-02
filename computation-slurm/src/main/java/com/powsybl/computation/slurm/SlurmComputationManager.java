@@ -212,64 +212,82 @@ public class SlurmComputationManager implements ComputationManager {
         requireNonNull(environment);
         requireNonNull(handler);
 
-        UUID callableId = UUID.randomUUID();
-        Callable<R> callable = () -> doExecute(callableId, environment, handler, parameters);
-        CompletableFutureTask<R> rCompletableFutureTask = new SlurmCompletableFutureTask<>(callable, callableId, taskStore).runAsync(executorService);
-        rCompletableFutureTask.handleAsync((r, t) -> taskStore.finallyCleanCallable(callableId), executorService);
-        return rCompletableFutureTask;
+        CompletableFuture<R> result = new CompletableFuture<>();
+
+        //We use a completable future bound to the actual task to be able to interrupt the underlying thread via cancel
+        //so that for example client code in "before" can be interrupted
+        CompletableFutureTask interruptible = new CompletableFutureTask<>(() -> {
+            doExecute(result, environment, handler, parameters);
+            return null;
+        }).runAsync(executorService);
+
+        //If the returned result is cancelled by the user,
+        //interrupt the actual execution thread through the previous future
+        result.exceptionally(exception -> {
+            interruptible.cancel(true);
+            return null;
+        });
+
+        return result;
     }
 
-    private <R> R doExecute(UUID callableId, ExecutionEnvironment environment, ExecutionHandler<R> handler, ComputationParameters parameters) throws IOException, InterruptedException {
+    /**
+     * Clean task store after completion of the task,
+     * and interrupt task in case of exception, in particular
+     * when cancellation has been required.
+     */
+    private <R> void addFinalizer(CompletableFuture<R> result, SlurmTask task) {
+        result.handle((res, exception) -> {
+            taskStore.remove(task);
+            if (exception != null) {
+                task.interrupt();
+            }
+            return null;
+        });
+    }
+
+    private <R> void doExecute(CompletableFuture<R> futureResult, ExecutionEnvironment environment, ExecutionHandler<R> handler, ComputationParameters parameters) {
+
+        if (futureResult.isCancelled()) {
+            LOGGER.info("Slurm task cancelled before working directory creation");
+            return;
+        }
+
         Path remoteWorkingDir;
         try (WorkingDirectory remoteWorkingDirectory = new RemoteWorkingDir(baseDir, environment.getWorkingDirPrefix(), environment.isDebug())) {
             remoteWorkingDir = remoteWorkingDirectory.toPath();
 
             List<CommandExecution> commandExecutions = handler.before(remoteWorkingDir);
-            SlurmExecutionReport report = null;
-            SlurmException slurmExceptionForReport = null;
 
-            try {
-                SlurmTask slurmTask = new SlurmTask(callableId, this, remoteWorkingDirectory, commandExecutions, parameters, environment);
-                taskStore.add(slurmTask);
+            SlurmTask slurmTask = new SlurmTaskImpl(this, remoteWorkingDirectory, commandExecutions, parameters, environment);
+            taskStore.add(slurmTask);
 
-                slurmTask.submit();
-                if (taskStore.isCancelled(callableId)) {
-                    LOGGER.debug("cancelled after submitted");
-                    throw new InterruptedException("cancelled after submitted");
-                }
-                LOGGER.debug("Waiting finish...");
-                // waiting task finish
-                // TODO check NPE
-                slurmTask.await();
+            //At this point we need to add the callback which will interrupt the underlying jobs in case of exception
+            addFinalizer(futureResult, slurmTask);
 
-                Optional<SlurmException> optionalSlurmException = taskStore.getException(callableId);
-                if (optionalSlurmException.isPresent()) {
-                    throw optionalSlurmException.get();
-                }
-                report = slurmTask.generateReport();
-            } catch (SlurmException e) {
-                LOGGER.warn("slurm exception: {}", e.getCause().getMessage());
-                LOGGER.debug("not throw exception and after() would be executed");
-                slurmExceptionForReport = e;
-            } catch (InterruptedException e) {
-                LOGGER.debug("exit point 1: Interrupted " + e.getMessage());
-                // TODO this msg is lost
-                throw e;
+            if (futureResult.isCancelled()) {
+                LOGGER.info("Slurm task cancelled before submission");
+                return;
+            }
+            slurmTask.submit();
+
+            if (futureResult.isCancelled()) {
+                LOGGER.info("Slurm task cancelled after submission");
+                return;
+            }
+            LOGGER.debug("Waiting finish...");
+            SlurmExecutionReport report = slurmTask.await();
+
+            if (futureResult.isCancelled()) {
+                LOGGER.info("Slurm task cancelled : skipping report generation.");
+                return;
             }
 
-            try {
-                R result = handler.after(remoteWorkingDir, report);
-                LOGGER.debug("exit point 3: Normal");
-                return result;
-            } catch (Exception e) {
-                if (slurmExceptionForReport != null) {
-                    LOGGER.debug("exit point 2: Error by slurm --> continue to exit point 4");
-                    e.addSuppressed(slurmExceptionForReport);
-                }
-                LOGGER.debug("exit point 4: other exception, ex: after throw powsybl exception");
-                LOGGER.warn("exception:", e);
-                throw e;
-            }
+            R res = handler.after(remoteWorkingDir, report);
+            futureResult.complete(res);
+            LOGGER.debug("Normal exit");
+        } catch (Throwable exception) {
+            futureResult.completeExceptionally(exception);
         }
     }
 
@@ -378,7 +396,7 @@ public class SlurmComputationManager implements ComputationManager {
             closeStarted = true;
             if (!isClosed) {
                 LOGGER.info("Shutdown slurm...");
-                getTaskStore().cancelAll();
+                getTaskStore().interruptAll();
             }
         });
     }

@@ -10,58 +10,60 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.file.Path;
-import java.util.Objects;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import static java.util.Objects.requireNonNull;
 
 /**
+ * A job monitor which relies on the creation of "flag" files at the end of submitted jobs.
+ *
  * @author Yichen Tang <yichen.tang at rte-france.com>
  */
-class FlagFilesMonitor implements Runnable {
+class FlagFilesMonitor extends AbstractSlurmJobMonitor {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(FlagFilesMonitor.class);
 
     private final CommandExecutor commandRunner;
     private final Path flagDir;
-    private final TaskStore taskStore;
 
     FlagFilesMonitor(SlurmComputationManager slurmComputationManager) {
-        Objects.requireNonNull(slurmComputationManager);
-        this.commandRunner = Objects.requireNonNull(slurmComputationManager.getCommandRunner());
-        this.flagDir = Objects.requireNonNull(slurmComputationManager.getFlagDir());
-        this.taskStore = Objects.requireNonNull(slurmComputationManager.getTaskStore());
+        super(() -> slurmComputationManager.getTaskStore().getPendingJobs());
+        requireNonNull(slurmComputationManager);
+        this.commandRunner = requireNonNull(slurmComputationManager.getCommandRunner());
+        this.flagDir = requireNonNull(slurmComputationManager.getFlagDir());
     }
 
     @Override
-    public void run() {
-        try {
-            LOGGER.debug("polling in {}", flagDir);
-            CommandResult execute = commandRunner.execute("ls -1 " + flagDir);
-            String stdout = execute.getStdOut();
-            String[] split = stdout.split("\n");
-            for (String line : split) {
-                int idx = line.indexOf('_');
-                if (idx > 0) {
-                    // ex: mydone_workingDirxxxxxx_taskid
-                    int lastIdx = line.lastIndexOf('_');
-                    String workingDirName = line.substring(idx + 1, lastIdx);
-                    taskStore.getTask(workingDirName).ifPresent(task -> {
-                        LOGGER.debug("{} found", line);
-                        task.countDown();
-                        commandRunner.execute("rm " + flagDir + "/" + line);
-                        // cancel following jobs(which depends on this job) if there are errors
-                        if (line.startsWith("myerror_")) {
-                            task.error();
-                        } else if (line.startsWith("mydone_")) {
-                            String id = line.substring(lastIdx + 1);
-                            taskStore.untracing(Long.parseLong(id));
-                        } else {
-                            LOGGER.warn("Unexpected file found in flagDir: {}", line);
-                        }
-                    });
+    public void detectJobsState(List<MonitoredJob> jobs) {
+        LOGGER.debug("polling in {}", flagDir);
+        Map<Long, MonitoredJob> jobsById = jobs.stream()
+                .collect(Collectors.toMap(MonitoredJob::getJobId, job -> job));
+        CommandResult execute = commandRunner.execute("ls -1 " + flagDir);
+        String stdout = execute.getStdOut();
+        String[] split = stdout.split("\n");
+        for (String line : split) {
+            long idx = line.indexOf('_');
+            if (idx > 0) {
+                // ex: mydone_workingDirxxxxxx_taskid
+                int lastIdx = line.lastIndexOf('_');
+                Long id = Long.parseLong(line.substring(lastIdx + 1));
+                MonitoredJob job = jobsById.get(id);
+                if (job == null) {
+                    continue;
                 }
+                LOGGER.debug("{} found", line);
+                if (line.startsWith("myerror_")) {
+                    job.failed();
+                } else if (line.startsWith("mydone_")) {
+                    job.done();
+                } else {
+                    LOGGER.warn("Unexpected file found in flagDir: {}", line);
+                }
+
+                commandRunner.execute("rm " + flagDir + "/" + line);
             }
-        } catch (Throwable t) {
-            LOGGER.warn(t.toString());
-            // scheduleAtFixedRate() API said: If any execution of the task encounters an exception, subsequent executions are suppressed.
         }
     }
 }

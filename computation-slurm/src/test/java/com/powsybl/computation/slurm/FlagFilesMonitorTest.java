@@ -9,18 +9,13 @@ package com.powsybl.computation.slurm;
 import org.junit.Test;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.LongStream;
+import java.util.List;
 
 import static com.powsybl.computation.slurm.CommandResultTestFactory.multilineOutput;
 import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 /**
  * @author Yichen TANG <yichen.tang at rte-france.com>
@@ -36,10 +31,14 @@ public class FlagFilesMonitorTest {
                         "myerror_" + wdName + "_2")));
 
         TaskStore taskStore = mock(TaskStore.class);
-        SlurmTask task = mock(SlurmTask.class);
-        Set<Long> tracingIds = LongStream.range(1L, 7L).boxed().collect(Collectors.toSet());
-        when(task.getTracingIds()).thenReturn(tracingIds);
-        when(taskStore.getTask(eq(wdName))).thenReturn(Optional.of(task));
+
+        List<MonitoredJob> jobs = new ArrayList<>();
+        for (long i = 1; i < 7; i++) {
+            MonitoredJob job = mock(MonitoredJob.class);
+            when(job.getJobId()).thenReturn(i);
+            jobs.add(job);
+        }
+        when(taskStore.getPendingJobs()).thenReturn(jobs);
 
         Path flagDir = mock(Path.class);
         when(flagDir.toString()).thenReturn("/flagdir");
@@ -53,7 +52,7 @@ public class FlagFilesMonitorTest {
 
         verify(runner, times(1)).execute(eq("rm /flagdir/mydone_workingDir_1234_1"));
         verify(runner, times(1)).execute(eq("rm /flagdir/myerror_workingDir_1234_2"));
-        verify(taskStore, times(1)).untracing(1L);
-        verify(task, times(1)).error();
+        verify(jobs.get(0), times(1)).done();
+        verify(jobs.get(1), times(1)).failed();
     }
 }

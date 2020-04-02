@@ -45,7 +45,7 @@ public class SlurmCancelExecutionTest extends AbstractIntegrationTests {
             System.out.println("Cancelled:" + cancel);
             Assert.assertTrue(cancel);
             if (checkClean) {
-                assertIsCleanedAfterWait(computationManager.getTaskStore());
+                assertIsCleaned(computationManager.getTaskStore());
             }
             Assertions.assertThatThrownBy(completableFuture::join)
                     .isInstanceOf(CancellationException.class);
@@ -77,7 +77,7 @@ public class SlurmCancelExecutionTest extends AbstractIntegrationTests {
         try {
             baseTest(supplier, true);
             assertTrue(testAppender.list.stream()
-                    .anyMatch(e -> e.getFormattedMessage().contains("Interrupted cancelled during await")));
+                    .anyMatch(e -> e.getFormattedMessage().contains("skipping report generation")));
         } finally {
             removeApprender(testAppender);
         }
@@ -96,7 +96,7 @@ public class SlurmCancelExecutionTest extends AbstractIntegrationTests {
         try {
             baseTest(supplier, true);
             assertTrue(testAppender.list.stream()
-                    .anyMatch(e -> e.getFormattedMessage().contains("Interrupted cancelled during await")));
+                    .anyMatch(e -> e.getFormattedMessage().contains("skipping report generation")));
         } finally {
             removeApprender(testAppender);
         }
@@ -115,7 +115,7 @@ public class SlurmCancelExecutionTest extends AbstractIntegrationTests {
         try {
             baseTest(supplier, true);
             assertTrue(testAppender.list.stream()
-                    .anyMatch(e -> e.getFormattedMessage().contains("Interrupted cancelled during submitting")));
+                    .anyMatch(e -> e.getFormattedMessage().contains("skipping report generation")));
         } finally {
             removeApprender(testAppender);
         }

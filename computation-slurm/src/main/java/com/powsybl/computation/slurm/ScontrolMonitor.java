@@ -9,53 +9,55 @@ package com.powsybl.computation.slurm;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- *  Use "scontrol show job ID_OF_JOB" to get state of job
- *  in case, the job itself can not finish completely.(For example, scancel on slurm directly or timeout)
+ *  A job monitor which uses "scontrol show job ID_OF_JOB" to get state of job,
+ *  in case, the job itself can not finish completely.
+ *  (For example, scancel on slurm directly or timeout)
  *
  *  @author Yichen Tang <yichen.tang at rte-france.com>
  */
-public class ScontrolMonitor implements Runnable {
+public class ScontrolMonitor extends AbstractSlurmJobMonitor {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ScontrolMonitor.class);
 
     private final CommandExecutor commandRunner;
-    private final TaskStore taskStore;
 
     private int counter;
 
     ScontrolMonitor(SlurmComputationManager manager) {
+        super(() -> manager.getTaskStore().getPendingJobs());
         this.commandRunner = manager.getCommandRunner();
-        this.taskStore = manager.getTaskStore();
     }
 
     @Override
-    public void run() {
+    public void detectJobsState(List<MonitoredJob> jobs) {
         boolean cleaned = false;
         Set<Long> checkedIds = new HashSet<>();
         LOGGER.info("Scontrol monitor starts {}...", counter);
         while (!cleaned) {
-            Set<Long> tracingIds = taskStore.getTracingIds();
-            List<Long> sorted = tracingIds.stream().sorted().collect(Collectors.toList());
+            List<MonitoredJob> sorted = jobs.stream()
+                    .sorted(Comparator.comparing(MonitoredJob::getJobId))
+                    .collect(Collectors.toList());
             // start from min id
             // find the first unmoral state
-            // call future.cancel()
+            // call job.interruptJob()
             // restart until tracingIds are all running or pending
-            for (Long id : sorted) {
+            for (MonitoredJob job : sorted) {
+                long id = job.getJobId();
                 if (checkedIds.contains(id)) {
                     continue;
                 }
                 ScontrolCmd scontrolCmd = ScontrolCmdFactory.showJob(id);
-                ScontrolCmd.ScontrolResult scontrolResult = null;
                 try {
-                    scontrolResult = scontrolCmd.send(commandRunner);
+                    ScontrolCmd.ScontrolResult scontrolResult = scontrolCmd.send(commandRunner);
                     SlurmConstants.JobState jobState = scontrolResult.getJobState();
-                    boolean unmoral = false;
+                    boolean anormal = false;
                     switch (jobState) {
                         case RUNNING:
                         case PENDING:
@@ -64,12 +66,12 @@ public class ScontrolMonitor implements Runnable {
                         case TIMEOUT:
                         case DEADLINE:
                         case CANCELLED:
-                            unmoral = true;
+                            anormal = true;
                             String msg = "JobId: " + id + " is " + jobState;
+                            job.interrupted();
                             LOGGER.info(msg);
-                            taskStore.cancelCallable(id, new SlurmException(msg));
                             break;
-                        case COMPLETE:
+                        case COMPLETED:
                             // this monitor found task finished before flagDirMonitor
                             // maybe store it and recheck in next run()
                             checkedIds.add(id);
@@ -77,7 +79,7 @@ public class ScontrolMonitor implements Runnable {
                         default:
                             LOGGER.warn("Not implemented yet {}", jobState);
                     }
-                    if (unmoral) {
+                    if (anormal) {
                         break; // restart
                     }
                 } catch (SlurmCmdNonZeroException e) {

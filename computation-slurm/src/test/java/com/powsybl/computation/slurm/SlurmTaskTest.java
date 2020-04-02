@@ -6,6 +6,7 @@
  */
 package com.powsybl.computation.slurm;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 import com.powsybl.commons.io.WorkingDirectory;
@@ -21,6 +22,7 @@ import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static com.powsybl.computation.slurm.CommandResultTestFactory.simpleOutput;
 import static org.junit.Assert.assertEquals;
@@ -49,15 +51,12 @@ public class SlurmTaskTest {
         Files.createDirectories(flagPath);
     }
 
-    private void testIdsRelationship(SlurmTask task) {
+    private void testIdsRelationship(SlurmTaskImpl task) {
         List<Long> masters = task.getMasters();
         assertEquals(1L, (long) task.getFirstJobId());
         assertEquals(Arrays.asList(1L, 3L, 6L), masters);
-        assertEquals(new HashSet<>(Arrays.asList(1L, 2L, 3L, 4L, 5L, 6L)), task.getTracingIds());
-        assertTrue(task.contains(3L));
-        assertFalse(task.contains(0L));
-        assertFalse(task.contains(33L));
-        assertEquals(new HashSet<>(Arrays.asList(1L, 2L, 3L, 4L, 5L, 6L)), task.getAllJobIds());
+        assertEquals(ImmutableSet.of(1L, 2L, 3L, 4L, 5L, 6L), getPendingJobsIds(task));
+        assertEquals(ImmutableSet.of(1L, 2L, 3L, 4L, 5L, 6L), task.getAllJobIds());
 
         // sub task
         assertEquals(Arrays.asList(4L, 5L), task.getBatches(3L));
@@ -66,23 +65,32 @@ public class SlurmTaskTest {
         assertEquals(3L, (long) task.getMasterId(4L));
     }
 
+    private static Set<Long> getPendingJobsIds(SlurmTask task) {
+        return task.getPendingJobs().stream()
+                .map(MonitoredJob::getJobId)
+                .collect(Collectors.toSet());
+    }
+
+    private static MonitoredJob getPendingJob(SlurmTask task, long id) {
+        return task.getPendingJobs().stream()
+                .filter(job ->  job.getJobId() == id)
+                .findFirst()
+                .orElseThrow(AssertionError::new);
+    }
+
     @Test
-    public void testCounterSum() {
+    public void testCommands() {
         CommandExecutor commandExecutor = mock(CommandExecutor.class);
-        UUID uuid = UUID.randomUUID();
-        SlurmTask task = new SlurmTask(uuid, mockScm(commandExecutor), mockWd(), CommandExecutionsTestFactory.md5sumLargeFile(), ComputationParameters.empty(), ExecutionEnvironment.createDefault());
+        SlurmTaskImpl task = new SlurmTaskImpl(mockScm(commandExecutor), mockWd(), CommandExecutionsTestFactory.md5sumLargeFile(), ComputationParameters.empty(), ExecutionEnvironment.createDefault());
         assertEquals(2, task.getCommandExecutionSize());
         assertEquals(3, task.getCommandExecution(0).getExecutionCount());
         assertEquals(1, task.getCommandExecution(1).getExecutionCount());
-        // 3 + 1, common unzip job is not accounted
-        assertEquals(4, task.getJobCount());
     }
 
     @Test
     public void test() {
         CommandExecutor commandExecutor = mock(CommandExecutor.class);
-        UUID uuid = UUID.randomUUID();
-        SlurmTask task = new SlurmTask(uuid, mockScm(commandExecutor), mockWd(), CommandExecutionsTestFactory.longProgramInList(2, 3, 1), ComputationParameters.empty(), ExecutionEnvironment.createDefault());
+        SlurmTaskImpl task = new SlurmTaskImpl(mockScm(commandExecutor), mockWd(), CommandExecutionsTestFactory.longProgramInList(2, 3, 1), ComputationParameters.empty(), ExecutionEnvironment.createDefault());
         when(commandExecutor.execute(startsWith("sbatch")))
                 .thenReturn(simpleOutput("Submitted batch job 1"))
                 .thenReturn(simpleOutput("Submitted batch job 2"))
@@ -98,7 +106,7 @@ public class SlurmTaskTest {
         try {
             task.submit();
             testIdsRelationship(task);
-        } catch (IOException | InterruptedException e) {
+        } catch (IOException e) {
             e.printStackTrace();
             fail();
         }
@@ -112,22 +120,19 @@ public class SlurmTaskTest {
         assertEquals(0, executionError.getIndex());
 
         // untracing
-        assertTrue(task.untracing(1L));
-        assertTrue(task.untracing(2L));
-        assertEquals(new HashSet<>(Arrays.asList(3L, 4L, 5L, 6L)), task.getTracingIds());
-        assertFalse(task.untracing(1L));
+        getPendingJob(task, 1L).done();
+        getPendingJob(task, 2L).done();
+        assertEquals(ImmutableSet.of(3L, 4L, 5L, 6L), getPendingJobsIds(task));
 
-        // cancel
-        assertFalse(task.isCancel());
-        task.cancel();
-        assertTrue(task.isCancel());
+        //interrupt
+        task.interrupt();
+        assertTrue(task.getPendingJobs().isEmpty());
     }
 
     @Test
     public void testSubmitCommonUnzipFile() {
         CommandExecutor commandExecutor = mock(CommandExecutor.class);
-        UUID uuid = UUID.randomUUID();
-        SlurmTask task2 = new SlurmTask(uuid, mockScm(commandExecutor), mockWd(), CommandExecutionsTestFactory.md5sumLargeFile(), ComputationParameters.empty(), ExecutionEnvironment.createDefault());
+        SlurmTaskImpl task2 = new SlurmTaskImpl(mockScm(commandExecutor), mockWd(), CommandExecutionsTestFactory.md5sumLargeFile(), ComputationParameters.empty(), ExecutionEnvironment.createDefault());
         when(commandExecutor.execute(startsWith("sbatch")))
                 .thenReturn(simpleOutput("Submitted batch job 1"))
                 .thenReturn(simpleOutput("Submitted batch job 2"))
@@ -144,16 +149,15 @@ public class SlurmTaskTest {
         // 6
         try {
             task2.submit();
-            assertEquals(new HashSet<>(Arrays.asList(1L, 2L, 3L, 4L, 5L, 6L)), task2.getTracingIds());
+            assertEquals(ImmutableSet.of(1L, 2L, 3L, 4L, 5L, 6L), getPendingJobsIds(task2));
             assertEquals(Arrays.asList(1L, 2L, 5L, 6L), task2.getMasters());
-        } catch (IOException | InterruptedException e) {
+        } catch (IOException e) {
             e.printStackTrace();
             fail();
         }
 
-        assertFalse(task2.isCancel());
-        task2.error();
-        assertTrue(task2.isCancel());
+        getPendingJob(task2, 1L).failed();
+        assertTrue(task2.getPendingJobs().isEmpty());
     }
 
     @Test
@@ -163,7 +167,7 @@ public class SlurmTaskTest {
         WorkingDirectory directory = mock(WorkingDirectory.class);
         Path path = mock(Path.class);
         when(directory.toPath()).thenReturn(path);
-        SlurmTask task = new SlurmTask(uuid, mockScm(commandExecutor), directory, Collections.emptyList(), ComputationParameters.empty(), ExecutionEnvironment.createDefault());
+        SlurmTaskImpl task = new SlurmTaskImpl(mockScm(commandExecutor), directory, Collections.emptyList(), ComputationParameters.empty(), ExecutionEnvironment.createDefault());
         assertEquals(path, task.getWorkingDirPath());
     }
 

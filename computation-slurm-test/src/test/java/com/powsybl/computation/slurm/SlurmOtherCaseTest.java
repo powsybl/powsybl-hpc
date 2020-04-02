@@ -44,12 +44,12 @@ public class SlurmOtherCaseTest extends AbstractIntegrationTests {
         };
         try (SlurmComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
             CompletableFuture<String> completableFuture = computationManager.execute(EMPTY_ENV, supplier.get(), ComputationParameters.empty());
-            System.out.println("Go to cancel on server");
+            System.out.println("Go to interrupt on server");
             Assertions.assertThatThrownBy(completableFuture::join)
                     .isInstanceOf(CompletionException.class);
             // TODO detail msg
 //                    .hasMessageContaining("is CANCELLED");
-            assertIsCleanedAfterWait(computationManager.getTaskStore());
+            assertIsCleaned(computationManager.getTaskStore());
         } catch (IOException e) {
             e.printStackTrace();
             failed = true;
@@ -96,7 +96,7 @@ public class SlurmOtherCaseTest extends AbstractIntegrationTests {
             CompletableFuture<Void> completableFuture = computationManager.execute(EMPTY_ENV, deadlineTest.get(), computationParameters);
             Assertions.assertThatThrownBy(completableFuture::join)
                     .isInstanceOf(CompletionException.class);
-            assertIsCleanedAfterWait(computationManager.getTaskStore());
+            assertIsCleaned(computationManager.getTaskStore());
         } catch (IOException e) {
             e.printStackTrace();
             failed = true;
@@ -121,13 +121,12 @@ public class SlurmOtherCaseTest extends AbstractIntegrationTests {
         try (SlurmComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
             CompletableFuture<String> execute = computationManager.execute(EMPTY_ENV, supplier.get(), parameters);
             execute.join();
-            assertIsCleanedAfterWait(computationManager.getTaskStore());
+            assertIsCleaned(computationManager.getTaskStore());
             assertTrue(appender.list.stream().anyMatch(e -> e.getFormattedMessage().contains("exit point 2: Error by slurm")));
         } catch (IOException e) {
             fail();
         } catch (CompletionException ce) {
-            Throwable[] suppressed = ce.getCause().getSuppressed();
-            assertTrue(suppressed[0].getMessage().contains("Invalid qos specification"));
+            assertTrue(ce.getCause().getMessage().contains("Invalid qos specification"));
         } finally {
             removeApprender(appender);
         }

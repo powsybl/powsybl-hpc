@@ -77,7 +77,6 @@ public class SlurmComputationManagerTest {
         });
         String join = normal.join();
         assertEquals("OK", join);
-        assertTrue(normal instanceof SlurmCompletableFutureTask);
 
         CompletableFuture<String> afterException = sut.execute(ExecutionEnvironment.createDefault(), new AbstractExecutionHandler<String>() {
             @Override

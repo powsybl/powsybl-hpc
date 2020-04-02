@@ -26,11 +26,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 /**
  * @author Yichen TANG <yichen.tang at rte-france.com>
@@ -66,15 +64,8 @@ public abstract class AbstractIntegrationTests {
                 Paths.get(config.getStringProperty("local-dir")), 5, 1);
     }
 
-    static void assertIsCleanedAfterWait(TaskStore store) {
-        try {
-            int seconds = 15;
-            LOGGER.debug("Waiting " + seconds + " seconds to check clean...");
-            TimeUnit.SECONDS.sleep(seconds);
-            assertTrue(store.isEmpty());
-        } catch (InterruptedException e) {
-            fail();
-        }
+    static void assertIsCleaned(TaskStore store) {
+        assertTrue(store.isEmpty());
     }
 
     void baseTest(Supplier<AbstractExecutionHandler<String>> supplier) {

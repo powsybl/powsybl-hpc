@@ -6,22 +6,18 @@
  */
 package com.powsybl.computation.slurm;
 
+import com.google.common.collect.ImmutableList;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Matchers;
 
-import java.util.Set;
-import java.util.UUID;
+import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -31,7 +27,7 @@ public class ScontrolMonitorTest {
 
     private SlurmComputationManager slurm;
     private TaskStore ts;
-    private SlurmTask task;
+    private List<MockJob> jobs;
     private CommandExecutor cm;
 
     private CommandResult runningResult = new CommandResult(0, "JobState=RUNNING", "");
@@ -41,9 +37,15 @@ public class ScontrolMonitorTest {
     public void testAllRunning() {
         when(cm.execute(anyString())).thenReturn(runningResult);
         ScontrolMonitor monitor = new ScontrolMonitor(slurm);
-        assertFalse(ts.getTracingIds().isEmpty());
+        assertFalse(ts.getPendingJobs().isEmpty());
+
+        assertEquals(0, jobs.stream().filter(MockJob::isDone).count());
+        assertEquals(0, jobs.stream().filter(MockJob::isFailed).count());
+
         monitor.run();
-        assertFalse(ts.getTracingIds().isEmpty());
+
+        assertEquals(0, jobs.stream().filter(MockJob::isDone).count());
+        assertEquals(0, jobs.stream().filter(MockJob::isFailed).count());
     }
 
     @Test
@@ -54,31 +56,88 @@ public class ScontrolMonitorTest {
         when(cm.execute(Matchers.endsWith("3"))).thenReturn(cancelledResult);
 
         ScontrolMonitor monitor = new ScontrolMonitor(slurm);
+
+        assertEquals(0, jobs.stream().filter(MockJob::isDone).count());
+        assertEquals(0, jobs.stream().filter(MockJob::isFailed).count());
+
         monitor.run();
-        assertTrue(ts.getTracingIds().isEmpty());
-        // check scancel only once
-        verify(task, times(1)).cancel();
+
+        assertEquals(0, jobs.stream().filter(MockJob::isDone).count());
+        assertTrue(jobs.get(2).isInterrupted());
     }
 
     @Before
     public void setup() {
         slurm = mock(SlurmComputationManager.class);
-        ts = new TaskStore();
+        ts = mock(TaskStore.class);
         cm = mock(CommandExecutor.class);
-        task = mockSlurmTask();
-        ts.add(task);
+        jobs = mockJobs();
         when(slurm.getTaskStore()).thenReturn(ts);
         when(slurm.getCommandRunner()).thenReturn(cm);
     }
 
-    private SlurmTask mockSlurmTask() {
-        SlurmTask task = mock(SlurmTask.class);
-        Set<Long> tracingIds = LongStream.range(1L, 7L).boxed().collect(Collectors.toSet());
-        when(task.getId()).thenReturn("workingDir_1234");
-        UUID uuid = UUID.randomUUID();
-        when(task.getCallableId()).thenReturn(uuid);
-        when(task.getTracingIds()).thenReturn(tracingIds);
-        when(task.contains(eq(3L))).thenReturn(true);
-        return task;
+    private List<MockJob> mockJobs() {
+        List<MockJob> jobs = LongStream.range(1, 7)
+                .mapToObj(MockJob::new)
+                .collect(Collectors.toList());
+        when(ts.getPendingJobs()).thenReturn(ImmutableList.copyOf(jobs));
+        return jobs;
+    }
+
+    private static final class MockJob implements MonitoredJob {
+
+        private final long id;
+        private boolean done = false;
+        private boolean failed = false;
+        private boolean interrupted = false;
+
+        private MockJob(long id) {
+            this.id = id;
+        }
+
+        /**
+         * This job ID in slurm
+         */
+        @Override
+        public long getJobId() {
+            return id;
+        }
+
+        /**
+         * To be called by a monitor when the job has ended successfully.
+         */
+        @Override
+        public void done() {
+            done = true;
+        }
+
+        /**
+         * To be called by a monitor when the job has failed.
+         */
+        @Override
+        public void failed() {
+            failed = true;
+        }
+
+        /**
+         * To be called if the job is detected to have been killed
+         * before completing.
+         */
+        @Override
+        public void interrupted() {
+            interrupted = true;
+        }
+
+        public boolean isDone() {
+            return done;
+        }
+
+        public boolean isFailed() {
+            return failed;
+        }
+
+        public boolean isInterrupted() {
+            return interrupted;
+        }
     }
 }
