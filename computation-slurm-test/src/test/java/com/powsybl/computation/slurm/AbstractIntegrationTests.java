@@ -6,6 +6,8 @@
  */
 package com.powsybl.computation.slurm;
 
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.powsybl.commons.config.ModuleConfig;
 import com.powsybl.commons.config.YamlModuleConfigRepository;
 import com.powsybl.computation.AbstractExecutionHandler;
@@ -24,11 +26,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 /**
  * @author Yichen TANG <yichen.tang at rte-france.com>
@@ -37,6 +37,7 @@ public abstract class AbstractIntegrationTests {
 
     static final Logger LOGGER = LoggerFactory.getLogger(AbstractIntegrationTests.class);
     static final ExecutionEnvironment EMPTY_ENV = new ExecutionEnvironment(Collections.emptyMap(), "unit_test_", false);
+    private static final ch.qos.logback.classic.Logger SCM_LOGGER = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(SlurmComputationManager.class);
 
     SlurmComputationConfig slurmConfig;
 
@@ -60,16 +61,11 @@ public abstract class AbstractIntegrationTests {
      */
     private static SlurmComputationConfig generateSlurmConfigWithShortScontrolTime(ModuleConfig config) {
         return new SlurmComputationConfig(generateSsh(config), config.getStringProperty("remote-dir"),
-                Paths.get(config.getStringProperty("local-dir")), 5, 1, 10);
+                Paths.get(config.getStringProperty("local-dir")), 5, 1);
     }
 
-    static void assertIsCleanedAfterWait(TaskStore store) {
-        try {
-            TimeUnit.SECONDS.sleep(15);
-            assertTrue(store.isEmpty());
-        } catch (InterruptedException e) {
-            fail();
-        }
+    static void assertIsCleaned(TaskStore store) {
+        assertTrue(store.isEmpty());
     }
 
     void baseTest(Supplier<AbstractExecutionHandler<String>> supplier) {
@@ -85,6 +81,16 @@ public abstract class AbstractIntegrationTests {
     }
 
     abstract void baseTest(Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters, boolean checkClean);
+
+    static void addApprender(ListAppender<ILoggingEvent> appender) {
+        appender.start();
+        SCM_LOGGER.addAppender(appender);
+    }
+
+    static void removeApprender(ListAppender<ILoggingEvent> appender) {
+        appender.stop();
+        SCM_LOGGER.detachAppender(appender);
+    }
 
     static void generateZipFileOnRemote(String name, Path dest) {
         try (InputStream inputStream = SlurmNormalExecutionTest.class.getResourceAsStream("/afile.txt");

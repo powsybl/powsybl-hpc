@@ -195,19 +195,4 @@ public final class CommandExecutionsTestFactory {
         return longProgramInList(1, 5, 2);
     }
 
-    static List<CommandExecution> cancelFirstJobAfterDone() {
-        Command command1 = new SimpleCommandBuilder()
-                .id("cFAD1")
-                .program("echo")
-                .args("hi")
-                .build();
-        Command command2 = new SimpleCommandBuilder()
-                .id("cFAD2")
-                .program("sleep")
-                .args("60s")
-                .build();
-        return Arrays.asList(new CommandExecution(command1, 1),
-                new CommandExecution(command2, 1));
-    }
-
 }

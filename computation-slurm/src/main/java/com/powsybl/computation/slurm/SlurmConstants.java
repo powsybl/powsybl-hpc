@@ -21,7 +21,7 @@ final class SlurmConstants {
         TIMEOUT,
         DEADLINE,
         CANCELLED,
-        COMPLETE
+        COMPLETED
     }
 
     private SlurmConstants() {

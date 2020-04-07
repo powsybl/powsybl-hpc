@@ -6,17 +6,19 @@
  */
 package com.powsybl.computation.slurm;
 
+import com.google.common.collect.ImmutableList;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Matchers;
-import org.mockito.internal.util.reflection.Whitebox;
 
-import java.util.stream.IntStream;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.LongStream;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static org.mockito.Matchers.anyString;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * @author Yichen Tang <yichen.tang at rte-france.com>
@@ -25,6 +27,7 @@ public class ScontrolMonitorTest {
 
     private SlurmComputationManager slurm;
     private TaskStore ts;
+    private List<MockJob> jobs;
     private CommandExecutor cm;
 
     private CommandResult runningResult = new CommandResult(0, "JobState=RUNNING", "");
@@ -34,8 +37,15 @@ public class ScontrolMonitorTest {
     public void testAllRunning() {
         when(cm.execute(anyString())).thenReturn(runningResult);
         ScontrolMonitor monitor = new ScontrolMonitor(slurm);
+        assertFalse(ts.getPendingJobs().isEmpty());
+
+        assertEquals(0, jobs.stream().filter(MockJob::isDone).count());
+        assertEquals(0, jobs.stream().filter(MockJob::isFailed).count());
+
         monitor.run();
-        assertFalse(ts.getTracingIds().isEmpty());
+
+        assertEquals(0, jobs.stream().filter(MockJob::isDone).count());
+        assertEquals(0, jobs.stream().filter(MockJob::isFailed).count());
     }
 
     @Test
@@ -46,24 +56,88 @@ public class ScontrolMonitorTest {
         when(cm.execute(Matchers.endsWith("3"))).thenReturn(cancelledResult);
 
         ScontrolMonitor monitor = new ScontrolMonitor(slurm);
+
+        assertEquals(0, jobs.stream().filter(MockJob::isDone).count());
+        assertEquals(0, jobs.stream().filter(MockJob::isFailed).count());
+
         monitor.run();
-        assertTrue(ts.getTracingIds().isEmpty());
-        // check scancel only once
-        IntStream.range(1, 7).forEach(i -> verify(cm, times(1)).execute("scancel " + i));
+
+        assertEquals(0, jobs.stream().filter(MockJob::isDone).count());
+        assertTrue(jobs.get(2).isInterrupted());
     }
 
     @Before
     public void setup() {
-        SlurmComputationManager.Mycf mycf;
         slurm = mock(SlurmComputationManager.class);
-        mycf = new SlurmComputationManager.Mycf(slurm);
-        mycf.setThread(new Thread());
-        ts = new TaskStore(15);
-        ts.add(SlurmTaskTest.mockSubmittedTask(mycf));
-        Whitebox.setInternalState(slurm, "taskStore", ts);
-        when(slurm.getTaskStore()).thenReturn(ts);
+        ts = mock(TaskStore.class);
         cm = mock(CommandExecutor.class);
-        Whitebox.setInternalState(slurm, "commandRunner", cm);
+        jobs = mockJobs();
+        when(slurm.getTaskStore()).thenReturn(ts);
         when(slurm.getCommandRunner()).thenReturn(cm);
+    }
+
+    private List<MockJob> mockJobs() {
+        List<MockJob> jobs = LongStream.range(1, 7)
+                .mapToObj(MockJob::new)
+                .collect(Collectors.toList());
+        when(ts.getPendingJobs()).thenReturn(ImmutableList.copyOf(jobs));
+        return jobs;
+    }
+
+    private static final class MockJob implements MonitoredJob {
+
+        private final long id;
+        private boolean done = false;
+        private boolean failed = false;
+        private boolean interrupted = false;
+
+        private MockJob(long id) {
+            this.id = id;
+        }
+
+        /**
+         * This job ID in slurm
+         */
+        @Override
+        public long getJobId() {
+            return id;
+        }
+
+        /**
+         * To be called by a monitor when the job has ended successfully.
+         */
+        @Override
+        public void done() {
+            done = true;
+        }
+
+        /**
+         * To be called by a monitor when the job has failed.
+         */
+        @Override
+        public void failed() {
+            failed = true;
+        }
+
+        /**
+         * To be called if the job is detected to have been killed
+         * before completing.
+         */
+        @Override
+        public void interrupted() {
+            interrupted = true;
+        }
+
+        public boolean isDone() {
+            return done;
+        }
+
+        public boolean isFailed() {
+            return failed;
+        }
+
+        public boolean isInterrupted() {
+            return interrupted;
+        }
     }
 }

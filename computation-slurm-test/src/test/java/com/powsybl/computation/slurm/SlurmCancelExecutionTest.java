@@ -6,9 +6,13 @@
  */
 package com.powsybl.computation.slurm;
 
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.powsybl.computation.AbstractExecutionHandler;
 import com.powsybl.computation.CommandExecution;
 import com.powsybl.computation.ComputationParameters;
+import com.powsybl.computation.ExecutionReport;
+import org.assertj.core.api.Assertions;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -16,11 +20,13 @@ import org.junit.Test;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
 import static com.powsybl.computation.slurm.CommandExecutionsTestFactory.*;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * @author Yichen TANG <yichen.tang at rte-france.com>
@@ -33,15 +39,17 @@ public class SlurmCancelExecutionTest extends AbstractIntegrationTests {
         try (SlurmComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
             CompletableFuture<String> completableFuture = computationManager.execute(EMPTY_ENV, supplier.get(), parameters);
             System.out.println("CompletableFuture would be cancelled in 5 seconds...");
-            // TODO add a test before finished submit
+            // TODO add a test before submit
             Thread.sleep(5000);
             boolean cancel = completableFuture.cancel(true);
             System.out.println("Cancelled:" + cancel);
             Assert.assertTrue(cancel);
             if (checkClean) {
-                assertIsCleanedAfterWait(computationManager.getTaskStore());
+                assertIsCleaned(computationManager.getTaskStore());
             }
-            // TODO should throw CancellationException
+            Assertions.assertThatThrownBy(completableFuture::join)
+                    .isInstanceOf(CancellationException.class);
+            // TODO detailed msg getCause is null
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
             failed = true;
@@ -52,36 +60,74 @@ public class SlurmCancelExecutionTest extends AbstractIntegrationTests {
 
     @Test
     public void testLongProgramToCancel() {
-        Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractExecutionHandler<String>() {
+        ListAppender<ILoggingEvent> testAppender = new ListAppender<>();
+        addApprender(testAppender);
+        Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractFailInAfterHandler() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
                 return longProgram(10);
             }
 
+            @Override
+            public String after(Path workingDir, ExecutionReport report) {
+                failed = true;
+                return "KO";
+            }
         };
-        baseTest(supplier, true);
+        try {
+            baseTest(supplier, true);
+            assertTrue(testAppender.list.stream()
+                    .anyMatch(e -> e.getFormattedMessage().contains("An exception occurred during execution of commands on slurm")));
+        } finally {
+            removeApprender(testAppender);
+        }
     }
 
     @Test
     public void testLongProgramInListToCancel() {
-        Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractExecutionHandler<String>() {
+        ListAppender<ILoggingEvent> testAppender = new ListAppender<>();
+        addApprender(testAppender);
+        Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractFailInAfterHandler() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
                 return longProgramInList();
             }
         };
-        baseTest(supplier, true);
+        try {
+            baseTest(supplier, true);
+            assertTrue(testAppender.list.stream()
+                    .anyMatch(e -> e.getFormattedMessage().contains("An exception occurred during execution of commands on slurm")));
+        } finally {
+            removeApprender(testAppender);
+        }
     }
 
     @Test
     public void testMixedProgramsToCancel() {
-        Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractExecutionHandler<String>() {
+        ListAppender<ILoggingEvent> testAppender = new ListAppender<>();
+        addApprender(testAppender);
+        Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractFailInAfterHandler() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
                 return mixedPrograms();
             }
         };
-        baseTest(supplier, true);
+        try {
+            baseTest(supplier, true);
+            assertTrue(testAppender.list.stream()
+                    .anyMatch(e -> e.getFormattedMessage().contains("An exception occurred during execution of commands on slurm")));
+        } finally {
+            removeApprender(testAppender);
+        }
+    }
+
+    abstract class AbstractFailInAfterHandler extends AbstractExecutionHandler<String> {
+        @Override
+        public String after(Path workingDir, ExecutionReport report) {
+            System.out.println("------------SHOULD NOT EXECUTED------------");
+            failed = true;
+            return "KO";
+        }
     }
 
 }

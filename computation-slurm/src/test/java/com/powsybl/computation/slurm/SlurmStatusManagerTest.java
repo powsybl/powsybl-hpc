@@ -11,6 +11,7 @@ import org.joda.time.DateTime;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import java.util.Arrays;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
@@ -23,9 +24,9 @@ public class SlurmStatusManagerTest {
 
     @Test
     public void test() {
-        CommandResult r1 = new CommandResult(0, "2009-01-09 03:54:42\n", "");
-        CommandResult r2 = new CommandResult(0, "0/32/0/32\n", "");
-        CommandResult r3 = new CommandResult(0, "1 cmd2\n8 simpleCmdId\n", "");
+        CommandResult r1 = CommandResultTestFactory.simpleOutput("2009-01-09 03:54:42");
+        CommandResult r2 = CommandResultTestFactory.simpleOutput("0/32/0/32");
+        CommandResult r3 = CommandResultTestFactory.multilineOutput(Arrays.asList("1 cmd2", "8 simpleCmdId"));
         CommandExecutor commandExecutor = Mockito.mock(CommandExecutor.class);
         Mockito.when(commandExecutor.execute(startsWith("date"))).thenReturn(r1);
         Mockito.when(commandExecutor.execute(startsWith("sinfo"))).thenReturn(r2);

@@ -6,6 +6,8 @@
  */
 package com.powsybl.computation.slurm;
 
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.powsybl.computation.AbstractExecutionHandler;
 import com.powsybl.computation.CommandExecution;
 import com.powsybl.computation.ComputationParameters;
@@ -42,15 +44,17 @@ public class SlurmOtherCaseTest extends AbstractIntegrationTests {
         };
         try (SlurmComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
             CompletableFuture<String> completableFuture = computationManager.execute(EMPTY_ENV, supplier.get(), ComputationParameters.empty());
-            System.out.println("Go to cancel on server");
-            // TODO should thrown CompletionException
-            String join = completableFuture.join();
-            assertNull(join);
-            assertTrue(completableFuture.isCancelled());
-            assertIsCleanedAfterWait(computationManager.getTaskStore());
+            System.out.println("Go to interrupt on server");
+            Assertions.assertThatThrownBy(completableFuture::join)
+                    .isInstanceOf(CompletionException.class);
+            // TODO detail msg
+//                    .hasMessageContaining("is CANCELLED");
+            assertIsCleaned(computationManager.getTaskStore());
         } catch (IOException e) {
             e.printStackTrace();
             failed = true;
+        } catch (CompletionException ce) {
+            System.out.println("in ce");
         }
         // assert on main thread
         assertFalse(failed);
@@ -90,11 +94,9 @@ public class SlurmOtherCaseTest extends AbstractIntegrationTests {
             builder.setDeadline("longProgram", 12);
             ComputationParameters computationParameters = builder.build();
             CompletableFuture<Void> completableFuture = computationManager.execute(EMPTY_ENV, deadlineTest.get(), computationParameters);
-            Assertions.assertThatThrownBy(() -> {
-                System.out.println("Tring to get result, should throw CompletionException");
-                Void join = completableFuture.join();
-            }).isInstanceOf(CompletionException.class);
-            assertIsCleanedAfterWait(computationManager.getTaskStore());
+            Assertions.assertThatThrownBy(completableFuture::join)
+                    .isInstanceOf(CompletionException.class);
+            assertIsCleaned(computationManager.getTaskStore());
         } catch (IOException e) {
             e.printStackTrace();
             failed = true;
@@ -114,15 +116,19 @@ public class SlurmOtherCaseTest extends AbstractIntegrationTests {
         ComputationParameters parameters = new ComputationParametersBuilder().setTimeout("longProgram", 60).build();
         SlurmComputationParameters slurmComputationParameters = new SlurmComputationParameters(parameters, "THIS_QOS_SHOULD_NOT_EXIST_IN_SLURM");
         parameters.addExtension(SlurmComputationParameters.class, slurmComputationParameters);
-
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        addApprender(appender);
         try (SlurmComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
             CompletableFuture<String> execute = computationManager.execute(EMPTY_ENV, supplier.get(), parameters);
-            Assertions.assertThatThrownBy(execute::join)
-                    .isInstanceOf(CompletionException.class)
-                    .hasMessageContaining("Invalid qos specification");
-            assertIsCleanedAfterWait(computationManager.getTaskStore());
+            execute.join();
+            assertIsCleaned(computationManager.getTaskStore());
+            assertTrue(appender.list.stream().anyMatch(e -> e.getFormattedMessage().contains("exit point 2: Error by slurm")));
         } catch (IOException e) {
             fail();
+        } catch (CompletionException ce) {
+            assertTrue(ce.getCause().getMessage().contains("Invalid qos specification"));
+        } finally {
+            removeApprender(appender);
         }
     }
 
