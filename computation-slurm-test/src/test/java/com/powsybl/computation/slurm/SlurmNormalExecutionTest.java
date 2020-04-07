@@ -18,22 +18,17 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import java.util.stream.LongStream;
 import java.util.zip.GZIPOutputStream;
 
-import static com.powsybl.computation.slurm.CommandExecutionsTestFactory.longProgram;
-import static com.powsybl.computation.slurm.CommandExecutionsTestFactory.md5sumLargeFile;
-import static com.powsybl.computation.slurm.CommandExecutionsTestFactory.simpleCmdWithCount;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static com.powsybl.computation.slurm.CommandExecutionsTestFactory.*;
+import static org.junit.Assert.*;
 
 /**
  * @author Yichen TANG <yichen.tang at rte-france.com>
@@ -44,7 +39,6 @@ public class SlurmNormalExecutionTest extends AbstractIntegrationTests {
 
     void baseTest(Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters, boolean checkClean) {
         AbstractExecutionHandler<String> handler = supplier.get();
-        SlurmTaskImpl task = null;
         ListAppender<ILoggingEvent> normalAppender = new ListAppender<>();
         addApprender(normalAppender);
         try (SlurmComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
@@ -52,12 +46,6 @@ public class SlurmNormalExecutionTest extends AbstractIntegrationTests {
             System.out.println("to wait finish");
             String join = completableFuture.join();
             assertEquals("OK", join);
-//            task = (SlurmTaskImpl) computationManager.getTaskStore().getTasks().stream().findFirst().get();
-//            System.out.println("First:" + task.getFirstJobId());
-//            System.out.println("Masters:" + task.getMasters());
-//            for (long master : task.getMasters()) {
-//                System.out.println(master + "->" + task.getBatches(master));
-//            }
             if (checkClean) {
                 assertIsCleaned(computationManager.getTaskStore());
             }
@@ -70,46 +58,6 @@ public class SlurmNormalExecutionTest extends AbstractIntegrationTests {
             removeApprender(normalAppender);
         }
         assertFalse(failed);
-        //assertTaskRelations(task);
-    }
-
-    private static List<Long> findExpectedIdRelations(SlurmTaskImpl task) {
-        List<Long> list = new ArrayList<>();
-        for (int i = 0; i < task.getCommandExecutionSize(); i++) {
-            CommandExecution ce = task.getCommandExecution(i);
-            if (ce.getCommand().getInputFiles().stream()
-                    .anyMatch(inputFile -> !inputFile.dependsOnExecutionNumber() && inputFile.getPreProcessor() != null)) {
-                list.add(0L);
-            }
-            list.add((long) ce.getExecutionCount());
-        }
-        return list;
-    }
-
-    private static void assertTaskRelations(SlurmTaskImpl task) {
-        assertTaskRelations(task, findExpectedIdRelations(task));
-    }
-
-    private static void assertTaskRelations(SlurmTaskImpl task, List<Long> expected) {
-        Long actualMasterId = task.getFirstJobId();
-        assertEquals(expected.size(), task.getMasters().size());
-        for (int i = 0; i < expected.size(); i++) {
-            assertTrue(task.getMasters().contains(actualMasterId));
-            long expectedBatchCount = expected.get(i);
-            List<Long> expectedBatchIds = calExpectedBatchIds(expectedBatchCount, actualMasterId);
-            List<Long> batchIds = task.getBatches(actualMasterId);
-            assertEquals(expectedBatchIds, batchIds);
-            if (batchIds.size() == 0) {
-                actualMasterId = actualMasterId + 1;
-            } else {
-                actualMasterId = batchIds.get(batchIds.size() - 1) + 1;
-            }
-        }
-    }
-
-    private static List<Long> calExpectedBatchIds(long expectedBatchCount, long actualMasterId) {
-        return LongStream.range(1, expectedBatchCount).map(l -> l + actualMasterId)
-                .boxed().collect(Collectors.toList());
     }
 
     @Test

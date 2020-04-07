@@ -77,7 +77,7 @@ public class SlurmCancelExecutionTest extends AbstractIntegrationTests {
         try {
             baseTest(supplier, true);
             assertTrue(testAppender.list.stream()
-                    .anyMatch(e -> e.getFormattedMessage().contains("skipping report generation")));
+                    .anyMatch(e -> e.getFormattedMessage().contains("An exception occurred during execution of commands on slurm")));
         } finally {
             removeApprender(testAppender);
         }
@@ -96,7 +96,7 @@ public class SlurmCancelExecutionTest extends AbstractIntegrationTests {
         try {
             baseTest(supplier, true);
             assertTrue(testAppender.list.stream()
-                    .anyMatch(e -> e.getFormattedMessage().contains("skipping report generation")));
+                    .anyMatch(e -> e.getFormattedMessage().contains("An exception occurred during execution of commands on slurm")));
         } finally {
             removeApprender(testAppender);
         }
@@ -115,7 +115,7 @@ public class SlurmCancelExecutionTest extends AbstractIntegrationTests {
         try {
             baseTest(supplier, true);
             assertTrue(testAppender.list.stream()
-                    .anyMatch(e -> e.getFormattedMessage().contains("skipping report generation")));
+                    .anyMatch(e -> e.getFormattedMessage().contains("An exception occurred during execution of commands on slurm")));
         } finally {
             removeApprender(testAppender);
         }

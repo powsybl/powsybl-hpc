@@ -21,25 +21,21 @@ public interface SlurmTask {
 
     /**
      * Submits all jobs required to complete this task to the Slurm infrastructure.
-     *
-     * @throws IOException
-     * @throws InterruptedException
      */
-    void submit() throws IOException, InterruptedException;
+    void submit() throws IOException;
 
     /**
      * Waits for the whole task to be executed, and generates the execution report.
      *
-     * @return
-     * @throws InterruptedException
-     * @throws ExecutionException
+     * @throws java.util.concurrent.CancellationException if the task has been interrupted by a call to {@link #interrupt()}.
      */
     SlurmExecutionReport await() throws InterruptedException, ExecutionException;
-
 
     /**
      * Asks for interruption of the execution of this task,
      * in order to save the infrastructure computation resources.
+     *
+     * <p>Calls waiting for completion of {@link #await()} will throw a {@link java.util.concurrent.CancellationException}.
      */
     void interrupt();
 

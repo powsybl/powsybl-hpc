@@ -74,6 +74,10 @@ public class SlurmTaskImpl implements SlurmTask {
 
     @Override
     public void submit() throws IOException {
+        if (!canSubmit()) {
+            return;
+        }
+
         commandByJobId = new HashMap<>();
         outerSendingLoop:
         for (int commandIdx = 0; commandIdx < executions.size(); commandIdx++) {
@@ -87,8 +91,7 @@ public class SlurmTaskImpl implements SlurmTask {
             // a master job to copy NonExecutionDependent and PreProcess needed input files
             if (command.getInputFiles().stream()
                     .anyMatch(inputFile -> !inputFile.dependsOnExecutionNumber() && inputFile.getPreProcessor() != null)) {
-                if (scm.isCloseStarted()) {
-                    LOGGER.info(CLOSE_START_NO_MORE_SEND_INFO);
+                if (!canSubmit()) {
                     break outerSendingLoop;
                 }
                 SbatchScriptGenerator sbatchScriptGenerator = new SbatchScriptGenerator(flagDir);
@@ -101,8 +104,7 @@ public class SlurmTaskImpl implements SlurmTask {
 
             // no job array --> commandId_index.batch
             for (int executionIndex = 0; executionIndex < commandExecution.getExecutionCount(); executionIndex++) {
-                if (scm.isCloseStarted()) {
-                    LOGGER.info(CLOSE_START_NO_MORE_SEND_INFO);
+                if (!canSubmit()) {
                     break outerSendingLoop;
                 }
                 prepareBatch(command, executionIndex, commandExecution);
@@ -125,6 +127,21 @@ public class SlurmTaskImpl implements SlurmTask {
                     LOGGER.debug("Slurm task completed in {}.", workingDir);
                     taskCompletion.complete(null);
                 });
+    }
+
+    /**
+     * Check if task has already been completed, or if computation manager is closing.
+     */
+    private boolean canSubmit() {
+        if (scm.isCloseStarted()) {
+            LOGGER.info(CLOSE_START_NO_MORE_SEND_INFO);
+            return false;
+        }
+        if (isCompleted()) {
+            LOGGER.info("Stopping jobs submission for task in {}: task has been interrupted.", workingDir);
+            return false;
+        }
+        return true;
     }
 
     private SbatchCmd buildSbatchCmd(String commandId, int executionIndex, List<Long> preJobIds, ComputationParameters baseParams) {
@@ -261,6 +278,13 @@ public class SlurmTaskImpl implements SlurmTask {
     }
 
     /**
+     * {@code true} if the task is already considered completed, be it through normal completion or interruption.
+     */
+    private boolean isCompleted() {
+        return taskCompletion.isDone();
+    }
+
+    /**
      * If first job id is null, this masterId would take account as first job id.
      * @param masterId
      */
@@ -342,7 +366,7 @@ public class SlurmTaskImpl implements SlurmTask {
 
     @Override
     public void interrupt() {
-        taskCompletion.complete(null);
+        taskCompletion.cancel(true);
         cancelSubmittedJobs();
     }
 
@@ -474,7 +498,7 @@ public class SlurmTaskImpl implements SlurmTask {
                 interrupted = true;
             }
 
-            done();
+            completed.complete(null);
             LOGGER.debug("Scancel slurm job {}.", jobId);
             commandExecutor.execute("scancel " + jobId);
         }
@@ -482,12 +506,14 @@ public class SlurmTaskImpl implements SlurmTask {
         /**
          * To be called by a monitor when the job has failed.
          *
-         * The implementation asks for the interruption of all jobs.
+         * <p>The implementation asks for the interruption of all other jobs,
+         * but the task will complete normally and generate an execution report.
          */
         @Override
         public void failed() {
             LOGGER.debug("Slurm job {} failed.", jobId);
-            interrupt();
+            taskCompletion.complete(null);
+            cancelSubmittedJobs();
         }
 
         /**
@@ -500,7 +526,7 @@ public class SlurmTaskImpl implements SlurmTask {
         @Override
         public void interrupted() {
             taskCompletion.completeExceptionally(new SlurmException("Job " + jobId + " execution has been interrupted on slurm infrastructure."));
-            interrupt();
+            cancelSubmittedJobs();
         }
 
     }

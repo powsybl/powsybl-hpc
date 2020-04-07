@@ -46,8 +46,6 @@ public class SlurmInvalidExecutionTest extends AbstractIntegrationTests {
             if (checkClean) {
                 assertIsCleaned(computationManager.getTaskStore());
             }
-            //assertTrue(testAppender.list.stream()
-            //        .anyMatch(e -> e.getFormattedMessage().contains("exit point 4: other exception")));
         } catch (IOException e) {
             e.printStackTrace();
             fail();

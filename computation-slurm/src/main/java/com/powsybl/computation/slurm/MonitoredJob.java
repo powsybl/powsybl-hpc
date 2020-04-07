@@ -27,7 +27,7 @@ public interface MonitoredJob {
 
     /**
      * To be called by a monitor when the job has completed but
-     * with an error (exit code != 1).
+     * with an error (exit code != 0).
      */
     void failed();
 

@@ -233,8 +233,8 @@ public class SlurmComputationManager implements ComputationManager {
 
     /**
      * Clean task store after completion of the task,
-     * and interrupt task in case of exception, in particular
-     * when cancellation has been required.
+     * and interrupt task if the future has been completed with an exception,
+     * in particular when cancellation has been required.
      */
     private <R> void addFinalizer(CompletableFuture<R> result, SlurmTask task) {
         result.handle((res, exception) -> {
@@ -262,31 +262,20 @@ public class SlurmComputationManager implements ComputationManager {
             SlurmTask slurmTask = new SlurmTaskImpl(this, remoteWorkingDirectory, commandExecutions, parameters, environment);
             taskStore.add(slurmTask);
 
-            //At this point we need to add the callback which will interrupt the underlying jobs in case of exception
+            //At this point we need to add the callback which will interrupt the underlying task,
+            //and therefore jobs, in case of exception
             addFinalizer(futureResult, slurmTask);
 
-            if (futureResult.isCancelled()) {
-                LOGGER.info("Slurm task cancelled before submission");
-                return;
-            }
             slurmTask.submit();
 
-            if (futureResult.isCancelled()) {
-                LOGGER.info("Slurm task cancelled after submission");
-                return;
-            }
             LOGGER.debug("Waiting finish...");
             SlurmExecutionReport report = slurmTask.await();
-
-            if (futureResult.isCancelled()) {
-                LOGGER.info("Slurm task cancelled : skipping report generation.");
-                return;
-            }
 
             R res = handler.after(remoteWorkingDir, report);
             futureResult.complete(res);
             LOGGER.debug("Normal exit");
         } catch (Throwable exception) {
+            LOGGER.debug("An exception occurred during execution of commands on slurm.", exception);
             futureResult.completeExceptionally(exception);
         }
     }
