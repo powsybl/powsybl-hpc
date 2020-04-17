@@ -164,7 +164,7 @@ public class SlurmOtherCaseTest extends AbstractIntegrationTests {
     }
 
     @Override
-    void baseTest(SlurmComputationConfig config, Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters, boolean checkClean) {
+    void baseTest(SlurmComputationConfig config, Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters) {
         // do nothing
     }
 }

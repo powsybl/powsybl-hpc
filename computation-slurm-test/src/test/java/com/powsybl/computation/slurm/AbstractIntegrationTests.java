@@ -36,7 +36,7 @@ import static org.junit.Assert.assertTrue;
 public abstract class AbstractIntegrationTests {
 
     static final Logger LOGGER = LoggerFactory.getLogger(AbstractIntegrationTests.class);
-    static final ExecutionEnvironment EMPTY_ENV = new ExecutionEnvironment(Collections.emptyMap(), "unit_test_", true);
+    static final ExecutionEnvironment EMPTY_ENV = new ExecutionEnvironment(Collections.emptyMap(), "unit_test_", false);
     private static final ch.qos.logback.classic.Logger SCM_LOGGER = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(SlurmComputationManager.class);
 
     SlurmComputationConfig batchConfig;
@@ -73,23 +73,15 @@ public abstract class AbstractIntegrationTests {
     }
 
     void baseTest(Supplier<AbstractExecutionHandler<String>> supplier) {
-        baseTest(supplier, ComputationParameters.empty(), false);
+        baseTest(supplier, ComputationParameters.empty());
     }
 
     void baseTest(Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters) {
-        baseTest(supplier, parameters, false);
+        baseTest(batchConfig, supplier, parameters);
+        baseTest(arrayConfig, supplier, parameters);
     }
 
-    void baseTest(Supplier<AbstractExecutionHandler<String>> supplier, boolean checkClean) {
-        baseTest(supplier, ComputationParameters.empty(), checkClean);
-    }
-
-    void baseTest(Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters, boolean checkClean) {
-        baseTest(batchConfig, supplier, parameters, checkClean);
-        baseTest(arrayConfig, supplier, parameters, checkClean);
-    }
-
-    abstract void baseTest(SlurmComputationConfig config, Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters, boolean checkClean);
+    abstract void baseTest(SlurmComputationConfig config, Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters);
 
     static void addApprender(ListAppender<ILoggingEvent> appender) {
         appender.start();
