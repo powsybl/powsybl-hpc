@@ -37,18 +37,18 @@ public abstract class AbstractTask implements SlurmTask {
     private static final String CLOSE_START_NO_MORE_SEND_INFO = "SCM close started and no more send sbatch to slurm";
     private static final String SACCT_NONZERO_JOB = "sacct --jobs=%s -n --format=\"jobid,exitcode\" | grep -v \"0:0\" | grep -v \"\\.\"";
 
-    protected Path workingDir;
-    protected Path flagDir;
-    protected CommandExecutor commandExecutor;
-    protected List<CommandExecution> executions;
-    protected ComputationParameters parameters;
-    protected ExecutionEnvironment environment;
+    protected final Path workingDir;
+    protected final Path flagDir;
+    protected final CommandExecutor commandExecutor;
+    protected final List<CommandExecution> executions;
+    protected final ComputationParameters parameters;
+    protected final ExecutionEnvironment environment;
 
-    protected Map<Long, Command> commandByJobId;
-    final List<CompletableMonitoredJob> jobs = new ArrayList<>();
+    protected final List<CompletableMonitoredJob> jobs = new ArrayList<>();
     protected final CompletableFuture<Void> taskCompletion = new CompletableFuture<>();
+    protected Map<Long, Command> commandByJobId;
 
-    private SlurmComputationManager scm;
+    private final SlurmComputationManager scm;
 
     AbstractTask(SlurmComputationManager scm, WorkingDirectory directory,
                         List<CommandExecution> executions, ComputationParameters parameters, ExecutionEnvironment environment) {
@@ -172,7 +172,6 @@ public abstract class AbstractTask implements SlurmTask {
      * Asks for cancellation of submitted jobs to Slurm infrastructure.
      */
     protected void cancelSubmittedJobs() {
-        System.out.println("cancel");
         jobs.forEach(CompletableMonitoredJob::interruptJob);
     }
 

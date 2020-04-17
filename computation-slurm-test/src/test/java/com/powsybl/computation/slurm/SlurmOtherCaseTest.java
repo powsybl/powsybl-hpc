@@ -36,7 +36,7 @@ public class SlurmOtherCaseTest extends AbstractIntegrationTests {
 
     @Test
     public void testLongProgramToCancelExternal() {
-//        testLongProgramToCancelExternal(batchConfig);
+        testLongProgramToCancelExternal(batchConfig);
         testLongProgramToCancelExternal(arrayConfig);
     }
 

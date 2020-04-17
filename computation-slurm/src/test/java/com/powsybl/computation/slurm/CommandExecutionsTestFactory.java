@@ -75,6 +75,10 @@ public final class CommandExecutionsTestFactory {
     }
 
     static List<CommandExecution> groupCmd() {
+        return groupCmd(1);
+    }
+
+    static List<CommandExecution> groupCmd(int executionCount) {
         Command command = new GroupCommandBuilder()
                 .id("groupCmdId")
                 .subCommand()
@@ -86,7 +90,7 @@ public final class CommandExecutionsTestFactory {
                 .args("sub2")
                 .add()
                 .build();
-        return Collections.singletonList(new CommandExecution(command, 1));
+        return Collections.singletonList(new CommandExecution(command, 3));
     }
 
     static List<CommandExecution> longProgram(int seconds) {
