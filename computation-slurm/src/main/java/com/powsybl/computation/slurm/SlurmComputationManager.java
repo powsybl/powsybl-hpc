@@ -277,8 +277,8 @@ public class SlurmComputationManager implements ComputationManager {
             SlurmExecutionReport report = slurmTask.await();
 
             R res = handler.after(remoteWorkingDir, report);
-            futureResult.complete(res);
             LOGGER.debug("Normal exit");
+            futureResult.complete(res);
         } catch (Throwable exception) {
             LOGGER.debug("An exception occurred during execution of commands on slurm.", exception);
             futureResult.completeExceptionally(exception);
