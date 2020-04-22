@@ -20,8 +20,12 @@ import java.util.stream.Stream;
 import static com.powsybl.computation.slurm.SlurmConstants.BATCH_EXT;
 
 /**
+ * A {@link SlurmTask} which submits each command as an individual slurm job.
+ *
+ * <p>
  * This class contains those job ids relationship in Slurm platform for one task.
  * It has a correspondent working directory and the CompletableFuture as return value.
+ *
  * @author Yichen TANG <yichen.tang at rte-france.com>
  */
 public class SlurmTaskImpl extends AbstractTask {

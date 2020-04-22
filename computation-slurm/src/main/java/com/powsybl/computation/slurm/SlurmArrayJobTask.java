@@ -16,6 +16,10 @@ import java.util.*;
 import java.util.regex.Matcher;
 
 /**
+ *
+ * A {@link SlurmTask} which submits commands as job arrays when possible,
+ * in particular for commands with execution count > 1.
+ *
  * @author Yichen TANG <yichen.tang at rte-france.com>
  */
 class SlurmArrayJobTask extends AbstractTask {
