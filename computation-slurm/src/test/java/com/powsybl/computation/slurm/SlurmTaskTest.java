@@ -71,9 +71,9 @@ public class SlurmTaskTest {
                 .collect(Collectors.toSet());
     }
 
-    private static MonitoredJob getPendingJob(SlurmTask task, long id) {
+    static MonitoredJob getPendingJob(SlurmTask task, long id) {
         return task.getPendingJobs().stream()
-                .filter(job ->  job.getJobId() == id)
+                .filter(job -> job.getJobId() == id)
                 .findFirst()
                 .orElseThrow(AssertionError::new);
     }
@@ -163,7 +163,6 @@ public class SlurmTaskTest {
     @Test
     public void baseTest() {
         CommandExecutor commandExecutor = mock(CommandExecutor.class);
-        UUID uuid = UUID.randomUUID();
         WorkingDirectory directory = mock(WorkingDirectory.class);
         Path path = mock(Path.class);
         when(directory.toPath()).thenReturn(path);

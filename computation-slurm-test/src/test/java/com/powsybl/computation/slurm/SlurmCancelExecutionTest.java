@@ -35,8 +35,8 @@ import static org.junit.Assert.assertTrue;
 public class SlurmCancelExecutionTest extends AbstractIntegrationTests {
 
     @Override
-    void baseTest(Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters, boolean checkClean) {
-        try (SlurmComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
+    void baseTest(SlurmComputationConfig config, Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters) {
+        try (SlurmComputationManager computationManager = new SlurmComputationManager(config)) {
             CompletableFuture<String> completableFuture = computationManager.execute(EMPTY_ENV, supplier.get(), parameters);
             System.out.println("CompletableFuture would be cancelled in 5 seconds...");
             // TODO add a test before submit
@@ -44,9 +44,7 @@ public class SlurmCancelExecutionTest extends AbstractIntegrationTests {
             boolean cancel = completableFuture.cancel(true);
             System.out.println("Cancelled:" + cancel);
             Assert.assertTrue(cancel);
-            if (checkClean) {
-                assertIsCleaned(computationManager.getTaskStore());
-            }
+            assertIsCleaned(computationManager.getTaskStore());
             Assertions.assertThatThrownBy(completableFuture::join)
                     .isInstanceOf(CancellationException.class);
             // TODO detailed msg getCause is null
@@ -75,7 +73,7 @@ public class SlurmCancelExecutionTest extends AbstractIntegrationTests {
             }
         };
         try {
-            baseTest(supplier, true);
+            baseTest(supplier);
             assertTrue(testAppender.list.stream()
                     .anyMatch(e -> e.getFormattedMessage().contains("An exception occurred during execution of commands on slurm")));
         } finally {
@@ -94,7 +92,7 @@ public class SlurmCancelExecutionTest extends AbstractIntegrationTests {
             }
         };
         try {
-            baseTest(supplier, true);
+            baseTest(supplier);
             assertTrue(testAppender.list.stream()
                     .anyMatch(e -> e.getFormattedMessage().contains("An exception occurred during execution of commands on slurm")));
         } finally {
@@ -113,7 +111,7 @@ public class SlurmCancelExecutionTest extends AbstractIntegrationTests {
             }
         };
         try {
-            baseTest(supplier, true);
+            baseTest(supplier);
             assertTrue(testAppender.list.stream()
                     .anyMatch(e -> e.getFormattedMessage().contains("An exception occurred during execution of commands on slurm")));
         } finally {

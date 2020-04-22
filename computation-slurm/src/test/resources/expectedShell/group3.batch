@@ -1,0 +1,16 @@
+#!/bin/sh
+case $SLURM_ARRAY_TASK_ID in
+    0)
+      ARGS_0=""5s"" ARGS_1=""sub2""
+    ;;
+    1)
+      ARGS_0=""5s"" ARGS_1=""sub2""
+    ;;
+    2)
+      ARGS_0=""5s"" ARGS_1=""sub2""
+    ;;
+esac
+sleep $ARGS_0
+rc=$?; if [[ $rc != 0 ]]; then touch /tmp/flags/myerror_workingPath_12345_$SLURM_ARRAY_JOB_ID-$SLURM_ARRAY_TASK_ID; exit $rc; fi
+echo $ARGS_1
+rc=$?; if [[ $rc != 0 ]]; then touch /tmp/flags/myerror_workingPath_12345_$SLURM_ARRAY_JOB_ID-$SLURM_ARRAY_TASK_ID; exit $rc; fi

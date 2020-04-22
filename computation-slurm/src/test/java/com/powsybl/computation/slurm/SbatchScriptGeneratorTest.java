@@ -15,13 +15,17 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystem;
+import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.nio.file.Paths;
+import java.util.*;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 /**
  * @author Yichen Tang <yichen.tang at rte-france.com>
@@ -47,6 +51,23 @@ public class SbatchScriptGeneratorTest {
     }
 
     @Test
+    public void testEnv() {
+        List<CommandExecution> commandExecutions = CommandExecutionsTestFactory.simpleCmd();
+        CommandExecution commandExecution = commandExecutions.get(commandIdx);
+        Command command = commandExecution.getCommand();
+        Map<String, String> env = new HashMap<>();
+        env.put("foo", "bar");
+        env.put("FOO_PATH", "/home/foo/java");
+
+        List<String> shell = new SbatchScriptGenerator(flagPath).parser(command, 0, workingPath, env);
+        assertEquals(ImmutableList.of("#!/bin/sh",
+                "export FOO_PATH=/home/foo/java:$FOO_PATH; export foo=bar; ",
+                "echo \"test\"",
+                "rc=$?; if [[ $rc != 0 ]]; then touch /tmp/flags/myerror_workingPath_12345_$SLURM_JOBID; exit $rc; fi",
+                "touch /tmp/flags/mydone_workingPath_12345_$SLURM_JOBID"), shell);
+    }
+
+    @Test
     public void testSimpleCmd() {
         List<CommandExecution> commandExecutions = CommandExecutionsTestFactory.simpleCmd();
         CommandExecution commandExecution = commandExecutions.get(commandIdx);
@@ -68,6 +89,8 @@ public class SbatchScriptGeneratorTest {
                 "echo \"te1st0\"",
                 "rc=$?; if [[ $rc != 0 ]]; then touch /tmp/flags/myerror_workingPath_12345_$SLURM_JOBID; exit $rc; fi",
                 "touch /tmp/flags/mydone_workingPath_12345_$SLURM_JOBID"), shell);
+
+        assertCommandExecutionToShell(commandExecutions.get(0), "simpleCmdWithCount3.batch");
     }
 
     @Test
@@ -82,6 +105,8 @@ public class SbatchScriptGeneratorTest {
                 "rc=$?; if [[ $rc != 0 ]]; then touch /tmp/flags/myerror_workingPath_12345_$SLURM_JOBID; exit $rc; fi",
                 "gzip out0",
                 "touch /tmp/flags/mydone_workingPath_12345_$SLURM_JOBID"), shell);
+
+        assertCommandExecutionToShell(commandExecutions.get(0), "myEchoSimpleCmdWithUnzipZip.batch");
     }
 
     @Test
@@ -130,6 +155,25 @@ public class SbatchScriptGeneratorTest {
                 "echo \"sub2\"",
                 "rc=$?; if [[ $rc != 0 ]]; then touch /tmp/flags/myerror_workingPath_12345_$SLURM_JOBID; exit $rc; fi",
                 "touch /tmp/flags/mydone_workingPath_12345_$SLURM_JOBID"), shell);
+    }
+
+    @Test
+    public void testGroupCmdArray() {
+        List<CommandExecution> commandExecutions = CommandExecutionsTestFactory.groupCmd();
+        CommandExecution commandExecution = commandExecutions.get(0);
+        assertCommandExecutionToShell(commandExecution, "group3.batch");
+    }
+
+    private void assertCommandExecutionToShell(CommandExecution commandExecution, String expected) {
+        SbatchScriptGenerator shellGenerator = new SbatchScriptGenerator(flagPath);
+        List<String> shell = shellGenerator.parser(commandExecution, workingPath, Collections.emptyMap(), false);
+        List<String> expectedShell = null;
+        try {
+            expectedShell = Files.readAllLines(Paths.get(this.getClass().getResource("/expectedShell/" + expected).toURI()), StandardCharsets.UTF_8);
+            assertEquals(expectedShell, shell);
+        } catch (IOException | URISyntaxException e) {
+            fail();
+        }
     }
 
 }

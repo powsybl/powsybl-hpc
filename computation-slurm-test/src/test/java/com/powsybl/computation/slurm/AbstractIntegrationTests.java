@@ -39,7 +39,8 @@ public abstract class AbstractIntegrationTests {
     static final ExecutionEnvironment EMPTY_ENV = new ExecutionEnvironment(Collections.emptyMap(), "unit_test_", false);
     private static final ch.qos.logback.classic.Logger SCM_LOGGER = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(SlurmComputationManager.class);
 
-    SlurmComputationConfig slurmConfig;
+    SlurmComputationConfig batchConfig;
+    SlurmComputationConfig arrayConfig;
 
     volatile boolean failed = false;
 
@@ -48,7 +49,8 @@ public abstract class AbstractIntegrationTests {
         YamlModuleConfigRepository configRepository = new YamlModuleConfigRepository(Paths.get("src/test/resources/config.yml"));
         ModuleConfig config = configRepository.getModuleConfig("slurm-computation-manager")
                 .orElseThrow(() -> new RuntimeException("Config.yaml is not good. Please recheck the config.yaml.example"));
-        slurmConfig = generateSlurmConfigWithShortScontrolTime(config);
+        batchConfig = batchConfig(config);
+        arrayConfig = arrayConfig(config);
         // TODO prepare myapps if necessary
     }
 
@@ -56,12 +58,14 @@ public abstract class AbstractIntegrationTests {
         return new SlurmComputationConfig.SshConfig(config.getStringProperty("hostname"), 22, config.getStringProperty("username"), config.getStringProperty("password"), 10, 5);
     }
 
-    /**
-     * Returns a config in which scontrol monitor runs every minute
-     */
-    private static SlurmComputationConfig generateSlurmConfigWithShortScontrolTime(ModuleConfig config) {
+    private static SlurmComputationConfig batchConfig(ModuleConfig config) {
         return new SlurmComputationConfig(generateSsh(config), config.getStringProperty("remote-dir"),
-                Paths.get(config.getStringProperty("local-dir")), 5, 1);
+                Paths.get(config.getStringProperty("local-dir")), 5, 1, false);
+    }
+
+    private static SlurmComputationConfig arrayConfig(ModuleConfig config) {
+        return new SlurmComputationConfig(generateSsh(config), config.getStringProperty("remote-dir"),
+                Paths.get(config.getStringProperty("local-dir")), 5, 1, true);
     }
 
     static void assertIsCleaned(TaskStore store) {
@@ -73,14 +77,11 @@ public abstract class AbstractIntegrationTests {
     }
 
     void baseTest(Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters) {
-        baseTest(supplier, parameters, false);
+        baseTest(batchConfig, supplier, parameters);
+        baseTest(arrayConfig, supplier, parameters);
     }
 
-    void baseTest(Supplier<AbstractExecutionHandler<String>> supplier, boolean checkClean) {
-        baseTest(supplier, ComputationParameters.empty(), checkClean);
-    }
-
-    abstract void baseTest(Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters, boolean checkClean);
+    abstract void baseTest(SlurmComputationConfig config, Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters);
 
     static void addApprender(ListAppender<ILoggingEvent> appender) {
         appender.start();

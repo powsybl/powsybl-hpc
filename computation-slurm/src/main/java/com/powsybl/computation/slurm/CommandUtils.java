@@ -38,4 +38,14 @@ final class CommandUtils {
         String argStr = args.stream().collect(getWrapperAndJoiner());
         return program + " " + argStr;
     }
+
+    /**
+     * Generates a command's argu string, with each argument wrapped with quotes.
+     * @param args
+     * @return the argu's string
+     */
+    static String commandArgsToString(Collection<String> args) {
+        requireNonNull(args);
+        return args.stream().collect(getWrapperAndJoiner());
+    }
 }

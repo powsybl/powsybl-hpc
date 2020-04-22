@@ -98,7 +98,7 @@ public class SlurmComputationManager implements ComputationManager {
         Runtime.getRuntime().addShutdownHook(shutdownThread());
 
         LOGGER.debug("init scm");
-        LOGGER.info("FlagMonitor={};ScontrolMonitor={}", config.getPollingInterval(), config.getScontrolInterval());
+        LOGGER.info("FlagMonitor={};ScontrolMonitor={};ArrayJob={}", config.getPollingInterval(), config.getScontrolInterval(), config.isJobArray());
     }
 
     /**
@@ -259,7 +259,12 @@ public class SlurmComputationManager implements ComputationManager {
 
             List<CommandExecution> commandExecutions = handler.before(remoteWorkingDir);
 
-            SlurmTask slurmTask = new SlurmTaskImpl(this, remoteWorkingDirectory, commandExecutions, parameters, environment);
+            SlurmTask slurmTask = null;
+            if (config.isJobArray()) {
+                slurmTask = new JobArraySlurmTask(this, remoteWorkingDirectory, commandExecutions, parameters, environment);
+            } else {
+                slurmTask = new SlurmTaskImpl(this, remoteWorkingDirectory, commandExecutions, parameters, environment);
+            }
             taskStore.add(slurmTask);
 
             //At this point we need to add the callback which will interrupt the underlying task,
@@ -272,8 +277,8 @@ public class SlurmComputationManager implements ComputationManager {
             SlurmExecutionReport report = slurmTask.await();
 
             R res = handler.after(remoteWorkingDir, report);
-            futureResult.complete(res);
             LOGGER.debug("Normal exit");
+            futureResult.complete(res);
         } catch (Throwable exception) {
             LOGGER.debug("An exception occurred during execution of commands on slurm.", exception);
             futureResult.completeExceptionally(exception);

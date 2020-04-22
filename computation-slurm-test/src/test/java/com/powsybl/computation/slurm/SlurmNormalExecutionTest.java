@@ -37,7 +37,8 @@ import static org.junit.Assert.*;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class SlurmNormalExecutionTest extends AbstractIntegrationTests {
 
-    void baseTest(Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters, boolean checkClean) {
+    @Override
+    public void baseTest(SlurmComputationConfig slurmConfig, Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters) {
         AbstractExecutionHandler<String> handler = supplier.get();
         ListAppender<ILoggingEvent> normalAppender = new ListAppender<>();
         addApprender(normalAppender);
@@ -46,9 +47,7 @@ public class SlurmNormalExecutionTest extends AbstractIntegrationTests {
             System.out.println("to wait finish");
             String join = completableFuture.join();
             assertEquals("OK", join);
-            if (checkClean) {
-                assertIsCleaned(computationManager.getTaskStore());
-            }
+            assertIsCleaned(computationManager.getTaskStore());
             assertTrue(normalAppender.list.stream()
                     .anyMatch(e -> e.getFormattedMessage().contains("Normal exit")));
         } catch (IOException e) {
@@ -79,7 +78,7 @@ public class SlurmNormalExecutionTest extends AbstractIntegrationTests {
                 return simpleCmdWithCount(7);
             }
         };
-        baseTest(supplier, ComputationParameters.empty(), true);
+        baseTest(supplier, ComputationParameters.empty());
     }
 
     @Test

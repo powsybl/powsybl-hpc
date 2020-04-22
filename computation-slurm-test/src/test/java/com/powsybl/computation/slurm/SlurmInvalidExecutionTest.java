@@ -23,8 +23,11 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.function.Supplier;
 
-import static com.powsybl.computation.slurm.CommandExecutionsTestFactory.*;
-import static org.junit.Assert.*;
+import static com.powsybl.computation.slurm.CommandExecutionsTestFactory.invalidProgram;
+import static com.powsybl.computation.slurm.CommandExecutionsTestFactory.invalidProgramInGroup;
+import static com.powsybl.computation.slurm.CommandExecutionsTestFactory.invalidProgramInList;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.fail;
 
 /**
  * @author Yichen TANG <yichen.tang at rte-france.com>
@@ -33,7 +36,7 @@ import static org.junit.Assert.*;
 public class SlurmInvalidExecutionTest extends AbstractIntegrationTests {
 
     @Override
-    void baseTest(Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters, boolean checkClean) {
+    void baseTest(SlurmComputationConfig slurmConfig, Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters) {
         ListAppender<ILoggingEvent> testAppender = new ListAppender<>();
         addApprender(testAppender);
         try (SlurmComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
@@ -43,9 +46,7 @@ public class SlurmInvalidExecutionTest extends AbstractIntegrationTests {
             Assertions.assertThatThrownBy(completableFuture::join)
                     .isInstanceOf(CompletionException.class)
                     .hasMessageContaining("com.powsybl.commons.PowsyblException: Error during the execution in directory");
-            if (checkClean) {
-                assertIsCleaned(computationManager.getTaskStore());
-            }
+            assertIsCleaned(computationManager.getTaskStore());
         } catch (IOException e) {
             e.printStackTrace();
             fail();
@@ -64,18 +65,7 @@ public class SlurmInvalidExecutionTest extends AbstractIntegrationTests {
                 return invalidProgram();
             }
         };
-        baseTest(supplier, true);
-    }
-
-    @Test
-    public void testInvalidProgramCheckClean() {
-        Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractCheckErrorsExecutionHandler() {
-            @Override
-            public List<CommandExecution> before(Path workingDir) {
-                return invalidProgram();
-            }
-        };
-        baseTest(supplier, ComputationParameters.empty(), true);
+        baseTest(supplier);
     }
 
     @Test
@@ -101,7 +91,7 @@ public class SlurmInvalidExecutionTest extends AbstractIntegrationTests {
                 return invalidProgramInList();
             }
         };
-        baseTest(supplier, true);
+        baseTest(supplier);
     }
 
     @Test
@@ -112,7 +102,7 @@ public class SlurmInvalidExecutionTest extends AbstractIntegrationTests {
                 return invalidProgramInGroup();
             }
         };
-        baseTest(supplier, true);
+        baseTest(supplier);
     }
 
     abstract static class AbstractCheckErrorsExecutionHandler extends AbstractExecutionHandler<String> {
