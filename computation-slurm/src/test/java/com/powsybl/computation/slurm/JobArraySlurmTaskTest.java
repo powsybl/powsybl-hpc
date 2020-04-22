@@ -26,7 +26,7 @@ import static org.mockito.Mockito.when;
 /**
  * @author Yichen TANG <yichen.tang at rte-france.com>
  */
-public class SlurmArrayJobTaskTest extends DefaultSlurmTaskTest {
+public class JobArraySlurmTaskTest extends DefaultSlurmTaskTest {
 
     @Test
     public void testCounterSum() throws IOException {
@@ -36,7 +36,7 @@ public class SlurmArrayJobTaskTest extends DefaultSlurmTaskTest {
                 .thenReturn(simpleOutput("Submitted batch job 2"))
                 .thenReturn(simpleOutput("Submitted batch job 5"))
                 .thenReturn(simpleOutput("Submitted batch job 6"));
-        SlurmTask task = new SlurmArrayJobTask(mockScm(commandExecutor), mockWd(), md5sumLargeFile(), ComputationParameters.empty(), ExecutionEnvironment.createDefault());
+        SlurmTask task = new JobArraySlurmTask(mockScm(commandExecutor), mockWd(), md5sumLargeFile(), ComputationParameters.empty(), ExecutionEnvironment.createDefault());
         task.submit();
         assertEquals(4, task.getPendingJobs().size());
     }
@@ -44,7 +44,7 @@ public class SlurmArrayJobTaskTest extends DefaultSlurmTaskTest {
     @Test
     public void testSubmit231() throws ExecutionException, InterruptedException {
         CommandExecutor commandExecutor = mock(CommandExecutor.class);
-        SlurmTask task = new SlurmArrayJobTask(mockScm(commandExecutor), mockWd(), CommandExecutionsTestFactory.longProgramInList(2, 3, 1), ComputationParameters.empty(), ExecutionEnvironment.createDefault());
+        SlurmTask task = new JobArraySlurmTask(mockScm(commandExecutor), mockWd(), CommandExecutionsTestFactory.longProgramInList(2, 3, 1), ComputationParameters.empty(), ExecutionEnvironment.createDefault());
         when(commandExecutor.execute(startsWith("sbatch")))
                 .thenReturn(simpleOutput("Submitted batch job 1"))
                 .thenReturn(simpleOutput("Submitted batch job 3"))

@@ -98,7 +98,7 @@ public class SlurmComputationManager implements ComputationManager {
         Runtime.getRuntime().addShutdownHook(shutdownThread());
 
         LOGGER.debug("init scm");
-        LOGGER.info("FlagMonitor={};ScontrolMonitor={};ArrayJob={}", config.getPollingInterval(), config.getScontrolInterval(), config.isArrayJob());
+        LOGGER.info("FlagMonitor={};ScontrolMonitor={};ArrayJob={}", config.getPollingInterval(), config.getScontrolInterval(), config.isJobArray());
     }
 
     /**
@@ -260,8 +260,8 @@ public class SlurmComputationManager implements ComputationManager {
             List<CommandExecution> commandExecutions = handler.before(remoteWorkingDir);
 
             SlurmTask slurmTask = null;
-            if (config.isArrayJob()) {
-                slurmTask = new SlurmArrayJobTask(this, remoteWorkingDirectory, commandExecutions, parameters, environment);
+            if (config.isJobArray()) {
+                slurmTask = new JobArraySlurmTask(this, remoteWorkingDirectory, commandExecutions, parameters, environment);
             } else {
                 slurmTask = new SlurmTaskImpl(this, remoteWorkingDirectory, commandExecutions, parameters, environment);
             }

@@ -28,7 +28,7 @@ public class SlurmComputationConfig {
     private static final int DEFAULT_SCONTROL_INTERVAL = 4; // "scontrol" command to check job state
     private static final int DEFAULT_PORT = 22;
     private static final boolean DEFAULT_REMOTE = true;
-    private static final boolean DEFAULT_ARRAY_JOB = true;
+    private static final boolean DEFAULT_JOB_ARRAY = true;
 
     private final String workingDir;
     private final Path localDir;
@@ -36,7 +36,7 @@ public class SlurmComputationConfig {
     // TODO change to second
     private final int scontrolInMinute;
 
-    private final boolean arrayJob;
+    private final boolean jobArray;
 
     private final SshConfig sshConfig;
 
@@ -88,25 +88,25 @@ public class SlurmComputationConfig {
      */
     // TODO uniform time units
     SlurmComputationConfig(SshConfig sshConfig, String workingDir, Path localDir, int pollingInSecond,
-                           int scontrolInMinute, boolean arrayJob) {
+                           int scontrolInMinute, boolean jobArray) {
         this.sshConfig = requireNonNull(sshConfig);
         this.workingDir = requireNonNull(workingDir);
         this.localDir = requireNonNull(localDir);
         this.pollingInSecond = pollingInSecond;
         this.scontrolInMinute = scontrolInMinute;
-        this.arrayJob = arrayJob;
+        this.jobArray = jobArray;
     }
 
     /**
      * Configuration for a local access to a Slurm infrastructure.
      */
-    SlurmComputationConfig(String workingDir, Path localDir, int pollingInSecond, int scontrolInMinute, boolean arrayJob) {
+    SlurmComputationConfig(String workingDir, Path localDir, int pollingInSecond, int scontrolInMinute, boolean jobArray) {
         this.sshConfig = null;
         this.workingDir = requireNonNull(workingDir);
         this.localDir = requireNonNull(localDir);
         this.pollingInSecond = pollingInSecond;
         this.scontrolInMinute = scontrolInMinute;
-        this.arrayJob = arrayJob;
+        this.jobArray = jobArray;
     }
 
     public static SlurmComputationConfig load() {
@@ -121,7 +121,7 @@ public class SlurmComputationConfig {
         Path localDir = config.getPathProperty("local-dir");
         int pollingInSecond = config.getIntProperty("polling-time", DEFAULT_POLLING);
         int scontrolInMinute = config.getIntProperty("scontrol-time", DEFAULT_SCONTROL_INTERVAL);
-        boolean arrayJob = config.getBooleanProperty("array-job", DEFAULT_ARRAY_JOB);
+        boolean arrayJob = config.getBooleanProperty("job-array", DEFAULT_JOB_ARRAY);
 
         if (remote) {
             String workingDir = config.getStringProperty("remote-dir");
@@ -166,8 +166,8 @@ public class SlurmComputationConfig {
         return requireNonNull(sshConfig);
     }
 
-    boolean isArrayJob() {
-        return arrayJob;
+    boolean isJobArray() {
+        return jobArray;
     }
 
 }

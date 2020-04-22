@@ -22,14 +22,14 @@ import java.util.regex.Matcher;
  *
  * @author Yichen TANG <yichen.tang at rte-france.com>
  */
-class SlurmArrayJobTask extends AbstractTask {
+class JobArraySlurmTask extends AbstractTask {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(SlurmArrayJobTask.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(JobArraySlurmTask.class);
 
     private Long firstJobId = null;
     private List<Long> ids = new ArrayList<>();
 
-    SlurmArrayJobTask(SlurmComputationManager scm, WorkingDirectory directory,
+    JobArraySlurmTask(SlurmComputationManager scm, WorkingDirectory directory,
                       List<CommandExecution> executions, ComputationParameters parameters, ExecutionEnvironment environment) {
         super(scm, directory, executions, parameters, environment);
     }
