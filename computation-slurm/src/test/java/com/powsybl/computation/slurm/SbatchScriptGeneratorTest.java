@@ -80,6 +80,20 @@ public class SbatchScriptGeneratorTest {
     }
 
     @Test
+    public void testArgsWithSpaces() {
+        List<CommandExecution> commandExecutions = CommandExecutionsTestFactory.argsWithSpaces(3);
+        CommandExecution commandExecution = commandExecutions.get(commandIdx);
+        Command command = commandExecution.getCommand();
+        List<String> shell = new SbatchScriptGenerator(flagPath).parser(command, 0, workingPath, Collections.emptyMap());
+        // not array job
+        assertEquals(ImmutableList.of("#!/bin/sh",
+                "touch \"line 1,line 2\" \"v2\"",
+                "rc=$?; if [[ $rc != 0 ]]; then touch /tmp/flags/myerror_workingPath_12345_$SLURM_JOBID; exit $rc; fi",
+                "touch /tmp/flags/mydone_workingPath_12345_$SLURM_JOBID"), shell);
+        assertCommandExecutionToShell(commandExecutions.get(0), "argsWithSpaces.batch");
+    }
+
+    @Test
     public void testSimpleCmdWithCount() {
         List<CommandExecution> commandExecutions = CommandExecutionsTestFactory.simpleCmdWithCount(3);
         CommandExecution commandExecution = commandExecutions.get(commandIdx);

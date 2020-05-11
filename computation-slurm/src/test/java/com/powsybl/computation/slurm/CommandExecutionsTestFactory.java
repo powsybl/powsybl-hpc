@@ -41,6 +41,17 @@ public final class CommandExecutionsTestFactory {
         return Collections.singletonList(commandExecution);
     }
 
+    static List<CommandExecution> argsWithSpaces(int executionCount) {
+        Command command = new SimpleCommandBuilder()
+                .id("spaces")
+                .program("touch")
+                .args(i -> Arrays.asList("line 1,line 2", "v2"))
+                .timeout(60)
+                .build();
+        CommandExecution commandExecution = new CommandExecution(command, executionCount);
+        return Collections.singletonList(commandExecution);
+    }
+
     /**
      * The 4th batch would fail.
      * @param executionCount
