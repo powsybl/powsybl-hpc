@@ -1,14 +1,14 @@
 #!/bin/sh
 case $SLURM_ARRAY_TASK_ID in
     0)
-      ARGS=("te1st0")
+      ARGS=("line 1,line 2" "v2")
     ;;
     1)
-      ARGS=("te1st1")
+      ARGS=("line 1,line 2" "v2")
     ;;
     2)
-      ARGS=("te1st2")
+      ARGS=("line 1,line 2" "v2")
     ;;
 esac
-echo "${ARGS[@]}"
+touch "${ARGS[@]}"
 rc=$?; if [[ $rc != 0 ]]; then touch /tmp/flags/myerror_workingPath_12345_$SLURM_ARRAY_JOB_ID-$SLURM_ARRAY_TASK_ID; exit $rc; fi

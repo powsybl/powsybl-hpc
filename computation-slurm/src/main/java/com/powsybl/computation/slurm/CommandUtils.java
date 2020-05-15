@@ -6,7 +6,7 @@
  */
 package com.powsybl.computation.slurm;
 
-import java.util.Collection;
+import java.util.List;
 import java.util.StringJoiner;
 import java.util.stream.Collector;
 
@@ -31,7 +31,7 @@ final class CommandUtils {
     /**
      * Generates a command string, with each argument wrapped with quotes.
      */
-    static String commandToString(String program, Collection<String> args) {
+    static String commandToString(String program, List<String> args) {
         requireNonNull(program);
         requireNonNull(args);
 
@@ -44,7 +44,7 @@ final class CommandUtils {
      * @param args
      * @return the argu's string
      */
-    static String commandArgsToString(Collection<String> args) {
+    static String commandArgsToString(List<String> args) {
         requireNonNull(args);
         return args.stream().collect(getWrapperAndJoiner());
     }

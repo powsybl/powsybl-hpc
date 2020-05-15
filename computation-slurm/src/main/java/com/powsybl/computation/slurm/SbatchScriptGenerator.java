@@ -37,6 +37,7 @@ class SbatchScriptGenerator {
     private static final String INDENTATION_6 = "      ";
     private static final String SH_CASE_BREAK = INDENTATION_4 + ";;";
     private static final String SPL_CMD_ARGS = "ARGS";
+    private static final String CALL_SPL_CMD_ARGS = " \"${ARGS[@]}\"";
     private static final String SUB_CMD_ARGS = "ARGS_";
     private static final String PRE_FILE = "PRE";
     private static final String POST_FILE = "POST";
@@ -213,7 +214,7 @@ class SbatchScriptGenerator {
                 case SIMPLE:
                     SimpleCommand simpleCmd = (SimpleCommand) command;
                     String args = CommandUtils.commandArgsToString(simpleCmd.getArgs(caseIdx));
-                    shell.add(INDENTATION_6 + SPL_CMD_ARGS + "=\"" + args + "\"");
+                    shell.add(INDENTATION_6 + SPL_CMD_ARGS + "=(" + args + ")");
                     shell.add(SH_CASE_BREAK);
                     break;
                 case GROUP:
@@ -223,7 +224,7 @@ class SbatchScriptGenerator {
                     for (int i = 0; i < subCommands.size(); i++) {
                         GroupCommand.SubCommand cmd = subCommands.get(i);
                         String argsSub = CommandUtils.commandArgsToString(cmd.getArgs(caseIdx));
-                        String de = SUB_CMD_ARGS + i + "=\"" + argsSub + "\"";
+                        String de = SUB_CMD_ARGS + i + "=(" + argsSub + ")";
                         subArgs.add(de);
                     }
                     String subArgsJoined = String.join(" ", subArgs);
@@ -293,11 +294,12 @@ class SbatchScriptGenerator {
     }
 
     private void simpleCmdWithArgs(List<String> list, SimpleCommand simpleCommand) {
-        list.add(simpleCommand.getProgram() + " $" + SPL_CMD_ARGS);
+        list.add(simpleCommand.getProgram() + CALL_SPL_CMD_ARGS);
     }
 
     private void subCmdWithArgs(List<String> list, GroupCommand.SubCommand subCommand, int idxInGroup) {
-        list.add(subCommand.getProgram() + " $" + SUB_CMD_ARGS + idxInGroup);
+        // cmd "${ARGS_1{[@]}"
+        list.add(subCommand.getProgram() + " \"${ARGS_" + idxInGroup + "[@]}\"");
     }
 
 }
