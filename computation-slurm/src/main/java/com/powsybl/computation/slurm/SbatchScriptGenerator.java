@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
 
 /**
  * Generates the content of the sbatch script, to be submitted using and {@link SbatchCmd}.
@@ -42,6 +43,9 @@ class SbatchScriptGenerator {
     private static final String PRE_FILE = "PRE";
     private static final String POST_FILE = "POST";
 
+    private static final Function<String, String> WRAP_FILENAME = str -> "'" + str + "'";
+    private static final Function<String, String> VAR2ARG = str -> "\"$" + str + "\"";
+
     private final Path flagDir;
 
     SbatchScriptGenerator(Path flagDir) {
@@ -54,7 +58,7 @@ class SbatchScriptGenerator {
         command.getInputFiles()
                 .stream().filter(inputFile -> !inputFile.dependsOnExecutionNumber()) // common
                 .filter(inputFile -> inputFile.getPreProcessor() != null) // to unzip
-                .forEach(inputFile -> addUnzip(shell, inputFile.getName(0), inputFile.getPreProcessor()));
+                .forEach(inputFile -> addUnzipFilename(shell, inputFile.getName(0), inputFile.getPreProcessor()));
         return shell;
     }
 
@@ -99,7 +103,7 @@ class SbatchScriptGenerator {
     private void preProcess(List<String> list, Command command, int executionIndex) {
         command.getInputFiles().stream()
                 .filter(InputFile::dependsOnExecutionNumber)
-                .forEach(file -> addUnzip(list, file.getName(executionIndex), file.getPreProcessor()));
+                .forEach(file -> addUnzipFilename(list, file.getName(executionIndex), file.getPreProcessor()));
     }
 
     private void preProcess(List<String> shell, Command command) {
@@ -110,19 +114,29 @@ class SbatchScriptGenerator {
                 // skip because this file is already unzip in a previous batch
                 continue;
             }
-            addUnzip(shell, "$" + PRE_FILE + i, inputFile.getPreProcessor());
+            addUnzipVariable(shell, PRE_FILE + i, inputFile.getPreProcessor());
         }
     }
 
-    private static void addUnzip(List<String> shell, String filename, FilePreProcessor preProcessor) {
+    // used in batch mode
+    private static void addUnzipFilename(List<String> shell, String filename, FilePreProcessor preProcessor) {
+        addUnzipCmd(shell, WRAP_FILENAME.apply(filename), preProcessor);
+    }
+
+    // used in array mode
+    private static void addUnzipVariable(List<String> shell, String variableName, FilePreProcessor preProcessor) {
+        addUnzipCmd(shell, VAR2ARG.apply(variableName), preProcessor);
+    }
+
+    private static void addUnzipCmd(List<String> shell, String unzipArg, FilePreProcessor preProcessor) {
         switch (preProcessor) {
             case FILE_GUNZIP:
                 // gunzip the file
-                shell.add(SH_GUNZIP + filename);
+                shell.add(SH_GUNZIP + unzipArg);
                 break;
             case ARCHIVE_UNZIP:
                 // extract the archive
-                shell.add(SH_UNZIP + filename);
+                shell.add(SH_UNZIP + unzipArg);
                 break;
             default:
                 throw new AssertionError("Unexpected FilePreProcessor value: " + preProcessor);
@@ -171,7 +185,7 @@ class SbatchScriptGenerator {
             fileName = file.getName(executionIndex);
             if (postProcessor != null) {
                 if (postProcessor == FilePostProcessor.FILE_GZIP) {
-                    list.add(SH_GZIP + fileName);
+                    list.add(SH_GZIP + WRAP_FILENAME.apply(fileName));
                 } else {
                     throw new AssertionError("Unexpected postProcessor type value: " + postProcessor);
                 }
@@ -184,15 +198,15 @@ class SbatchScriptGenerator {
         for (int i = 0; i < outputFiles.size(); i++) {
             OutputFile outputFile = outputFiles.get(i);
             FilePostProcessor postProcessor = outputFile.getPostProcessor();
-            addGzip(shell, "$" + POST_FILE + i, postProcessor);
+            addGzipVariable(shell, POST_FILE + i, postProcessor);
             // TODO add touch my error for gzip command??
         }
     }
 
-    private static void addGzip(List<String> shell, String fileName, FilePostProcessor postProcessor) {
+    private static void addGzipVariable(List<String> shell, String variableName, FilePostProcessor postProcessor) {
         if (postProcessor != null) {
             if (postProcessor == FilePostProcessor.FILE_GZIP) {
-                shell.add(SH_GZIP + fileName);
+                shell.add(SH_GZIP + VAR2ARG.apply(variableName));
             } else {
                 throw new AssertionError("Unexpected postProcessor type value: " + postProcessor);
             }
@@ -248,7 +262,7 @@ class SbatchScriptGenerator {
                 // skip because this file is already unzip in a previous batch
                 continue;
             }
-            ins.add(PRE_FILE + i + "=" + inputFile.getName(caseIdx));
+            ins.add(PRE_FILE + i + "=" + WRAP_FILENAME.apply(inputFile.getName(caseIdx)));
         }
         if (ins.isEmpty()) {
             return;
@@ -264,7 +278,7 @@ class SbatchScriptGenerator {
             if (!outputFile.dependsOnExecutionNumber() || outputFile.getPostProcessor() == null) {
                 continue;
             }
-            outs.add(POST_FILE + i + "=" + outputFile.getName(caseIdx));
+            outs.add(POST_FILE + i + "=" + WRAP_FILENAME.apply(outputFile.getName(caseIdx)));
         }
         if (outs.isEmpty()) {
             return;
