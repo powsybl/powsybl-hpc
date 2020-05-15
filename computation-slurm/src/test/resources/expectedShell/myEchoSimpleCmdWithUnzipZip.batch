@@ -3,20 +3,20 @@ case $SLURM_ARRAY_TASK_ID in
     0)
       PRE0=in0.zip
       POST0=out0
-      ARGS=""in0" "out0""
+      ARGS=("in0" "out0")
     ;;
     1)
       PRE0=in1.zip
       POST0=out1
-      ARGS=""in1" "out1""
+      ARGS=("in1" "out1")
     ;;
     2)
       PRE0=in2.zip
       POST0=out2
-      ARGS=""in2" "out2""
+      ARGS=("in2" "out2")
     ;;
 esac
 unzip -o -q $PRE0
-/home/dev-itesla/myapps/myecho.sh $ARGS
+/home/dev-itesla/myapps/myecho.sh "${ARGS[@]}"
 rc=$?; if [[ $rc != 0 ]]; then touch /tmp/flags/myerror_workingPath_12345_$SLURM_ARRAY_JOB_ID-$SLURM_ARRAY_TASK_ID; exit $rc; fi
 gzip $POST0

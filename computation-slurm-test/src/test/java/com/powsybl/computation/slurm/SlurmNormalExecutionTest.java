@@ -132,6 +132,27 @@ public class SlurmNormalExecutionTest extends AbstractIntegrationTests {
     }
 
     @Test
+    public void testArgsWithSpace() {
+        Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractReturnOKExecutionHandler() {
+            @Override
+            public List<CommandExecution> before(Path workingDir) {
+                return CommandExecutionsTestFactory.argsWithSpaces(3);
+            }
+
+            @Override
+            public String after(Path workingDir, ExecutionReport report) throws IOException {
+                if (Files.exists(workingDir.resolve("line 1,line 2")) && Files.exists(workingDir.resolve("v2"))) {
+                    return super.after(workingDir, report);
+                } else {
+                    failed = true;
+                    return "KO";
+                }
+            }
+        };
+        baseTest(supplier);
+    }
+
+    @Test
     public void testTwoSimpleCmd() {
         Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractReturnOKExecutionHandler() {
             @Override
