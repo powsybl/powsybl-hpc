@@ -121,6 +121,31 @@ public class SlurmNormalExecutionTest extends AbstractIntegrationTests {
     }
 
     @Test
+    public void testFilesWithSpaces() {
+        Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractExecutionHandler<String>() {
+            @Override
+            public List<CommandExecution> before(Path workingDir) {
+                generateZipFileOnRemote("in 0", workingDir.resolve("in 0.zip"));
+                generateZipFileOnRemote("in 1", workingDir.resolve("in 1.zip"));
+                generateZipFileOnRemote("in 2", workingDir.resolve("in 2.zip"));
+                return CommandExecutionsTestFactory.testFilesWithSpaces(3);
+            }
+
+            @Override
+            public String after(Path workingDir, ExecutionReport report) throws IOException {
+                super.after(workingDir, report);
+                Path out2 = workingDir.resolve("out 2.gz");
+                System.out.println("out 2.gz should exists, actual exists:" + Files.exists(out2));
+                if (Files.exists(out2)) {
+                    return "OK";
+                }
+                return "KO";
+            }
+        };
+        baseTest(supplier);
+    }
+
+    @Test
     public void testGroupCmd() {
         Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractReturnOKExecutionHandler() {
             @Override

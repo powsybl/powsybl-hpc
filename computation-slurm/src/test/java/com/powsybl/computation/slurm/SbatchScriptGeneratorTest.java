@@ -114,10 +114,10 @@ public class SbatchScriptGeneratorTest {
         Command command = commandExecution.getCommand();
         List<String> shell = new SbatchScriptGenerator(flagPath).parser(command, 0, workingPath, Collections.emptyMap());
         assertEquals(ImmutableList.of("#!/bin/sh",
-                "unzip -o -q in0.zip",
+                "unzip -o -q 'in0.zip'",
                 "/home/dev-itesla/myapps/myecho.sh \"in0\" \"out0\"",
                 "rc=$?; if [[ $rc != 0 ]]; then touch /tmp/flags/myerror_workingPath_12345_$SLURM_JOBID; exit $rc; fi",
-                "gzip out0",
+                "gzip 'out0'",
                 "touch /tmp/flags/mydone_workingPath_12345_$SLURM_JOBID"), shell);
 
         assertCommandExecutionToShell(commandExecutions.get(0), "myEchoSimpleCmdWithUnzipZip.batch");
@@ -134,10 +134,10 @@ public class SbatchScriptGeneratorTest {
     private static List<String> expectedTestCommandFilesBatch() {
         List<String> shell = new ArrayList<>();
         shell.add("#!/bin/sh");
-        shell.add("unzip -o -q in2.zip");
+        shell.add("unzip -o -q 'in2.zip'");
         shell.add("/home/dev-itesla/myapps/myecho.sh \"in2\" \"out2\"");
         shell.add("rc=$?; if [[ $rc != 0 ]]; then touch /tmp/flags/myerror_workingPath_12345_$SLURM_JOBID; exit $rc; fi");
-        shell.add("gzip tozip2");
+        shell.add("gzip 'tozip2'");
         shell.add("touch /tmp/flags/mydone_workingPath_12345_$SLURM_JOBID");
         return shell;
     }
@@ -153,7 +153,7 @@ public class SbatchScriptGeneratorTest {
     private static List<String> expectedtestOnlyUnzipBatch() {
         List<String> shell = new ArrayList<>();
         shell.add("#!/bin/sh");
-        shell.add("unzip -o -q foo.zip");
+        shell.add("unzip -o -q 'foo.zip'");
         return shell;
     }
 
