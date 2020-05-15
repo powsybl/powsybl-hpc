@@ -69,6 +69,18 @@ public final class CommandExecutionsTestFactory {
         return Collections.singletonList(commandExecution);
     }
 
+    static List<CommandExecution> testFilesWithSpaces(int executionCount) {
+        Command command = new SimpleCommandBuilder()
+                .id("rename")
+                .program("mv")
+                .inputFiles(new InputFile(integer -> "in " + integer + ".zip", FilePreProcessor.ARCHIVE_UNZIP))
+                .outputFiles(new OutputFile(integer -> "out " + integer, FilePostProcessor.FILE_GZIP))
+                .args(i -> Arrays.asList("in " + i, "out " + i))
+                .build();
+        CommandExecution commandExecution = new CommandExecution(command, executionCount);
+        return Collections.singletonList(commandExecution);
+    }
+
     static List<CommandExecution> commandFiles(int executionCount) {
         InputFile stringInput = new InputFile("foo.zip", FilePreProcessor.ARCHIVE_UNZIP);
         InputFile functionsInput = new InputFile(integer -> "in" + integer + ".zip", FilePreProcessor.ARCHIVE_UNZIP);
