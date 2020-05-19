@@ -189,6 +189,8 @@ public abstract class AbstractTask implements SlurmTask {
         private final boolean completionRequired;
         private boolean interrupted = false;
 
+        private int counter = 1;
+
         CompletableMonitoredJob(long jobId) {
             this(jobId, true);
         }
@@ -201,6 +203,10 @@ public abstract class AbstractTask implements SlurmTask {
             this.jobId = jobId;
             this.completed = new CompletableFuture<>();
             this.completionRequired = completionRequired;
+        }
+
+        public void setCounter(int counter) {
+            this.counter = counter;
         }
 
         boolean isCompleted() {
@@ -228,8 +234,13 @@ public abstract class AbstractTask implements SlurmTask {
          */
         @Override
         public void done() {
-            LOGGER.debug("Slurm job {} done.", jobId);
-            completed.complete(null);
+            counter--;
+            if (counter == 0) {
+                LOGGER.debug("Slurm job {} done.", jobId);
+                completed.complete(null);
+            } else {
+                LOGGER.debug("Slurm array job {} done. Rest: {}", jobId, counter);
+            }
         }
 
         /**

@@ -180,7 +180,7 @@ public class SbatchScriptGeneratorTest {
 
     private void assertCommandExecutionToShell(CommandExecution commandExecution, String expected) {
         SbatchScriptGenerator shellGenerator = new SbatchScriptGenerator(flagPath);
-        List<String> shell = shellGenerator.parser(commandExecution, workingPath, Collections.emptyMap(), false);
+        List<String> shell = shellGenerator.parser(commandExecution, workingPath, Collections.emptyMap(), true);
         List<String> expectedShell = null;
         try {
             expectedShell = Files.readAllLines(Paths.get(this.getClass().getResource("/expectedShell/" + expected).toURI()), StandardCharsets.UTF_8);
