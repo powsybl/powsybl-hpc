@@ -33,6 +33,7 @@ class SbatchScriptGenerator {
     private static final String CHECK_EXITCODE = "rc=$?; if [[ $rc != 0 ]]; then touch %s/myerror_%s_$SLURM_JOBID; exit $rc; fi";
     private static final String CHECK_EXITCODE_ARRAY = "rc=$?; if [[ $rc != 0 ]]; then touch %s/myerror_%s_$SLURM_ARRAY_JOB_ID-$SLURM_ARRAY_TASK_ID; exit $rc; fi";
     private static final String TOUCH_MYDONE = "touch %s/mydone_%s_$SLURM_JOBID";
+    private static final String TOUCH_MYDONE_ARRAY = "touch %s/mydone_%s_$SLURM_ARRAY_JOB_ID-$SLURM_ARRAY_TASK_ID";
 
     private static final String INDENTATION_4 = "    ";
     private static final String INDENTATION_6 = "      ";
@@ -94,7 +95,7 @@ class SbatchScriptGenerator {
         cmd(shell, commandExecution.getCommand(), workingDir);
         postProcess(shell, commandExecution.getCommand());
         if (touchMydone) {
-            touchMydone(shell, workingDir);
+            touchMydoneArray(shell, workingDir);
         }
         return shell;
     }
@@ -215,6 +216,10 @@ class SbatchScriptGenerator {
 
     private void touchMydone(List<String> list, Path workingDir) {
         list.add(String.format(TOUCH_MYDONE, flagDir.toAbsolutePath(), workingDir.getFileName()));
+    }
+
+    private void touchMydoneArray(List<String> list, Path workingDir) {
+        list.add(String.format(TOUCH_MYDONE_ARRAY, flagDir.toAbsolutePath(), workingDir.getFileName()));
     }
 
     private void arrayJobCase(List<String> shell, CommandExecution commandExecution) {

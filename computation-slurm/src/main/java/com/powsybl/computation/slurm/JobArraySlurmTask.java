@@ -77,7 +77,9 @@ class JobArraySlurmTask extends AbstractTask {
                 LOGGER.debug("First jobId : {}", firstJobId);
             }
             ids.add(prejobId);
-            jobs.add(new CompletableMonitoredJob(prejobId, isLast));
+            CompletableMonitoredJob completableMonitoredJob = new CompletableMonitoredJob(prejobId, isLast);
+            completableMonitoredJob.setCounter(commandExecution.getExecutionCount());
+            jobs.add(completableMonitoredJob);
             commandByJobId.put(prejobId, command);
         }
 

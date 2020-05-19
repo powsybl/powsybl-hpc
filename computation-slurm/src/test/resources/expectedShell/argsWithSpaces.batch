@@ -12,3 +12,4 @@ case $SLURM_ARRAY_TASK_ID in
 esac
 touch "${ARGS[@]}"
 rc=$?; if [[ $rc != 0 ]]; then touch /tmp/flags/myerror_workingPath_12345_$SLURM_ARRAY_JOB_ID-$SLURM_ARRAY_TASK_ID; exit $rc; fi
+touch /tmp/flags/mydone_workingPath_12345_$SLURM_ARRAY_JOB_ID-$SLURM_ARRAY_TASK_ID
