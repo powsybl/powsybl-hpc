@@ -56,7 +56,7 @@ public class ScontrolMonitor extends AbstractSlurmJobMonitor {
                 ScontrolCmd scontrolCmd = ScontrolCmdFactory.showJob(id);
                 try {
                     ScontrolCmd.ScontrolResult scontrolResult = scontrolCmd.send(commandRunner);
-                    SlurmConstants.JobState jobState = scontrolResult.getJobState();
+                    SlurmConstants.JobState jobState = scontrolResult.getResult().getJobState();
                     boolean anormal = false;
                     switch (jobState) {
                         case RUNNING:

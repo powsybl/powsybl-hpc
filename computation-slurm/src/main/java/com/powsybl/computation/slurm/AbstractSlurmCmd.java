@@ -6,6 +6,9 @@
  */
 package com.powsybl.computation.slurm;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Objects;
 
 /**
@@ -13,11 +16,14 @@ import java.util.Objects;
  */
 abstract class AbstractSlurmCmd<T> {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(AbstractSlurmCmd.class);
+
     abstract T send(CommandExecutor commandExecutor) throws SlurmCmdNonZeroException;
 
     CommandResult sendCmd(CommandExecutor commandExecutor, String cmd) throws SlurmCmdNonZeroException {
         Objects.requireNonNull(commandExecutor);
         Objects.requireNonNull(cmd);
+        LOGGER.debug("Sending cmd:" + cmd);
         CommandResult result = commandExecutor.execute(cmd);
         if (result.getExitCode() != 0) {
             throw new SlurmCmdNonZeroException(result);

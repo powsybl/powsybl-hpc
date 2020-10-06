@@ -6,6 +6,10 @@
  */
 package com.powsybl.computation.slurm;
 
+import org.apache.commons.lang3.StringUtils;
+
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -33,6 +37,35 @@ class ScontrolCmd extends AbstractSlurmCmd<ScontrolCmd.ScontrolResult> {
 
     class ScontrolResult extends AbstractSlurmCmdResult {
 
+        private List<ScontrolResultBean> resultBeanList = new ArrayList<>();
+
+        ScontrolResult(CommandResult commandResult) {
+            super(commandResult);
+            parse();
+        }
+
+        private void parse() {
+            final String stdOut = commandResult.getStdOut();
+            final String[] blocks = stdOut.split("\\n\\n");
+            for (String block : blocks) {
+                if (!StringUtils.isEmpty(block)) {
+                    resultBeanList.add(new ScontrolResultBean(block));
+                }
+            }
+        }
+
+        public ScontrolResultBean getResult() {
+            return resultBeanList.get(0);
+        }
+
+        public List<ScontrolResultBean> getResultBeanList() {
+            return resultBeanList;
+        }
+    }
+
+    class ScontrolResultBean {
+
+        private final String block;
         long jobId;
         String jobName;
         String userId;
@@ -40,10 +73,11 @@ class ScontrolCmd extends AbstractSlurmCmd<ScontrolCmd.ScontrolResult> {
         String qos;
         SlurmConstants.JobState jobState;
         String dependency;
-        String exitCode;
+        int exitCode;
+        int arrayTaskId;
 
-        ScontrolResult(CommandResult commandResult) {
-            super(commandResult);
+        ScontrolResultBean(String block) {
+            this.block = Objects.requireNonNull(block);
             parse();
         }
 
@@ -75,8 +109,12 @@ class ScontrolCmd extends AbstractSlurmCmd<ScontrolCmd.ScontrolResult> {
             return dependency;
         }
 
-        public String getExitCode() {
+        public int getExitCode() {
             return exitCode;
+        }
+
+        public int getArrayTaskId() {
+            return arrayTaskId;
         }
 
         private void parse() {
@@ -90,8 +128,7 @@ class ScontrolCmd extends AbstractSlurmCmd<ScontrolCmd.ScontrolResult> {
         }
 
         private void parseShowJob() {
-            String stdOut = commandResult.getStdOut();
-            String[] split = stdOut.split("\\s+");
+            String[] split = block.split("\\s+");
             // do this way because not sure the order and other fields configured by slurm
             for (String s : split) {
                 if (s.startsWith(USERID)) {
@@ -102,6 +139,11 @@ class ScontrolCmd extends AbstractSlurmCmd<ScontrolCmd.ScontrolResult> {
                     jobId = Long.parseLong(s.substring(JOBID_LENGTH));
                 } else if (s.startsWith(JOBSTATE)) {
                     jobState = SlurmConstants.JobState.valueOf(s.substring(JOBSTATE_LENGTH));
+                } else if (s.startsWith(EXITCODE)) {
+                    final String str = s.substring(EXITCODE_LENGTH);
+                    exitCode = Integer.parseInt(str.substring(0, str.indexOf(":")));
+                } else if (s.startsWith(ARRAY_TASK_ID)) {
+                    arrayTaskId = Integer.parseInt(s.substring(ARRAY_TASK_ID_LENGTH));
                 }
             }
         }
@@ -139,8 +181,10 @@ class ScontrolCmd extends AbstractSlurmCmd<ScontrolCmd.ScontrolResult> {
     // private static final int BATCHFLAG_LENGTH = 10;
     // private static final String REBOOT = "Reboot=";
     // private static final int REBOOT_LENGTH = 7;
-    // private static final String EXITCODE = "ExitCode=";
-    // private static final int EXITCODE_LENGTH = 9;
+    private static final String EXITCODE = "ExitCode=";
+    private static final int EXITCODE_LENGTH = 9;
+    private static final String ARRAY_TASK_ID = "ArrayTaskId=";
+    private static final int ARRAY_TASK_ID_LENGTH = 12;
     // private static final String RUNTIME = "RunTime=";
     // private static final int RUNTIME_LENGTH = 8;
     // private static final String TIMELIMIT = "TimeLimit=";

@@ -13,7 +13,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.regex.Matcher;
 
 /**
  *
@@ -92,22 +91,8 @@ class JobArraySlurmTask extends AbstractTask {
     }
 
     @Override
-    ExecutionError convertNonZeroSacctLine2Error(String line) {
-        Matcher m = DIGITAL_PATTERN.matcher(line);
-        m.find();
-        long jobId = Long.parseLong(m.group());
-        if (line.contains("_")) {
-            m.find();
-            int executionIdx = Integer.parseInt(m.group());
-            m.find();
-            int exitCode = Integer.parseInt(m.group());
-            return new ExecutionError(commandByJobId.get(jobId), executionIdx, exitCode);
-        } else {
-            // not array job
-            m.find();
-            int exitCode = Integer.parseInt(m.group());
-            return new ExecutionError(commandByJobId.get(jobId), 0, exitCode);
-        }
+    ExecutionError convertScontrolResult2Error(ScontrolCmd.ScontrolResultBean scontrolResultBean) {
+        return new ExecutionError(commandByJobId.get(scontrolResultBean.getJobId()), scontrolResultBean.getArrayTaskId(), scontrolResultBean.getExitCode());
     }
 
     private String prepareBatch(CommandExecution commandExecution, boolean isLastCommandExecution) throws IOException {

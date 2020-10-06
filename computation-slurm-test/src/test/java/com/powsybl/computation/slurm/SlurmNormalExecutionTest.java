@@ -64,7 +64,7 @@ public class SlurmNormalExecutionTest extends AbstractIntegrationTests {
         Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractReturnOKExecutionHandler() {
             @Override
             public List<CommandExecution> before(Path path) {
-                return simpleCmdWithCount(7);
+                return simpleCmdWithCount(2);
             }
         };
         baseTest(supplier);
@@ -183,6 +183,17 @@ public class SlurmNormalExecutionTest extends AbstractIntegrationTests {
             @Override
             public List<CommandExecution> before(Path workingDir) {
                 return CommandExecutionsTestFactory.twoSimpleCmd();
+            }
+        };
+        baseTest(supplier);
+    }
+
+    @Test
+    public void testFoo() {
+        Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractReturnOKExecutionHandler() {
+            @Override
+            public List<CommandExecution> before(Path workingDir) {
+                return CommandExecutionsTestFactory.mixedPrograms();
             }
         };
         baseTest(supplier);

@@ -57,7 +57,9 @@ public class JobArraySlurmTaskTest extends DefaultSlurmTaskTest {
             fail();
         }
 
-        when(commandExecutor.execute(startsWith("sacct"))).thenReturn(simpleOutput("3_1  127:0"));
+        when(commandExecutor.execute(startsWith("scontrol show job 1"))).thenReturn(simpleOutput("JobId=1 0:0"));
+        when(commandExecutor.execute(startsWith("scontrol show job 3"))).thenReturn(simpleOutput("JobId=3 ArrayTaskId=1 ExitCode=127:0"));
+        when(commandExecutor.execute(startsWith("scontrol show job 6"))).thenReturn(simpleOutput("JobId=6 0:0"));
         getPendingJob(task, 3).failed();
         SlurmExecutionReport report = task.await();
         assertEquals(1, report.getErrors().size());

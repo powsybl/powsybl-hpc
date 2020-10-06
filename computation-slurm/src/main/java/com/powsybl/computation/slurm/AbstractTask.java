@@ -8,7 +8,6 @@ package com.powsybl.computation.slurm;
 
 import com.powsybl.commons.io.WorkingDirectory;
 import com.powsybl.computation.*;
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -81,7 +80,7 @@ public abstract class AbstractTask implements SlurmTask {
         try {
             SbatchCmdResult sbatchResult = cmd.send(commandExecutor);
             long submittedJobId = sbatchResult.getSubmittedJobId();
-            LOGGER.debug("Submitted: {}, with jobId:{}", cmd, submittedJobId);
+            LOGGER.debug("Submitted with jobId:{}", submittedJobId);
             return submittedJobId;
         } catch (SlurmCmdNonZeroException e) {
             throw new SlurmException(e);
@@ -133,23 +132,26 @@ public abstract class AbstractTask implements SlurmTask {
 
     SlurmExecutionReport generateReport() {
         List<ExecutionError> errors = new ArrayList<>();
-        String jobIdsStr = StringUtils.join(getAllJobIds(), ",");
-        String sacct = String.format(SACCT_NONZERO_JOB, jobIdsStr);
-        LOGGER.debug("{}", sacct);
-        CommandResult sacctResult = commandExecutor.execute(sacct);
-        String sacctOutput = sacctResult.getStdOut();
-        if (sacctOutput.length() > 0) {
-            String[] lines = sacctOutput.split("\n");
-            for (String line : lines) {
-                errors.add(convertNonZeroSacctLine2Error(line));
+        try {
+            for (Long id : getAllJobIds()) {
+                final ScontrolCmd.ScontrolResult scontrolResult = ScontrolCmdFactory.showJob(id).send(commandExecutor);
+                for (ScontrolCmd.ScontrolResultBean bean : scontrolResult.getResultBeanList()) {
+                    if (bean.getExitCode() != 0) {
+                        final ExecutionError error = convertScontrolResult2Error(bean);
+                        errors.add(error);
+                        LOGGER.debug("{} error added ", error);
+                    }
+                }
             }
+        } catch (SlurmCmdNonZeroException e) {
+            LOGGER.warn("Scontrol non zero:", e);
         }
         return new SlurmExecutionReport(errors, workingDir);
     }
 
     abstract Collection<Long> getAllJobIds();
 
-    abstract ExecutionError convertNonZeroSacctLine2Error(String line);
+    abstract ExecutionError convertScontrolResult2Error(ScontrolCmd.ScontrolResultBean scontrolResultBean);
 
     /**
      * The list of jobs for which status must be monitored.
