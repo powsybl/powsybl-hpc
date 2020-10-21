@@ -71,6 +71,7 @@ public class ScontrolMonitor extends AbstractSlurmJobMonitor {
                             job.interrupted();
                             LOGGER.info(msg);
                             break;
+                        case COMPLETING:
                         case COMPLETED:
                             // this monitor found task finished before flagDirMonitor
                             // maybe store it and recheck in next run()

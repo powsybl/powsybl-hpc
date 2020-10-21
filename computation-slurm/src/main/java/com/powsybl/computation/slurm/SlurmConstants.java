@@ -22,6 +22,7 @@ final class SlurmConstants {
         TIMEOUT,
         DEADLINE,
         CANCELLED,
+        COMPLETING,
         COMPLETED
     }
 
