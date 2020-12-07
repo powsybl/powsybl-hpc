@@ -104,10 +104,10 @@ public class SlurmComputationManagerTest {
         ExecutorService executorService = mock(ExecutorService.class);
         CommandExecutor runner = mock(CommandExecutor.class);
         when(runner.execute(anyString())).thenReturn(emptyResult());
-        when(runner.execute(eq("sacct --help"))).thenReturn(new CommandResult(42, "not found", "error"));
+        when(runner.execute(eq("squeue --help"))).thenReturn(new CommandResult(42, "not found", "error"));
         Assertions.assertThatThrownBy(() -> new SlurmComputationManager(config, executorService, runner, fileSystem, localDir))
                 .isInstanceOf(SlurmException.class)
-                .hasMessage("Slurm is not installed. 'sacct --help' failed with code 42");
+                .hasMessage("Slurm is not installed. 'squeue --help' failed with code 42");
     }
 
     @Before

@@ -16,11 +16,13 @@ final class SlurmConstants {
     static final String BATCH_EXT = ".batch";
 
     enum JobState {
+        FAILED,
         PENDING,
         RUNNING,
         TIMEOUT,
         DEADLINE,
         CANCELLED,
+        COMPLETING,
         COMPLETED
     }
 

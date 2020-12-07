@@ -13,7 +13,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -124,12 +123,9 @@ public class SlurmTaskImpl extends AbstractTask {
     }
 
     @Override
-    ExecutionError convertNonZeroSacctLine2Error(String line) {
-        Matcher m = DIGITAL_PATTERN.matcher(line);
-        m.find();
-        long jobId = Long.parseLong(m.group());
-        m.find();
-        int exitCode = Integer.parseInt(m.group());
+    ExecutionError convertScontrolResult2Error(ScontrolCmd.ScontrolResultBean scontrolResultBean) {
+        long jobId = scontrolResultBean.getJobId();
+        int exitCode = scontrolResultBean.getExitCode();
         long mid = jobId;
         int executionIdx = 0;
         if (!commandByJobId.containsKey(jobId)) {

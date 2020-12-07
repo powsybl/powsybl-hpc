@@ -128,7 +128,7 @@ public class SlurmComputationManager implements ComputationManager {
     }
 
     private void checkSlurmInstall() {
-        for (String program : new String[]{"squeue", "sinfo", "srun", "sbatch", "scontrol", "sacct"}) {
+        for (String program : new String[]{"squeue", "sinfo", "srun", "sbatch", "scontrol"}) {
             int exitCode = commandRunner.execute(program + " --help").getExitCode();
             if (exitCode != 0) {
                 throw new SlurmException("Slurm is not installed. '" + program + " --help' failed with code " + exitCode);

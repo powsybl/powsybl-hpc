@@ -111,7 +111,7 @@ public class SlurmTaskTest {
             fail();
         }
 
-        when(commandExecutor.execute(startsWith("sacct"))).thenReturn(CommandResultTestFactory.simpleOutput("1 127:0"));
+        when(commandExecutor.execute(startsWith("scontrol"))).thenReturn(CommandResultTestFactory.simpleOutput("JobId=1\n ExitCode=127:0"));
         SlurmExecutionReport report = task.generateReport();
         assertFalse(report.getErrors().isEmpty());
         ExecutionError executionError = report.getErrors().get(0);
