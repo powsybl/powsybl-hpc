@@ -13,6 +13,7 @@ import com.powsybl.commons.io.WorkingDirectory;
 import com.powsybl.computation.ComputationParameters;
 import com.powsybl.computation.ExecutionEnvironment;
 import com.powsybl.computation.ExecutionError;
+import com.powsybl.computation.ExecutionReport;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -21,14 +22,14 @@ import java.io.IOException;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static com.powsybl.computation.slurm.CommandResultTestFactory.simpleOutput;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 import static org.mockito.Matchers.startsWith;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -112,7 +113,7 @@ public class SlurmTaskTest {
         }
 
         when(commandExecutor.execute(startsWith("scontrol"))).thenReturn(CommandResultTestFactory.simpleOutput("JobId=1\n ExitCode=127:0"));
-        SlurmExecutionReport report = task.generateReport();
+        ExecutionReport report = task.generateReport();
         assertFalse(report.getErrors().isEmpty());
         ExecutionError executionError = report.getErrors().get(0);
         assertEquals("tLP", executionError.getCommand().getId());

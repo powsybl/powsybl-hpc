@@ -12,12 +12,12 @@ import com.powsybl.computation.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nonnull;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.nio.file.Path;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.*;
@@ -109,13 +109,13 @@ public class MpiComputationManager implements ComputationManager {
             }
 
             @Override
-            public void write(byte[] b) throws IOException {
+            public void write(@Nonnull byte[] b) throws IOException {
                 buffer.write(b);
                 checkSize(false);
             }
 
             @Override
-            public void write(byte[] b, int off, int len) {
+            public void write(@Nonnull byte[] b, int off, int len) {
                 buffer.write(b, off, len);
                 checkSize(false);
             }
@@ -232,7 +232,7 @@ public class MpiComputationManager implements ComputationManager {
                 return ctxt;
             });
         } else {
-            ctxt.report = new DefaultExecutionReport(Collections.emptyList());
+            ctxt.report = new DefaultExecutionReport(ctxt.workingDir.toPath());
             return CompletableFuture.completedFuture(ctxt);
         }
     }

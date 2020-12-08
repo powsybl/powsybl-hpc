@@ -9,6 +9,7 @@ package com.powsybl.computation.slurm;
 import com.powsybl.computation.ComputationParameters;
 import com.powsybl.computation.ExecutionEnvironment;
 import com.powsybl.computation.ExecutionError;
+import com.powsybl.computation.ExecutionReport;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -61,7 +62,7 @@ public class JobArraySlurmTaskTest extends DefaultSlurmTaskTest {
         when(commandExecutor.execute(startsWith("scontrol show job 3"))).thenReturn(simpleOutput("JobId=3 ArrayTaskId=1 ExitCode=127:0"));
         when(commandExecutor.execute(startsWith("scontrol show job 6"))).thenReturn(simpleOutput("JobId=6 0:0"));
         getPendingJob(task, 3).failed();
-        SlurmExecutionReport report = task.await();
+        ExecutionReport report = task.await();
         assertEquals(1, report.getErrors().size());
         ExecutionError error = report.getErrors().get(0);
         assertEquals("tLP2", error.getCommand().getId());

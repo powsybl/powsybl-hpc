@@ -9,6 +9,8 @@ package com.powsybl.computation.slurm;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 import com.powsybl.computation.Command;
+import com.powsybl.computation.DefaultExecutionReport;
+import com.powsybl.computation.ExecutionReport;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -17,7 +19,7 @@ import java.io.*;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Optional;
 
 import static org.junit.Assert.*;
@@ -47,7 +49,7 @@ public class SlurmExecutionReportTest {
 
     @Test
     public void test() {
-        SlurmExecutionReport sut = new SlurmExecutionReport(new ArrayList<>(), workingDir);
+        ExecutionReport sut = new DefaultExecutionReport(workingDir, Collections.emptyList());
         Command command = mock(Command.class);
         when(command.getId()).thenReturn("cmdId");
         write();

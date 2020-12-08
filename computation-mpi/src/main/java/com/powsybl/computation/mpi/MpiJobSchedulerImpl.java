@@ -7,7 +7,6 @@
 package com.powsybl.computation.mpi;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.io.ByteStreams;
 import com.google.protobuf.ByteString;
 import com.powsybl.commons.PowsyblException;
 import com.powsybl.computation.*;
@@ -20,12 +19,8 @@ import org.slf4j.LoggerFactory;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.URI;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.nio.file.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -513,9 +508,8 @@ class MpiJobSchedulerImpl implements MpiJobScheduler {
                         try (FileSystem archiveFileSystem = FileSystems.newFileSystem(URI.create("jar:file:" + stdOutArchive.toUri().getPath()), ZIP_FS_ENV)) {
                             Path dir = archiveFileSystem.getPath("/").resolve("job-" + job.getId());
                             Files.createDirectories(dir);
-                            try (InputStream is = outputFile.getData().newInput();
-                                 OutputStream os = Files.newOutputStream(dir.resolve(outputFile.getName()))) {
-                                ByteStreams.copy(is, os);
+                            try (InputStream is = outputFile.getData().newInput()) {
+                                Files.copy(is, dir.resolve(outputFile.getName()), StandardCopyOption.REPLACE_EXISTING);
                             }
                         }
                     }
@@ -554,21 +548,19 @@ class MpiJobSchedulerImpl implements MpiJobScheduler {
     private void copyFileToWorkingDirectory(Messages.TaskResult.OutputFile outputFile, MpiJob job, String stdOutGzFileName) throws IOException {
         if (outputFile.getName().equals(stdOutGzFileName)) {
             Path path = job.getWorkingDir().resolve(outputFile.getName().substring(0, outputFile.getName().length() - 3));
-            try (InputStream is = new GZIPInputStream(outputFile.getData().newInput());
-                 OutputStream os = Files.newOutputStream(path)) {
-                ByteStreams.copy(is, os);
+            try (InputStream is = new GZIPInputStream(outputFile.getData().newInput())) {
+                Files.copy(is, path, StandardCopyOption.REPLACE_EXISTING);
             }
         } else {
             Path path = job.getWorkingDir().resolve(outputFile.getName());
-            try (InputStream is = outputFile.getData().newInput();
-                 OutputStream os = Files.newOutputStream(path)) {
-                ByteStreams.copy(is, os);
+            try (InputStream is = outputFile.getData().newInput()) {
+                Files.copy(is, path, StandardCopyOption.REPLACE_EXISTING);
             }
         }
     }
 
     private void processCompletedJob(MpiJob job) {
-        ExecutionReport report = new DefaultExecutionReport(job.getErrors());
+        ExecutionReport report = new DefaultExecutionReport(job.getWorkingDir(), job.getErrors());
         try {
             job.getListener().onEnd(report);
         } catch (Exception e) {
