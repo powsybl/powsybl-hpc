@@ -15,11 +15,11 @@
     <parent>
         <groupId>com.powsybl</groupId>
         <artifactId>powsybl-parent</artifactId>
-        <version>2</version>
+        <version>3</version>
         <relativePath/>
     </parent>
     <artifactId>powsybl-hpc</artifactId>
-    <version>2.11.0-SNAPSHOT</version>
+    <version>2.11.0</version>
     <packaging>pom</packaging>
 
     <name>powsybl HPC</name>
@@ -76,7 +76,7 @@
             ../../distribution-hpc/target/site/jacoco-aggregate/jacoco.xml,
         </sonar.coverage.jacoco.xmlReportPaths>
 
-        <powsyblcore.version>3.3.0</powsyblcore.version>
+        <powsyblcore.version>3.7.1</powsyblcore.version>
     </properties>
 
     <dependencyManagement>
