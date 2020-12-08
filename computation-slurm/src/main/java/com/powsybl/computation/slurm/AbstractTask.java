@@ -125,12 +125,12 @@ public abstract class AbstractTask implements SlurmTask {
     }
 
     @Override
-    public SlurmExecutionReport await() throws InterruptedException, ExecutionException {
+    public ExecutionReport await() throws InterruptedException, ExecutionException {
         taskCompletion.get();
         return generateReport();
     }
 
-    SlurmExecutionReport generateReport() {
+    ExecutionReport generateReport() {
         List<ExecutionError> errors = new ArrayList<>();
         try {
             for (Long id : getAllJobIds()) {
@@ -146,7 +146,7 @@ public abstract class AbstractTask implements SlurmTask {
         } catch (SlurmCmdNonZeroException e) {
             LOGGER.warn("Scontrol non zero:", e);
         }
-        return new SlurmExecutionReport(errors, workingDir);
+        return new DefaultExecutionReport(workingDir, errors);
     }
 
     abstract Collection<Long> getAllJobIds();

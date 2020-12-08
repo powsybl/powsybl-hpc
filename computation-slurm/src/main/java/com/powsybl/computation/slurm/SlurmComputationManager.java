@@ -274,7 +274,7 @@ public class SlurmComputationManager implements ComputationManager {
             slurmTask.submit();
 
             LOGGER.debug("Waiting finish...");
-            SlurmExecutionReport report = slurmTask.await();
+            ExecutionReport report = slurmTask.await();
 
             R res = handler.after(remoteWorkingDir, report);
             LOGGER.debug("Normal exit");

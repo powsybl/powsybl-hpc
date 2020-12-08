@@ -6,6 +6,8 @@
  */
 package com.powsybl.computation.slurm;
 
+import com.powsybl.computation.ExecutionReport;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -29,7 +31,7 @@ public interface SlurmTask {
      *
      * @throws java.util.concurrent.CancellationException if the task has been interrupted by a call to {@link #interrupt()}.
      */
-    SlurmExecutionReport await() throws InterruptedException, ExecutionException;
+    ExecutionReport await() throws InterruptedException, ExecutionException;
 
     /**
      * Asks for interruption of the execution of this task,
