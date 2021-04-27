@@ -92,7 +92,8 @@ class JobArraySlurmTask extends AbstractTask {
 
     @Override
     ExecutionError convertScontrolResult2Error(ScontrolCmd.ScontrolResultBean scontrolResultBean) {
-        return new ExecutionError(commandByJobId.get(scontrolResultBean.getJobId()), scontrolResultBean.getArrayTaskId(), scontrolResultBean.getExitCode());
+        Command cmd = commandByJobId.get(scontrolResultBean.getArrayJobId()) == null ? commandByJobId.get(scontrolResultBean.getJobId()) : commandByJobId.get(scontrolResultBean.getArrayJobId());
+        return new ExecutionError(cmd, scontrolResultBean.getArrayTaskId(), scontrolResultBean.getExitCode());
     }
 
     private String prepareBatch(CommandExecution commandExecution, boolean isLastCommandExecution) throws IOException {
