@@ -148,7 +148,13 @@ class ScontrolCmd extends AbstractSlurmCmd<ScontrolCmd.ScontrolResult> {
                     final String str = s.substring(EXITCODE_LENGTH);
                     exitCode = Integer.parseInt(str.substring(0, str.indexOf(":")));
                 } else if (s.startsWith(ARRAY_TASK_ID)) {
-                    arrayTaskId = Integer.parseInt(s.substring(ARRAY_TASK_ID_LENGTH));
+                    final String arrayTaskIdStr = s.substring(ARRAY_TASK_ID_LENGTH);
+                    if (!arrayTaskIdStr.contains("-")) {
+                        arrayTaskId = Integer.parseInt(arrayTaskIdStr);
+                    } else {
+                        // range ids are cancelled
+                        arrayTaskId = Integer.parseInt(arrayTaskIdStr.split("-")[0]);
+                    }
                 } else if (s.startsWith(ARRAY_JOB_ID)) {
                     arrayJobId = Long.parseLong(s.substring(ARRAY_JOB_ID_LENGTH));
                 }
