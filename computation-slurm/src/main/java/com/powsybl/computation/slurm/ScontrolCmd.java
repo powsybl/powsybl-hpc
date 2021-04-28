@@ -75,6 +75,7 @@ class ScontrolCmd extends AbstractSlurmCmd<ScontrolCmd.ScontrolResult> {
         String dependency;
         int exitCode;
         int arrayTaskId;
+        long arrayJobId;
 
         ScontrolResultBean(String block) {
             this.block = Objects.requireNonNull(block);
@@ -87,6 +88,10 @@ class ScontrolCmd extends AbstractSlurmCmd<ScontrolCmd.ScontrolResult> {
 
         public long getJobId() {
             return jobId;
+        }
+
+        long getArrayJobId() {
+            return arrayJobId;
         }
 
         public String getJobName() {
@@ -143,7 +148,15 @@ class ScontrolCmd extends AbstractSlurmCmd<ScontrolCmd.ScontrolResult> {
                     final String str = s.substring(EXITCODE_LENGTH);
                     exitCode = Integer.parseInt(str.substring(0, str.indexOf(":")));
                 } else if (s.startsWith(ARRAY_TASK_ID)) {
-                    arrayTaskId = Integer.parseInt(s.substring(ARRAY_TASK_ID_LENGTH));
+                    final String arrayTaskIdStr = s.substring(ARRAY_TASK_ID_LENGTH);
+                    if (!arrayTaskIdStr.contains("-")) {
+                        arrayTaskId = Integer.parseInt(arrayTaskIdStr);
+                    } else {
+                        // range ids are cancelled
+                        arrayTaskId = Integer.parseInt(arrayTaskIdStr.split("-")[0]);
+                    }
+                } else if (s.startsWith(ARRAY_JOB_ID)) {
+                    arrayJobId = Long.parseLong(s.substring(ARRAY_JOB_ID_LENGTH));
                 }
             }
         }
@@ -155,6 +168,8 @@ class ScontrolCmd extends AbstractSlurmCmd<ScontrolCmd.ScontrolResult> {
     private static final int JOBNAME_LENGTH = 8;
     private static final String USERID = "UserId=";
     private static final int USERID_LENGTH = 7;
+    private static final String ARRAY_JOB_ID = "ArrayJobId=";
+    private static final int ARRAY_JOB_ID_LENGTH = 11;
     // private static final String GROUPID = "GroupId=";
     // private static final int GROUPID_LENGTH = 8;
     // private static final String MCS_LABEL = "MCS_label=";
