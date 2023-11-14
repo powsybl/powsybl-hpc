@@ -118,7 +118,7 @@ public abstract class AbstractTask implements SlurmTask {
                 .map(CompletableMonitoredJob::getCompletableFuture)
                 .toArray(CompletableFuture[]::new);
         CompletableFuture.allOf(monitoredJobsFutures)
-                .thenRun(() ->  {
+                .thenRun(() -> {
                     LOGGER.debug("Slurm task completed in {}.", workingDir);
                     taskCompletion.complete(null);
                 });
