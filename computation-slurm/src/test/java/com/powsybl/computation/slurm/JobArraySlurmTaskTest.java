@@ -10,7 +10,7 @@ import com.powsybl.computation.ComputationParameters;
 import com.powsybl.computation.ExecutionEnvironment;
 import com.powsybl.computation.ExecutionError;
 import com.powsybl.computation.ExecutionReport;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
@@ -18,19 +18,18 @@ import java.util.concurrent.ExecutionException;
 import static com.powsybl.computation.slurm.CommandExecutionsTestFactory.md5sumLargeFile;
 import static com.powsybl.computation.slurm.CommandResultTestFactory.simpleOutput;
 import static com.powsybl.computation.slurm.SlurmTaskTest.getPendingJob;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-import static org.mockito.Matchers.startsWith;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.startsWith;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
  * @author Yichen TANG <yichen.tang at rte-france.com>
  */
-public class JobArraySlurmTaskTest extends DefaultSlurmTaskTest {
+class JobArraySlurmTaskTest extends DefaultSlurmTaskTest {
 
     @Test
-    public void testCounterSum() throws IOException {
+    void testCounterSum() throws IOException {
         CommandExecutor commandExecutor = mock(CommandExecutor.class);
         when(commandExecutor.execute(startsWith("sbatch")))
                 .thenReturn(simpleOutput("Submitted batch job 1"))
@@ -43,7 +42,7 @@ public class JobArraySlurmTaskTest extends DefaultSlurmTaskTest {
     }
 
     @Test
-    public void testSubmit231() throws ExecutionException, InterruptedException {
+    void testSubmit231() throws ExecutionException, InterruptedException {
         CommandExecutor commandExecutor = mock(CommandExecutor.class);
         SlurmTask task = new JobArraySlurmTask(mockScm(commandExecutor), mockWd(), CommandExecutionsTestFactory.longProgramInList(2, 3, 1), ComputationParameters.empty(), ExecutionEnvironment.createDefault());
         when(commandExecutor.execute(startsWith("sbatch")))

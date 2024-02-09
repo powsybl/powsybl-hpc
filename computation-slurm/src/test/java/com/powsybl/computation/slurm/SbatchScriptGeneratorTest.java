@@ -11,9 +11,9 @@ import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 import com.powsybl.computation.Command;
 import com.powsybl.computation.CommandExecution;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -24,13 +24,13 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * @author Yichen Tang <yichen.tang at rte-france.com>
  */
-public class SbatchScriptGeneratorTest {
+class SbatchScriptGeneratorTest {
 
     private FileSystem fileSystem;
     private Path flagPath;
@@ -38,20 +38,20 @@ public class SbatchScriptGeneratorTest {
 
     private final int commandIdx = 0;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         fileSystem = Jimfs.newFileSystem(Configuration.unix());
         flagPath = fileSystem.getPath("/tmp/flags");
         workingPath = fileSystem.getPath("/home/test/workingPath_12345");
     }
 
-    @After
+    @AfterEach
     public void tearDown() throws Exception {
         fileSystem.close();
     }
 
     @Test
-    public void testEnv() {
+    void testEnv() {
         List<CommandExecution> commandExecutions = CommandExecutionsTestFactory.simpleCmd();
         CommandExecution commandExecution = commandExecutions.get(commandIdx);
         Command command = commandExecution.getCommand();
@@ -68,7 +68,7 @@ public class SbatchScriptGeneratorTest {
     }
 
     @Test
-    public void testSimpleCmd() {
+    void testSimpleCmd() {
         List<CommandExecution> commandExecutions = CommandExecutionsTestFactory.simpleCmd();
         CommandExecution commandExecution = commandExecutions.get(commandIdx);
         Command command = commandExecution.getCommand();
@@ -80,7 +80,7 @@ public class SbatchScriptGeneratorTest {
     }
 
     @Test
-    public void testArgsWithSpaces() {
+    void testArgsWithSpaces() {
         List<CommandExecution> commandExecutions = CommandExecutionsTestFactory.argsWithSpaces(3);
         CommandExecution commandExecution = commandExecutions.get(commandIdx);
         Command command = commandExecution.getCommand();
@@ -94,7 +94,7 @@ public class SbatchScriptGeneratorTest {
     }
 
     @Test
-    public void testSimpleCmdWithCount() {
+    void testSimpleCmdWithCount() {
         List<CommandExecution> commandExecutions = CommandExecutionsTestFactory.simpleCmdWithCount(3);
         CommandExecution commandExecution = commandExecutions.get(commandIdx);
         Command command = commandExecution.getCommand();
@@ -108,7 +108,7 @@ public class SbatchScriptGeneratorTest {
     }
 
     @Test
-    public void testMyEchoSimpleCmd() {
+    void testMyEchoSimpleCmd() {
         List<CommandExecution> commandExecutions = CommandExecutionsTestFactory.myEchoSimpleCmdWithUnzipZip(3);
         CommandExecution commandExecution = commandExecutions.get(commandIdx);
         Command command = commandExecution.getCommand();
@@ -124,7 +124,7 @@ public class SbatchScriptGeneratorTest {
     }
 
     @Test
-    public void testCommandFiles() {
+    void testCommandFiles() {
         List<CommandExecution> commandExecutions = CommandExecutionsTestFactory.commandFiles(3);
         Command command = commandExecutions.get(0).getCommand();
         List<String> shell = new SbatchScriptGenerator(flagPath).parser(command, 2, workingPath, Collections.emptyMap());
@@ -143,7 +143,7 @@ public class SbatchScriptGeneratorTest {
     }
 
     @Test
-    public void testOnlyUnzipBatch() {
+    void testOnlyUnzipBatch() {
         List<CommandExecution> commandExecutions = CommandExecutionsTestFactory.commandFiles(3);
         Command command = commandExecutions.get(0).getCommand();
         List<String> shell = new SbatchScriptGenerator(flagPath).unzipCommonInputFiles(command);
@@ -158,7 +158,7 @@ public class SbatchScriptGeneratorTest {
     }
 
     @Test
-    public void testGroupCmd() {
+    void testGroupCmd() {
         List<CommandExecution> commandExecutions = CommandExecutionsTestFactory.groupCmd();
         CommandExecution commandExecution = commandExecutions.get(0);
         Command command = commandExecution.getCommand();
@@ -172,7 +172,7 @@ public class SbatchScriptGeneratorTest {
     }
 
     @Test
-    public void testGroupCmdArray() {
+    void testGroupCmdArray() {
         List<CommandExecution> commandExecutions = CommandExecutionsTestFactory.groupCmd();
         CommandExecution commandExecution = commandExecutions.get(0);
         assertCommandExecutionToShell(commandExecution, "group3.batch");
@@ -183,7 +183,7 @@ public class SbatchScriptGeneratorTest {
         List<String> shell = shellGenerator.parser(commandExecution, workingPath, Collections.emptyMap(), true);
         List<String> expectedShell = null;
         try {
-            expectedShell = Files.readAllLines(Paths.get(this.getClass().getResource("/expectedShell/" + expected).toURI()), StandardCharsets.UTF_8);
+            expectedShell = Files.readAllLines(Paths.get(Objects.requireNonNull(this.getClass().getResource("/expectedShell/" + expected)).toURI()), StandardCharsets.UTF_8);
             assertEquals(expectedShell, shell);
         } catch (IOException | URISyntaxException e) {
             fail();

@@ -6,7 +6,7 @@
  */
 package com.powsybl.computation.slurm;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -14,19 +14,18 @@ import java.util.Arrays;
 import java.util.List;
 
 import static com.powsybl.computation.slurm.CommandResultTestFactory.multilineOutput;
-import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.*;
 
 /**
  * @author Yichen TANG <yichen.tang at rte-france.com>
  */
-public class FlagFilesMonitorTest {
+class FlagFilesMonitorTest {
 
     @Test
-    public void test() {
+    void test() {
         String wdName = "workingDir_1234";
         CommandExecutor runner = mock(CommandExecutor.class);
-        when(runner.execute(eq("ls -1 /flagdir")))
+        when(runner.execute("ls -1 /flagdir"))
                 .thenReturn(multilineOutput(Arrays.asList("mydone_" + wdName + "_1",
                         "myerror_" + wdName + "_2")));
 
@@ -50,8 +49,8 @@ public class FlagFilesMonitorTest {
         FlagFilesMonitor sut = new FlagFilesMonitor(cm);
         sut.run();
 
-        verify(runner, times(1)).execute(eq("rm /flagdir/mydone_workingDir_1234_1"));
-        verify(runner, times(1)).execute(eq("rm /flagdir/myerror_workingDir_1234_2"));
+        verify(runner, times(1)).execute("rm /flagdir/mydone_workingDir_1234_1");
+        verify(runner, times(1)).execute("rm /flagdir/myerror_workingDir_1234_2");
         verify(jobs.get(0), times(1)).done();
         verify(jobs.get(1), times(1)).failed();
     }

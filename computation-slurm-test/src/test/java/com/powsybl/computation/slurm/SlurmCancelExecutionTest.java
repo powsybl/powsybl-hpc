@@ -13,9 +13,10 @@ import com.powsybl.computation.CommandExecution;
 import com.powsybl.computation.ComputationParameters;
 import com.powsybl.computation.ExecutionReport;
 import org.assertj.core.api.Assertions;
-import org.junit.Assert;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -25,14 +26,15 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
 import static com.powsybl.computation.slurm.CommandExecutionsTestFactory.*;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @author Yichen TANG <yichen.tang at rte-france.com>
  */
-@Ignore
-public class SlurmCancelExecutionTest extends AbstractIntegrationTests {
+@Disabled
+class SlurmCancelExecutionTest extends AbstractIntegrationTests {
+    static final Logger LOGGER = LoggerFactory.getLogger(SlurmCancelExecutionTest.class);
 
     @Override
     void baseTest(SlurmComputationConfig config, Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters) {
@@ -43,13 +45,13 @@ public class SlurmCancelExecutionTest extends AbstractIntegrationTests {
             Thread.sleep(5000);
             boolean cancel = completableFuture.cancel(true);
             System.out.println("Cancelled:" + cancel);
-            Assert.assertTrue(cancel);
+            assertTrue(cancel);
             assertIsCleaned(computationManager.getTaskStore());
             Assertions.assertThatThrownBy(completableFuture::join)
                     .isInstanceOf(CancellationException.class);
             // TODO detailed msg getCause is null
         } catch (IOException | InterruptedException e) {
-            e.printStackTrace();
+            LOGGER.error(e.getMessage(), e);
             failed = true;
         }
         // assert on main thread
@@ -57,7 +59,7 @@ public class SlurmCancelExecutionTest extends AbstractIntegrationTests {
     }
 
     @Test
-    public void testLongProgramToCancel() {
+    void testLongProgramToCancel() {
         ListAppender<ILoggingEvent> testAppender = new ListAppender<>();
         addApprender(testAppender);
         Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractFailInAfterHandler() {
@@ -82,7 +84,7 @@ public class SlurmCancelExecutionTest extends AbstractIntegrationTests {
     }
 
     @Test
-    public void testLongProgramInListToCancel() {
+    void testLongProgramInListToCancel() {
         ListAppender<ILoggingEvent> testAppender = new ListAppender<>();
         addApprender(testAppender);
         Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractFailInAfterHandler() {
@@ -101,7 +103,7 @@ public class SlurmCancelExecutionTest extends AbstractIntegrationTests {
     }
 
     @Test
-    public void testMixedProgramsToCancel() {
+    void testMixedProgramsToCancel() {
         ListAppender<ILoggingEvent> testAppender = new ListAppender<>();
         addApprender(testAppender);
         Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractFailInAfterHandler() {

@@ -11,8 +11,8 @@ import com.google.protobuf.ByteString;
 import com.powsybl.commons.PowsyblException;
 import com.powsybl.computation.*;
 import com.powsybl.computation.mpi.generated.Messages;
-import org.joda.time.DateTime;
-import org.joda.time.Duration;
+import java.time.ZonedDateTime;
+import java.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -365,7 +365,7 @@ class MpiJobSchedulerImpl implements MpiJobScheduler {
                 checkTaskCompletionTime += System.currentTimeMillis() - t0;
             }
             if (!completedTasks.isEmpty()) {
-                DateTime endTime = DateTime.now();
+                ZonedDateTime endTime = ZonedDateTime.now();
 
                 // release cores as fast as possible
                 completedTasks.forEach(task -> {
@@ -418,7 +418,7 @@ class MpiJobSchedulerImpl implements MpiJobScheduler {
                             command.toString(-1), allocatedCores, job.getWorkingDir());
                 }
 
-                DateTime startTime = DateTime.now();
+                ZonedDateTime startTime = ZonedDateTime.now();
 
                 // encode task messages
                 int oldTaskIndex = taskIndex;
@@ -488,13 +488,14 @@ class MpiJobSchedulerImpl implements MpiJobScheduler {
             }
 
             for (MpiTask task : completedTasks) {
-                // duration of the task seen by the master in ms
-                long taskDurationSeenByMaster = new Duration(task.getStartTime(), task.getEndTime()).getMillis();
+                // duration of the task seen by the master in ns
+                long taskDurationSeenByMaster = Duration.between(task.getStartTime(), task.getEndTime()).getNano();
 
                 // decode task result messages
                 Messages.TaskResult message = Messages.TaskResult.parseFrom(task.getResultMessage());
 
                 // duration of the task seen by the slave in ms
+                // TODO : duration is now in ns and not in ms
                 long taskDurationSeenBySlave = message.getTaskDuration(); // number of ms
 
                 // write output files to working dir
@@ -504,7 +505,7 @@ class MpiJobSchedulerImpl implements MpiJobScheduler {
                     copyFileToWorkingDirectory(outputFile, job, stdOutGzFileName);
 
                     // archive standard output of problematic tasks
-                    if ((stdOutArchive != null) && (message.getExitCode() != 0) && outputFile.getName().equals(stdOutGzFileName)) {
+                    if (stdOutArchive != null && message.getExitCode() != 0 && outputFile.getName().equals(stdOutGzFileName)) {
                         try (FileSystem archiveFileSystem = FileSystems.newFileSystem(URI.create("jar:file:" + stdOutArchive.toUri().getPath()), ZIP_FS_ENV)) {
                             Path dir = archiveFileSystem.getPath("/").resolve("job-" + job.getId());
                             Files.createDirectories(dir);

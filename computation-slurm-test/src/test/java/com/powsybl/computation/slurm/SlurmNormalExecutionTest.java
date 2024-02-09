@@ -9,10 +9,12 @@ package com.powsybl.computation.slurm;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import com.powsybl.computation.*;
-import org.junit.FixMethodOrder;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runners.MethodSorters;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.MethodOrderer.MethodName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -28,14 +30,15 @@ import java.util.stream.IntStream;
 import java.util.zip.GZIPOutputStream;
 
 import static com.powsybl.computation.slurm.CommandExecutionsTestFactory.*;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * @author Yichen TANG <yichen.tang at rte-france.com>
  */
-@Ignore
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
-public class SlurmNormalExecutionTest extends AbstractIntegrationTests {
+@Disabled
+@TestMethodOrder(MethodName.class)
+class SlurmNormalExecutionTest extends AbstractIntegrationTests {
+    static final Logger LOGGER = LoggerFactory.getLogger(SlurmNormalExecutionTest.class);
 
     @Override
     public void baseTest(SlurmComputationConfig slurmConfig, Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters) {
@@ -51,7 +54,7 @@ public class SlurmNormalExecutionTest extends AbstractIntegrationTests {
             assertTrue(normalAppender.list.stream()
                     .anyMatch(e -> e.getFormattedMessage().contains("Normal exit")));
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.error(e.getMessage(), e);
             fail();
         } finally {
             removeApprender(normalAppender);
@@ -60,7 +63,7 @@ public class SlurmNormalExecutionTest extends AbstractIntegrationTests {
     }
 
     @Test
-    public void testSimpleCmdWithCount() {
+    void testSimpleCmdWithCount() {
         Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractReturnOKExecutionHandler() {
             @Override
             public List<CommandExecution> before(Path path) {
@@ -71,7 +74,7 @@ public class SlurmNormalExecutionTest extends AbstractIntegrationTests {
     }
 
     @Test
-    public void testClean() {
+    void testClean() {
         Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractReturnOKExecutionHandler() {
             @Override
             public List<CommandExecution> before(Path path) {
@@ -82,7 +85,7 @@ public class SlurmNormalExecutionTest extends AbstractIntegrationTests {
     }
 
     @Test
-    public void testLongTask() {
+    void testLongTask() {
         Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractReturnOKExecutionHandler() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
@@ -96,8 +99,8 @@ public class SlurmNormalExecutionTest extends AbstractIntegrationTests {
     }
 
     @Test
-    public void testMyEchoSimpleCmd() {
-        Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractExecutionHandler<String>() {
+    void testMyEchoSimpleCmd() {
+        Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractExecutionHandler<>() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
                 generateZipFileOnRemote("in0", workingDir.resolve("in0.zip"));
@@ -121,8 +124,8 @@ public class SlurmNormalExecutionTest extends AbstractIntegrationTests {
     }
 
     @Test
-    public void testFilesWithSpaces() {
-        Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractExecutionHandler<String>() {
+    void testFilesWithSpaces() {
+        Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractExecutionHandler<>() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
                 generateZipFileOnRemote("in 0", workingDir.resolve("in 0.zip"));
@@ -146,7 +149,7 @@ public class SlurmNormalExecutionTest extends AbstractIntegrationTests {
     }
 
     @Test
-    public void testGroupCmd() {
+    void testGroupCmd() {
         Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractReturnOKExecutionHandler() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
@@ -157,7 +160,7 @@ public class SlurmNormalExecutionTest extends AbstractIntegrationTests {
     }
 
     @Test
-    public void testArgsWithSpace() {
+    void testArgsWithSpace() {
         Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractReturnOKExecutionHandler() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
@@ -178,7 +181,7 @@ public class SlurmNormalExecutionTest extends AbstractIntegrationTests {
     }
 
     @Test
-    public void testTwoSimpleCmd() {
+    void testTwoSimpleCmd() {
         Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractReturnOKExecutionHandler() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
@@ -189,7 +192,7 @@ public class SlurmNormalExecutionTest extends AbstractIntegrationTests {
     }
 
     @Test
-    public void testFoo() {
+    void testFoo() {
         Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractReturnOKExecutionHandler() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
@@ -200,8 +203,8 @@ public class SlurmNormalExecutionTest extends AbstractIntegrationTests {
     }
 
     @Test
-    public void testFilesReadBytes() {
-        Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractExecutionHandler<String>() {
+    void testFilesReadBytes() {
+        Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractExecutionHandler<>() {
 
             static final int COUNT = 10;
 
@@ -238,8 +241,8 @@ public class SlurmNormalExecutionTest extends AbstractIntegrationTests {
     }
 
     @Test
-    public void testZMd5sumLargeFile() {
-        Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractExecutionHandler<String>() {
+    void testZMd5sumLargeFile() {
+        Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractExecutionHandler<>() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
                 long startDump = System.nanoTime();
@@ -283,12 +286,12 @@ public class SlurmNormalExecutionTest extends AbstractIntegrationTests {
                 try {
                     outStream.write(oneMb.getBytes());
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    LOGGER.error(e.getMessage(), e);
                     failed = true;
                 }
             });
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.error(e.getMessage(), e);
             failed = true;
         }
     }

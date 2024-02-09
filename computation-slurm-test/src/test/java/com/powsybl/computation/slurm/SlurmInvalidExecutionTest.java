@@ -13,8 +13,10 @@ import com.powsybl.computation.CommandExecution;
 import com.powsybl.computation.ComputationParameters;
 import com.powsybl.computation.ExecutionReport;
 import org.assertj.core.api.Assertions;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -23,17 +25,16 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.function.Supplier;
 
-import static com.powsybl.computation.slurm.CommandExecutionsTestFactory.invalidProgram;
-import static com.powsybl.computation.slurm.CommandExecutionsTestFactory.invalidProgramInGroup;
-import static com.powsybl.computation.slurm.CommandExecutionsTestFactory.invalidProgramInList;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
+import static com.powsybl.computation.slurm.CommandExecutionsTestFactory.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * @author Yichen TANG <yichen.tang at rte-france.com>
  */
-@Ignore
-public class SlurmInvalidExecutionTest extends AbstractIntegrationTests {
+@Disabled
+class SlurmInvalidExecutionTest extends AbstractIntegrationTests {
+    static final Logger LOGGER = LoggerFactory.getLogger(SlurmInvalidExecutionTest.class);
 
     @Override
     void baseTest(SlurmComputationConfig slurmConfig, Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters) {
@@ -48,7 +49,7 @@ public class SlurmInvalidExecutionTest extends AbstractIntegrationTests {
                     .hasMessageContaining("com.powsybl.commons.PowsyblException: Error during the execution in directory");
             assertIsCleaned(computationManager.getTaskStore());
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.error(e.getMessage(), e);
             fail();
         } finally {
             removeApprender(testAppender);
@@ -58,7 +59,7 @@ public class SlurmInvalidExecutionTest extends AbstractIntegrationTests {
     }
 
     @Test
-    public void testInvalidProgram() {
+    void testInvalidProgram() {
         Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractCheckErrorsExecutionHandler() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
@@ -69,7 +70,7 @@ public class SlurmInvalidExecutionTest extends AbstractIntegrationTests {
     }
 
     @Test
-    public void testInvalidInBatch() {
+    void testInvalidInBatch() {
         Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractCheckErrorsExecutionHandler() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
@@ -84,7 +85,7 @@ public class SlurmInvalidExecutionTest extends AbstractIntegrationTests {
     }
 
     @Test
-    public void testInvalidProgramInList() {
+    void testInvalidProgramInList() {
         Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractCheckErrorsExecutionHandler() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
@@ -95,7 +96,7 @@ public class SlurmInvalidExecutionTest extends AbstractIntegrationTests {
     }
 
     @Test
-    public void testInvalidProgramInGroup() {
+    void testInvalidProgramInGroup() {
         Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractCheckErrorsExecutionHandler() {
             @Override
             public List<CommandExecution> before(Path workingDir) {

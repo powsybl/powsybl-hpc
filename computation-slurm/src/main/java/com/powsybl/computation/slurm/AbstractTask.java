@@ -156,7 +156,6 @@ public abstract class AbstractTask implements SlurmTask {
     /**
      * The list of jobs for which status must be monitored.
      *
-     * @return
      */
     @Override
     public List<MonitoredJob> getPendingJobs() {
@@ -278,7 +277,7 @@ public abstract class AbstractTask implements SlurmTask {
         /**
          * To be called if the job is detected to have been killed
          * before completing.
-         *
+         * <p>
          * The implementation completes the task with an exception,
          * and asks for interruption of all jobs.
          */

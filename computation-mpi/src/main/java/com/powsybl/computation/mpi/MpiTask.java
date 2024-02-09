@@ -6,7 +6,7 @@
  */
 package com.powsybl.computation.mpi;
 
-import org.joda.time.DateTime;
+import java.time.ZonedDateTime;
 
 /**
  *
@@ -22,13 +22,13 @@ class MpiTask {
 
     private final byte[] message;
 
-    private final DateTime startTime;
+    private final ZonedDateTime startTime;
 
-    private DateTime endTime;
+    private ZonedDateTime endTime;
 
     private byte[] resultMessage;
 
-    MpiTask(int id, Core core, int index, byte[] message, DateTime startTime) {
+    MpiTask(int id, Core core, int index, byte[] message, ZonedDateTime startTime) {
         this.id = id;
         this.core = core;
         this.index = index;
@@ -60,15 +60,15 @@ class MpiTask {
         return message;
     }
 
-    DateTime getStartTime() {
+    ZonedDateTime getStartTime() {
         return startTime;
     }
 
-    DateTime getEndTime() {
+    ZonedDateTime getEndTime() {
         return endTime;
     }
 
-    void setEndTime(DateTime endTime) {
+    void setEndTime(ZonedDateTime endTime) {
         this.endTime = endTime;
     }
 

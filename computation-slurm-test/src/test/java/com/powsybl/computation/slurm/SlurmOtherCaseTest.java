@@ -13,8 +13,10 @@ import com.powsybl.computation.CommandExecution;
 import com.powsybl.computation.ComputationParameters;
 import com.powsybl.computation.ComputationParametersBuilder;
 import org.assertj.core.api.Assertions;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -26,16 +28,17 @@ import java.util.function.Supplier;
 
 import static com.powsybl.computation.slurm.CommandExecutionsTestFactory.longProgram;
 import static com.powsybl.computation.slurm.CommandExecutionsTestFactory.makeSlurmBusy;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * @author Yichen TANG <yichen.tang at rte-france.com>
  */
-@Ignore
-public class SlurmOtherCaseTest extends AbstractIntegrationTests {
+@Disabled
+class SlurmOtherCaseTest extends AbstractIntegrationTests {
+    static final Logger LOGGER = LoggerFactory.getLogger(SlurmOtherCaseTest.class);
 
     @Test
-    public void testLongProgramToCancelExternal() {
+    void testLongProgramToCancelExternal() {
         testLongProgramToCancelExternal(batchConfig);
         testLongProgramToCancelExternal(arrayConfig);
     }
@@ -56,7 +59,7 @@ public class SlurmOtherCaseTest extends AbstractIntegrationTests {
 //                    .hasMessageContaining("is CANCELLED");
             assertIsCleaned(computationManager.getTaskStore());
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.error(e.getMessage(), e);
             failed = true;
         } catch (CompletionException ce) {
             System.out.println("in ce");
@@ -83,7 +86,7 @@ public class SlurmOtherCaseTest extends AbstractIntegrationTests {
     }
 
     @Test
-    public void testDeadline() throws InterruptedException {
+    void testDeadline() throws InterruptedException {
         testDeadline(batchConfig);
         testDeadline(arrayConfig);
     }
@@ -108,7 +111,7 @@ public class SlurmOtherCaseTest extends AbstractIntegrationTests {
                     .isInstanceOf(CompletionException.class);
             assertIsCleaned(computationManager.getTaskStore());
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.error(e.getMessage(), e);
             failed = true;
         }
         assertFalse(failed);
@@ -116,7 +119,7 @@ public class SlurmOtherCaseTest extends AbstractIntegrationTests {
 
     // sacctmgr show qos
     @Test
-    public void testInvalidQos() {
+    void testInvalidQos() {
         testInvalidQos(batchConfig);
         testInvalidQos(arrayConfig);
     }
@@ -149,7 +152,7 @@ public class SlurmOtherCaseTest extends AbstractIntegrationTests {
 
     // FIXME shutdown and check programmatically
     @Test
-    public void testStopSendingAfterShutdown() {
+    void testStopSendingAfterShutdown() {
         try (SlurmComputationManager computationManager = new SlurmComputationManager(batchConfig)) {
             CompletableFuture<Void> execute = computationManager.execute(EMPTY_ENV, new AbstractExecutionHandler<Void>() {
                 @Override

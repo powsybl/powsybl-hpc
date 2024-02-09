@@ -13,9 +13,9 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import com.powsybl.commons.PowsyblException;
 import com.powsybl.computation.*;
 import com.powsybl.computation.mpi.generated.Messages;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,14 +29,13 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  *
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
-public class MpiComputationManagerTest {
+class MpiComputationManagerTest {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MpiComputationManagerTest.class);
 
@@ -115,14 +114,14 @@ public class MpiComputationManagerTest {
     private ComputationManager cm;
     private FileSystem fileSystem;
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
         fileSystem = Jimfs.newFileSystem(Configuration.unix());
         Path tmpDir = Files.createDirectory(fileSystem.getPath("/tmp"));
         cm = new MpiComputationManager(tmpDir, new MpiNativeServicesMock());
     }
 
-    @After
+    @AfterEach
     public void tearDown() throws Exception {
         cm.close();
         cm = null;
@@ -160,14 +159,14 @@ public class MpiComputationManagerTest {
     }
 
     private static String readOutput1(Path workingDir) throws IOException {
-        return new String(Files.readAllBytes(workingDir.resolve(OUTPUT_FILE_NAME_1)), StandardCharsets.UTF_8);
+        return Files.readString(workingDir.resolve(OUTPUT_FILE_NAME_1));
     }
 
     private static String readOutput2(Path workingDir) throws IOException {
-        return new String(Files.readAllBytes(workingDir.resolve(OUTPUT_FILE_NAME_2)), StandardCharsets.UTF_8);
+        return Files.readString(workingDir.resolve(OUTPUT_FILE_NAME_2));
     }
 
-    private class ExecutionHandlerTest1 extends AbstractExecutionHandler<String> {
+    private static class ExecutionHandlerTest1 extends AbstractExecutionHandler<String> {
         @Override
         public List<CommandExecution> before(Path workingDir) throws IOException {
             writeInput1(workingDir);
@@ -181,7 +180,7 @@ public class MpiComputationManagerTest {
         }
     }
 
-    private class ExecutionHandlerTest2 extends AbstractExecutionHandler<String> {
+    private static class ExecutionHandlerTest2 extends AbstractExecutionHandler<String> {
         @Override
         public List<CommandExecution> before(Path workingDir) throws IOException {
             writeInput1(workingDir);
@@ -197,7 +196,7 @@ public class MpiComputationManagerTest {
     }
 
     @Test
-    public void testExecute() throws Exception {
+    void testExecute() throws Exception {
         final Path[] workingDirSav = new Path[1];
         String result = cm.execute(ExecutionEnvironment.createDefault(), new ExecutionHandlerTest1() {
                 @Override
@@ -206,12 +205,12 @@ public class MpiComputationManagerTest {
                     return super.before(workingDir);
                 }
             }).join();
-        assertTrue(OUTPUT_FILE_CONTENT_1.equals(result));
+        assertEquals(OUTPUT_FILE_CONTENT_1, result);
         assertTrue(Files.notExists(workingDirSav[0]));
     }
 
     @Test
-    public void testExecute2() throws Exception {
+    void testExecute2() throws Exception {
         final Path[] workingDirSav = new Path[1];
         try {
             cm.execute(ExecutionEnvironment.createDefault(), new ExecutionHandlerTest1() {
@@ -228,7 +227,7 @@ public class MpiComputationManagerTest {
     }
 
     @Test
-    public void testExecute3() throws Exception {
+    void testExecute3() throws Exception {
         final Path[] workingDirSav = new Path[1];
         try {
             cm.execute(ExecutionEnvironment.createDefault(), new ExecutionHandlerTest1() {
@@ -250,7 +249,7 @@ public class MpiComputationManagerTest {
     }
 
     @Test
-    public void testExecute4() throws Exception {
+    void testExecute4() throws Exception {
         final Path[] workingDirSav = new Path[1];
         String result = cm.execute(ExecutionEnvironment.createDefault(), new ExecutionHandlerTest2() {
                 @Override
@@ -267,7 +266,7 @@ public class MpiComputationManagerTest {
                     return result;
                 }
             }).join();
-        assertTrue(OUTPUT_FILE_CONTENT_2.equals(result));
+        assertEquals(OUTPUT_FILE_CONTENT_2, result);
         assertTrue(Files.notExists(workingDirSav[0]));
     }
 
