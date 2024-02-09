@@ -29,25 +29,21 @@
             <artifactId>logback-classic</artifactId>
             <scope>runtime</scope>
         </dependency>
-
         <dependency>
             <groupId>com.powsybl</groupId>
             <artifactId>powsybl-computation-local</artifactId>
             <version>${powsyblcore.version}</version>
         </dependency>
-
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>powsybl-computation-mpi</artifactId>
             <version>${project.version}</version>
         </dependency>
-
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>powsybl-computation-slurm</artifactId>
             <version>${project.version}</version>
         </dependency>
-
     </dependencies>
 
     <build>
@@ -102,6 +98,7 @@
                     <plugin>
                         <groupId>org.jacoco</groupId>
                         <artifactId>jacoco-maven-plugin</artifactId>
+                        <version>${maven.jacoco.version}</version>
                         <executions>
                             <execution>
                                 <id>report-aggregate</id>

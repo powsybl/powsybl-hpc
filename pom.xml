@@ -115,7 +115,22 @@
             </dependency>
             <dependency>
                 <groupId>com.powsybl</groupId>
+                <artifactId>powsybl-commons</artifactId>
+                <version>${powsyblcore.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.powsybl</groupId>
                 <artifactId>powsybl-computation</artifactId>
+                <version>${powsyblcore.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.powsybl</groupId>
+                <artifactId>powsybl-computation-local</artifactId>
+                <version>${powsyblcore.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.powsybl</groupId>
+                <artifactId>powsybl-tools</artifactId>
                 <version>${powsyblcore.version}</version>
             </dependency>
             <dependency>
