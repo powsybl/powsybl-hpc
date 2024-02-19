@@ -7637,7 +7637,7 @@ public final class Messages {
 
     /**
      * <pre>
-     * in ns
+     * in ms
      * </pre>
      *
      * <code>required int64 taskDuration = 2;</code>
@@ -7645,7 +7645,7 @@ public final class Messages {
     boolean hasTaskDuration();
     /**
      * <pre>
-     * in ns
+     * in ms
      * </pre>
      *
      * <code>required int64 taskDuration = 2;</code>
@@ -7654,7 +7654,7 @@ public final class Messages {
 
     /**
      * <pre>
-     * in ns
+     * in ms
      * </pre>
      *
      * <code>repeated int64 commandDuration = 3;</code>
@@ -7662,7 +7662,7 @@ public final class Messages {
     java.util.List<java.lang.Long> getCommandDurationList();
     /**
      * <pre>
-     * in ns
+     * in ms
      * </pre>
      *
      * <code>repeated int64 commandDuration = 3;</code>
@@ -7670,7 +7670,7 @@ public final class Messages {
     int getCommandDurationCount();
     /**
      * <pre>
-     * in ns
+     * in ms
      * </pre>
      *
      * <code>repeated int64 commandDuration = 3;</code>
@@ -8545,7 +8545,7 @@ public final class Messages {
     private long taskDuration_;
     /**
      * <pre>
-     * in ns
+     * in ms
      * </pre>
      *
      * <code>required int64 taskDuration = 2;</code>
@@ -8555,7 +8555,7 @@ public final class Messages {
     }
     /**
      * <pre>
-     * in ns
+     * in ms
      * </pre>
      *
      * <code>required int64 taskDuration = 2;</code>
@@ -8568,7 +8568,7 @@ public final class Messages {
     private java.util.List<java.lang.Long> commandDuration_;
     /**
      * <pre>
-     * in ns
+     * in ms
      * </pre>
      *
      * <code>repeated int64 commandDuration = 3;</code>
@@ -8579,7 +8579,7 @@ public final class Messages {
     }
     /**
      * <pre>
-     * in ns
+     * in ms
      * </pre>
      *
      * <code>repeated int64 commandDuration = 3;</code>
@@ -8589,7 +8589,7 @@ public final class Messages {
     }
     /**
      * <pre>
-     * in ns
+     * in ms
      * </pre>
      *
      * <code>repeated int64 commandDuration = 3;</code>
@@ -9180,7 +9180,7 @@ public final class Messages {
       private long taskDuration_ ;
       /**
        * <pre>
-       * in ns
+       * in ms
        * </pre>
        *
        * <code>required int64 taskDuration = 2;</code>
@@ -9190,7 +9190,7 @@ public final class Messages {
       }
       /**
        * <pre>
-       * in ns
+       * in ms
        * </pre>
        *
        * <code>required int64 taskDuration = 2;</code>
@@ -9200,7 +9200,7 @@ public final class Messages {
       }
       /**
        * <pre>
-       * in ns
+       * in ms
        * </pre>
        *
        * <code>required int64 taskDuration = 2;</code>
@@ -9213,7 +9213,7 @@ public final class Messages {
       }
       /**
        * <pre>
-       * in ns
+       * in ms
        * </pre>
        *
        * <code>required int64 taskDuration = 2;</code>
@@ -9234,7 +9234,7 @@ public final class Messages {
       }
       /**
        * <pre>
-       * in ns
+       * in ms
        * </pre>
        *
        * <code>repeated int64 commandDuration = 3;</code>
@@ -9245,7 +9245,7 @@ public final class Messages {
       }
       /**
        * <pre>
-       * in ns
+       * in ms
        * </pre>
        *
        * <code>repeated int64 commandDuration = 3;</code>
@@ -9255,7 +9255,7 @@ public final class Messages {
       }
       /**
        * <pre>
-       * in ns
+       * in ms
        * </pre>
        *
        * <code>repeated int64 commandDuration = 3;</code>
@@ -9265,7 +9265,7 @@ public final class Messages {
       }
       /**
        * <pre>
-       * in ns
+       * in ms
        * </pre>
        *
        * <code>repeated int64 commandDuration = 3;</code>
@@ -9279,7 +9279,7 @@ public final class Messages {
       }
       /**
        * <pre>
-       * in ns
+       * in ms
        * </pre>
        *
        * <code>repeated int64 commandDuration = 3;</code>
@@ -9292,7 +9292,7 @@ public final class Messages {
       }
       /**
        * <pre>
-       * in ns
+       * in ms
        * </pre>
        *
        * <code>repeated int64 commandDuration = 3;</code>
@@ -9307,7 +9307,7 @@ public final class Messages {
       }
       /**
        * <pre>
-       * in ns
+       * in ms
        * </pre>
        *
        * <code>repeated int64 commandDuration = 3;</code>

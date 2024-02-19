@@ -85,8 +85,8 @@ message TaskResult {
     }
 
     required int32 exitCode = 1;
-    required int64 taskDuration = 2; // in ns
-    repeated int64 commandDuration = 3; // in ns
+    required int64 taskDuration = 2; // in ms
+    repeated int64 commandDuration = 3; // in ms
     required int64 workingDataSize = 4; // in bytes
     repeated OutputFile outputFile = 5;
 }

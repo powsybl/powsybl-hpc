@@ -488,14 +488,13 @@ class MpiJobSchedulerImpl implements MpiJobScheduler {
             }
 
             for (MpiTask task : completedTasks) {
-                // duration of the task seen by the master in ns
-                long taskDurationSeenByMaster = Duration.between(task.getStartTime(), task.getEndTime()).getNano();
+                // duration of the task seen by the master in ms
+                long taskDurationSeenByMaster = Duration.between(task.getStartTime(), task.getEndTime()).getNano() / 1000;
 
                 // decode task result messages
                 Messages.TaskResult message = Messages.TaskResult.parseFrom(task.getResultMessage());
 
                 // duration of the task seen by the slave in ms
-                // TODO : duration is now in ns and not in ms
                 long taskDurationSeenBySlave = message.getTaskDuration(); // number of ms
 
                 // write output files to working dir
@@ -529,7 +528,7 @@ class MpiJobSchedulerImpl implements MpiJobScheduler {
                     LOGGER.error(e.toString(), e);
                 }
 
-                // update execution statistics
+                // update execution statistics - durations are in ms
                 statistics.logTaskEnd(task.getId(),
                         taskDurationSeenByMaster,
                         message.getCommandDurationList(),
