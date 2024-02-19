@@ -24,7 +24,7 @@ class SlurmStatusManagerTest {
 
     @Test
     void test() {
-        CommandResult r1 = CommandResultTestFactory.simpleOutput("2009-01-09 03:54:42");
+        CommandResult r1 = CommandResultTestFactory.simpleOutput("2009-01-09 03:54:42 CET");
         CommandResult r2 = CommandResultTestFactory.simpleOutput("0/32/0/32");
         CommandResult r3 = CommandResultTestFactory.multilineOutput(Arrays.asList("1 cmd2", "8 simpleCmdId"));
         CommandExecutor commandExecutor = Mockito.mock(CommandExecutor.class);

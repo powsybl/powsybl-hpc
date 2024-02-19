@@ -8,7 +8,6 @@ package com.powsybl.computation.slurm;
 
 import com.google.common.base.Strings;
 
-import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -20,12 +19,10 @@ import java.util.Objects;
  * @author Sylvain Leclerc <sylvain.leclerc at rte-france.com>
  */
 class SlurmStatusManager {
-
-    // TODO timezone??
-    private static final String TIME_CMD = "date +\"%Y-%m-%d %H:%M:%S\"";
+    private static final String TIME_CMD = "date +\"%Y-%m-%d %H:%M:%S %Z\"";
     private static final String INFO_CORES_CMD = "sinfo -h -o %C";
     private static final String QUEUE_CORES_PER_JOB = "squeue -h --format=\"%C %j\"";
-    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss\n").withZone(ZoneOffset.UTC);
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss zzz\n");
 
     private final CommandExecutor commandExecutor;
 
