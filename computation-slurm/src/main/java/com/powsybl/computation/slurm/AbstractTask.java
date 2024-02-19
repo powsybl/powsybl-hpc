@@ -280,6 +280,7 @@ public abstract class AbstractTask implements SlurmTask {
          * <p>
          * The implementation completes the task with an exception,
          * and asks for interruption of all jobs.
+         * </p>
          */
         @Override
         public void interrupted() {
