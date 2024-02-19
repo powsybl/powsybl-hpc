@@ -84,11 +84,11 @@ class ScontrolCmdTest {
                MinCPUsNode=1 MinMemoryNode=0 MinTmpDiskNode=0
                Features=(null) DelayBoot=00:00:00
                OverSubscribe=YES Contiguous=0 Licenses=(null) Network=(null)
-               Command=/home/test/yichen_slurm_unit/unit_test_3609105074134694169/cmdId.batch
-               WorkDir=/home/test/yichen_slurm_unit/unit_test_3609105074134694169
-               StdErr=/home/test/yichen_slurm_unit/unit_test_3609105074134694169/cmdId_1.err
+               Command=/home/test/tmp/unit_test_3609105074134694169/cmdId.batch
+               WorkDir=/home/test/tmp/unit_test_3609105074134694169
+               StdErr=/home/test/tmp/unit_test_3609105074134694169/cmdId_1.err
                StdIn=/dev/null
-               StdOut=/home/test/yichen_slurm_unit/unit_test_3609105074134694169/cmdId_1.out
+               StdOut=/home/test/tmp/unit_test_3609105074134694169/cmdId_1.out
                Power=
                KillOInInvalidDependent=Yes
                MailUser=(null) MailType=NONE
@@ -113,11 +113,11 @@ class ScontrolCmdTest {
                MinCPUsNode=1 MinMemoryNode=0 MinTmpDiskNode=0
                Features=(null) DelayBoot=00:00:00
                OverSubscribe=YES Contiguous=0 Licenses=(null) Network=(null)
-               Command=/home/test/yichen_slurm_unit/unit_test_3609105074134694169/cmdId.batch
-               WorkDir=/home/test/yichen_slurm_unit/unit_test_3609105074134694169
-               StdErr=/home/test/yichen_slurm_unit/unit_test_3609105074134694169/cmdId_0.err
+               Command=/home/test/tmp/unit_test_3609105074134694169/cmdId.batch
+               WorkDir=/home/test/tmp/unit_test_3609105074134694169
+               StdErr=/home/test/tmp/unit_test_3609105074134694169/cmdId_0.err
                StdIn=/dev/null
-               StdOut=/home/test/yichen_slurm_unit/unit_test_3609105074134694169/cmdId_0.out
+               StdOut=/home/test/tmp/unit_test_3609105074134694169/cmdId_0.out
                Power=
                KillOInInvalidDependent=Yes
                MailUser=(null) MailType=NONE
