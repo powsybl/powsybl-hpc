@@ -489,7 +489,7 @@ class MpiJobSchedulerImpl implements MpiJobScheduler {
 
             for (MpiTask task : completedTasks) {
                 // duration of the task seen by the master in ms
-                long taskDurationSeenByMaster = Duration.between(task.getStartTime(), task.getEndTime()).getNano() / 1000;
+                long taskDurationSeenByMaster = Duration.between(task.getStartTime(), task.getEndTime()).getNano() / 1000000;
 
                 // decode task result messages
                 Messages.TaskResult message = Messages.TaskResult.parseFrom(task.getResultMessage());

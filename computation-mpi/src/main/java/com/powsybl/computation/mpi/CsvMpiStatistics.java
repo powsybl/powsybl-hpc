@@ -510,7 +510,7 @@ public class CsvMpiStatistics implements MpiStatistics {
                         min[0] = task.startTime;
                     }
                     if (task.taskDuration != null) {
-                        ZonedDateTime endTime = task.startTime.plusNanos((int) (long) task.taskDuration);
+                        ZonedDateTime endTime = task.startTime.plusNanos((int) (long) (task.taskDuration * 1e6));
                         if (max[0] == null || endTime.compareTo(max[0]) > 0) {
                             max[0] = endTime;
                         }
