@@ -6,13 +6,10 @@
  */
 package com.powsybl.computation.mpi;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.protobuf.ByteString;
 import com.powsybl.commons.PowsyblException;
 import com.powsybl.computation.*;
 import com.powsybl.computation.mpi.generated.Messages;
-import java.time.ZonedDateTime;
-import java.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,6 +18,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.nio.file.*;
+import java.time.Duration;
+import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -38,7 +37,7 @@ class MpiJobSchedulerImpl implements MpiJobScheduler {
 
     private static final int TIMEOUT = 10; // ms
 
-    private static final Map<String, String> ZIP_FS_ENV = ImmutableMap.of("create", "true");
+    private static final Map<String, String> ZIP_FS_ENV = Map.of("create", "true");
 
     private final MpiNativeServices nativeServices;
 
@@ -186,10 +185,10 @@ class MpiJobSchedulerImpl implements MpiJobScheduler {
 
     private static Messages.Task.Environment createEnvMessage(Map<String, String> variables) {
         Messages.Task.Environment.Builder builder = Messages.Task.Environment.newBuilder();
-        for (Map.Entry<String, String> var : variables.entrySet()) {
+        for (Map.Entry<String, String> entry : variables.entrySet()) {
             builder.addVariable(Messages.Task.Variable.newBuilder()
-                    .setName(var.getKey())
-                    .setValue(var.getValue())
+                    .setName(entry.getKey())
+                    .setValue(entry.getValue())
                     .build());
         }
         return builder.build();
@@ -227,7 +226,7 @@ class MpiJobSchedulerImpl implements MpiJobScheduler {
                 .setInitJob(initJob);
 
         //
-        // select which files have to be send with the message
+        // select which files have to be sent with the message
         //
         for (InputFile file : command.getInputFiles()) {
             if (file.dependsOnExecutionNumber()) {
