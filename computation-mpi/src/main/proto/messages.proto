@@ -61,7 +61,7 @@ message Task {
     message Command {
         required string program = 1;
         repeated string argument = 2;
-	      optional int32 timeout = 3;
+        optional int32 timeout = 3;
     }
 
     required int32 jobId = 1;
