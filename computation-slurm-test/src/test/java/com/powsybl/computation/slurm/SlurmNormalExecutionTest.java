@@ -8,8 +8,10 @@ package com.powsybl.computation.slurm;
 
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import com.powsybl.commons.PowsyblException;
+import com.powsybl.commons.config.PlatformConfig;
+import com.powsybl.commons.config.YamlModuleConfigRepository;
 import com.powsybl.computation.*;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.MethodOrderer.MethodName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
@@ -20,6 +22,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -35,7 +38,6 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * @author Yichen TANG <yichen.tang at rte-france.com>
  */
-@Disabled
 @TestMethodOrder(MethodName.class)
 class SlurmNormalExecutionTest extends AbstractIntegrationTests {
     static final Logger LOGGER = LoggerFactory.getLogger(SlurmNormalExecutionTest.class);
@@ -92,9 +94,17 @@ class SlurmNormalExecutionTest extends AbstractIntegrationTests {
                 return longProgram(10);
             }
         };
+
+        // QOS configuration
+        YamlModuleConfigRepository configRepository = new YamlModuleConfigRepository(Paths.get("src/test/resources/config.yml"));
+        String qos = configRepository.getModuleConfig("slurm-computation-manager").flatMap(config -> config.getOptionalStringProperty("qos")).orElse("No qos configured");
+
+        // Parameters
         ComputationParameters parameters = new ComputationParametersBuilder().setTimeout("longProgram", 60).build();
-        SlurmComputationParameters slurmComputationParameters = new SlurmComputationParameters(parameters, "itesla");
+        SlurmComputationParameters slurmComputationParameters = new SlurmComputationParameters(parameters, qos);
         parameters.addExtension(SlurmComputationParameters.class, slurmComputationParameters);
+
+        // Test
         baseTest(supplier, parameters);
     }
 
