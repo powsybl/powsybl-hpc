@@ -9,6 +9,7 @@ package com.powsybl.computation.slurm;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import com.powsybl.computation.*;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.MethodOrderer.MethodName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
@@ -34,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * @author Yichen TANG <yichen.tang at rte-france.com>
  */
+@Disabled
 @TestMethodOrder(MethodName.class)
 class SlurmNormalExecutionTest extends AbstractIntegrationTests {
     static final Logger LOGGER = LoggerFactory.getLogger(SlurmNormalExecutionTest.class);

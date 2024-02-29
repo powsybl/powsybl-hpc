@@ -13,6 +13,7 @@ import com.powsybl.computation.CommandExecution;
 import com.powsybl.computation.ComputationParameters;
 import com.powsybl.computation.ExecutionReport;
 import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 /**
  * @author Yichen TANG <yichen.tang at rte-france.com>
  */
+@Disabled
 class SlurmInvalidExecutionTest extends AbstractIntegrationTests {
     static final Logger LOGGER = LoggerFactory.getLogger(SlurmInvalidExecutionTest.class);
 

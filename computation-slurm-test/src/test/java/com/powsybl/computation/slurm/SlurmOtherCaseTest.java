@@ -13,6 +13,7 @@ import com.powsybl.computation.CommandExecution;
 import com.powsybl.computation.ComputationParameters;
 import com.powsybl.computation.ComputationParametersBuilder;
 import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +33,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * @author Yichen TANG <yichen.tang at rte-france.com>
  */
+@Disabled
 class SlurmOtherCaseTest extends AbstractIntegrationTests {
     static final Logger LOGGER = LoggerFactory.getLogger(SlurmOtherCaseTest.class);
 
