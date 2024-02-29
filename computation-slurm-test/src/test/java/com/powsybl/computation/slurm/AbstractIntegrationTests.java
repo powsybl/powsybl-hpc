@@ -41,16 +41,17 @@ public abstract class AbstractIntegrationTests {
 
     SlurmComputationConfig batchConfig;
     SlurmComputationConfig arrayConfig;
+    ModuleConfig moduleConfig;
 
     volatile boolean failed = false;
 
     @BeforeEach
     public void setup() {
         YamlModuleConfigRepository configRepository = new YamlModuleConfigRepository(Paths.get("src/test/resources/config.yml"));
-        ModuleConfig config = configRepository.getModuleConfig("slurm-computation-manager")
+        moduleConfig = configRepository.getModuleConfig("slurm-computation-manager")
                 .orElseThrow(() -> new RuntimeException("Config.yaml is not good. Please recheck the config.yaml.example"));
-        batchConfig = batchConfig(config);
-        arrayConfig = arrayConfig(config);
+        batchConfig = batchConfig(moduleConfig);
+        arrayConfig = arrayConfig(moduleConfig);
         // TODO prepare myapps if necessary
     }
 

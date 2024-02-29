@@ -109,13 +109,15 @@ class SbatchScriptGeneratorTest {
 
     @Test
     void testMyEchoSimpleCmd() {
-        List<CommandExecution> commandExecutions = CommandExecutionsTestFactory.myEchoSimpleCmdWithUnzipZip(3);
+        String program = "/home/test/myecho.sh";
+
+        List<CommandExecution> commandExecutions = CommandExecutionsTestFactory.myEchoSimpleCmdWithUnzipZip(3, program);
         CommandExecution commandExecution = commandExecutions.get(commandIdx);
         Command command = commandExecution.getCommand();
         List<String> shell = new SbatchScriptGenerator(flagPath).parser(command, 0, workingPath, Collections.emptyMap());
         assertEquals(ImmutableList.of("#!/bin/sh",
                 "unzip -o -q 'in0.zip'",
-                "/home/dev-itesla/myapps/myecho.sh \"in0\" \"out0\"",
+                "/home/test/myecho.sh \"in0\" \"out0\"",
                 "rc=$?; if [[ $rc != 0 ]]; then touch /tmp/flags/myerror_workingPath_12345_$SLURM_JOBID; exit $rc; fi",
                 "gzip 'out0'",
                 "touch /tmp/flags/mydone_workingPath_12345_$SLURM_JOBID"), shell);

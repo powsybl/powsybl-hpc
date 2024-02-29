@@ -13,7 +13,6 @@ import com.powsybl.computation.CommandExecution;
 import com.powsybl.computation.ComputationParameters;
 import com.powsybl.computation.ComputationParametersBuilder;
 import org.assertj.core.api.Assertions;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +32,6 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * @author Yichen TANG <yichen.tang at rte-france.com>
  */
-@Disabled
 class SlurmOtherCaseTest extends AbstractIntegrationTests {
     static final Logger LOGGER = LoggerFactory.getLogger(SlurmOtherCaseTest.class);
 
@@ -44,19 +42,23 @@ class SlurmOtherCaseTest extends AbstractIntegrationTests {
     }
 
     private void testLongProgramToCancelExternal(SlurmComputationConfig config) {
-        Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractExecutionHandler<String>() {
+        // Script configuration
+        String program = String.format("%s/%s",
+            moduleConfig.getOptionalStringProperty("program").orElse("No program configured"),
+            "testToStop.sh");
+
+        Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractExecutionHandler<>() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
-                return longProgram(200);
+                return longProgram(200, program);
             }
         };
         try (SlurmComputationManager computationManager = new SlurmComputationManager(config)) {
             CompletableFuture<String> completableFuture = computationManager.execute(EMPTY_ENV, supplier.get(), ComputationParameters.empty());
-            System.out.println("Go to interrupt on server");
+            LOGGER.warn("Please interrupt the process on the server using the command \"scancel <JobId>\"");
             Assertions.assertThatThrownBy(completableFuture::join)
-                    .isInstanceOf(CompletionException.class);
-            // TODO detail msg
-//                    .hasMessageContaining("is CANCELLED");
+                    .isInstanceOf(CompletionException.class)
+                    .hasMessageContaining("has been interrupted on slurm infrastructure");
             assertIsCleaned(computationManager.getTaskStore());
         } catch (IOException e) {
             LOGGER.error(e.getMessage(), e);
@@ -92,13 +94,18 @@ class SlurmOtherCaseTest extends AbstractIntegrationTests {
     }
 
     private void testDeadline(SlurmComputationConfig config) throws InterruptedException {
+        // Script configuration
+        String program = String.format("%s/%s",
+            moduleConfig.getOptionalStringProperty("program").orElse("No program configured"),
+            "testToStop.sh");
+
         Thread makeSlurmBusyThread = new Thread(this::runMakeSlurmBusy);
         makeSlurmBusyThread.start();
         TimeUnit.SECONDS.sleep(10);
         Supplier<AbstractExecutionHandler<Void>> deadlineTest = () -> new AbstractExecutionHandler<Void>() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
-                return longProgram(10);
+                return longProgram(10, program);
             }
         };
         try (SlurmComputationManager computationManager = new SlurmComputationManager(config)) {
@@ -125,10 +132,15 @@ class SlurmOtherCaseTest extends AbstractIntegrationTests {
     }
 
     private void testInvalidQos(SlurmComputationConfig config) {
+        // Script configuration
+        String program = String.format("%s/%s",
+            moduleConfig.getOptionalStringProperty("program").orElse("No program configured"),
+            "testToStop.sh");
+
         Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractReturnOKExecutionHandler() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
-                return longProgram(10);
+                return longProgram(10, program);
             }
         };
         ComputationParameters parameters = new ComputationParametersBuilder().setTimeout("longProgram", 60).build();

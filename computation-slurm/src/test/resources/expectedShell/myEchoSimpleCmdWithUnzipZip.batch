@@ -17,7 +17,7 @@ case $SLURM_ARRAY_TASK_ID in
     ;;
 esac
 unzip -o -q "$PRE0"
-/home/dev-itesla/myapps/myecho.sh "${ARGS[@]}"
+/home/test/myecho.sh "${ARGS[@]}"
 rc=$?; if [[ $rc != 0 ]]; then touch /tmp/flags/myerror_workingPath_12345_$SLURM_ARRAY_JOB_ID-$SLURM_ARRAY_TASK_ID; exit $rc; fi
 gzip "$POST0"
 touch /tmp/flags/mydone_workingPath_12345_$SLURM_ARRAY_JOB_ID-$SLURM_ARRAY_TASK_ID

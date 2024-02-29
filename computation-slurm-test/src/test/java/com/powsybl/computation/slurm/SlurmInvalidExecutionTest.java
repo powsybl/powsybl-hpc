@@ -13,7 +13,6 @@ import com.powsybl.computation.CommandExecution;
 import com.powsybl.computation.ComputationParameters;
 import com.powsybl.computation.ExecutionReport;
 import org.assertj.core.api.Assertions;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,7 +31,6 @@ import static org.junit.jupiter.api.Assertions.fail;
 /**
  * @author Yichen TANG <yichen.tang at rte-france.com>
  */
-@Disabled
 class SlurmInvalidExecutionTest extends AbstractIntegrationTests {
     static final Logger LOGGER = LoggerFactory.getLogger(SlurmInvalidExecutionTest.class);
 
@@ -42,7 +40,7 @@ class SlurmInvalidExecutionTest extends AbstractIntegrationTests {
         addApprender(testAppender);
         try (SlurmComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
             CompletableFuture<String> completableFuture = computationManager.execute(EMPTY_ENV, supplier.get(), parameters);
-            System.out.println("to wait finish");
+            LOGGER.debug("Wait for the process to finish...");
             // As there are errors, the after() would throw exception(in this test)
             Assertions.assertThatThrownBy(completableFuture::join)
                     .isInstanceOf(CompletionException.class)
@@ -71,6 +69,11 @@ class SlurmInvalidExecutionTest extends AbstractIntegrationTests {
 
     @Test
     void testInvalidInBatch() {
+        // Script configuration
+        String program = String.format("%s/%s",
+            moduleConfig.getOptionalStringProperty("program").orElse("No program configured"),
+            "myecho.sh");
+
         Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractCheckErrorsExecutionHandler() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
@@ -78,7 +81,7 @@ class SlurmInvalidExecutionTest extends AbstractIntegrationTests {
                 generateZipFileOnRemote("in1", workingDir.resolve("in1.zip"));
                 generateZipFileOnRemote("in2", workingDir.resolve("in2.zip"));
                 generateZipFileOnRemote("in3", workingDir.resolve("in3.zip"));
-                return CommandExecutionsTestFactory.myEchoSimpleCmdWithUnzipZip(4);
+                return CommandExecutionsTestFactory.myEchoSimpleCmdWithUnzipZip(4, program);
             }
         };
         baseTest(supplier);

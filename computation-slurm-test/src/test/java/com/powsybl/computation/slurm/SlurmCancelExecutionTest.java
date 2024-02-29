@@ -13,7 +13,6 @@ import com.powsybl.computation.CommandExecution;
 import com.powsybl.computation.ComputationParameters;
 import com.powsybl.computation.ExecutionReport;
 import org.assertj.core.api.Assertions;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,7 +31,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * @author Yichen TANG <yichen.tang at rte-france.com>
  */
-@Disabled
 class SlurmCancelExecutionTest extends AbstractIntegrationTests {
     static final Logger LOGGER = LoggerFactory.getLogger(SlurmCancelExecutionTest.class);
 
@@ -60,12 +58,17 @@ class SlurmCancelExecutionTest extends AbstractIntegrationTests {
 
     @Test
     void testLongProgramToCancel() {
+        // Script configuration
+        String program = String.format("%s/%s",
+            moduleConfig.getOptionalStringProperty("program").orElse("No program configured"),
+            "testToStop.sh");
+
         ListAppender<ILoggingEvent> testAppender = new ListAppender<>();
         addApprender(testAppender);
         Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractFailInAfterHandler() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
-                return longProgram(10);
+                return longProgram(10, program);
             }
 
             @Override

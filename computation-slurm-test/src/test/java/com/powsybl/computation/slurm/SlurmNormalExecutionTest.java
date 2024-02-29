@@ -8,9 +8,6 @@ package com.powsybl.computation.slurm;
 
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
-import com.powsybl.commons.PowsyblException;
-import com.powsybl.commons.config.PlatformConfig;
-import com.powsybl.commons.config.YamlModuleConfigRepository;
 import com.powsybl.computation.*;
 import org.junit.jupiter.api.MethodOrderer.MethodName;
 import org.junit.jupiter.api.Test;
@@ -22,7 +19,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -49,7 +45,7 @@ class SlurmNormalExecutionTest extends AbstractIntegrationTests {
         addApprender(normalAppender);
         try (SlurmComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
             CompletableFuture<String> completableFuture = computationManager.execute(EMPTY_ENV, handler, parameters);
-            System.out.println("to wait finish");
+            LOGGER.debug("Wait for the process to finish...");
             String join = completableFuture.join();
             assertEquals("OK", join);
             assertIsCleaned(computationManager.getTaskStore());
@@ -88,16 +84,19 @@ class SlurmNormalExecutionTest extends AbstractIntegrationTests {
 
     @Test
     void testLongTask() {
+        // Script configuration
+        String program = String.format("%s/%s",
+            moduleConfig.getOptionalStringProperty("program").orElse("No program configured"),
+            "testToStop.sh");
         Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractReturnOKExecutionHandler() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
-                return longProgram(10);
+                return longProgram(10, program);
             }
         };
 
         // QOS configuration
-        YamlModuleConfigRepository configRepository = new YamlModuleConfigRepository(Paths.get("src/test/resources/config.yml"));
-        String qos = configRepository.getModuleConfig("slurm-computation-manager").flatMap(config -> config.getOptionalStringProperty("qos")).orElse("No qos configured");
+        String qos = moduleConfig.getOptionalStringProperty("qos").orElse("No qos configured");
 
         // Parameters
         ComputationParameters parameters = new ComputationParametersBuilder().setTimeout("longProgram", 60).build();
@@ -110,13 +109,18 @@ class SlurmNormalExecutionTest extends AbstractIntegrationTests {
 
     @Test
     void testMyEchoSimpleCmd() {
+        // Script configuration
+        String program = String.format("%s/%s",
+            moduleConfig.getOptionalStringProperty("program").orElse("No program configured"),
+            "myecho.sh");
+
         Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractExecutionHandler<>() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
                 generateZipFileOnRemote("in0", workingDir.resolve("in0.zip"));
                 generateZipFileOnRemote("in1", workingDir.resolve("in1.zip"));
                 generateZipFileOnRemote("in2", workingDir.resolve("in2.zip"));
-                return CommandExecutionsTestFactory.myEchoSimpleCmdWithUnzipZip(3);
+                return CommandExecutionsTestFactory.myEchoSimpleCmdWithUnzipZip(3, program);
             }
 
             @Override
