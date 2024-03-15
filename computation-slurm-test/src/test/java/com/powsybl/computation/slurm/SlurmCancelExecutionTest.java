@@ -32,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * @author Yichen TANG <yichen.tang at rte-france.com>
  */
-@Disabled
+@Disabled("Slurm integration tests must be run locally.")
 class SlurmCancelExecutionTest extends AbstractIntegrationTests {
     static final Logger LOGGER = LoggerFactory.getLogger(SlurmCancelExecutionTest.class);
 
