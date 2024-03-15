@@ -44,7 +44,7 @@ class SlurmNormalExecutionTest extends AbstractIntegrationTests {
     public void baseTest(SlurmComputationConfig slurmConfig, Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters) {
         AbstractExecutionHandler<String> handler = supplier.get();
         ListAppender<ILoggingEvent> normalAppender = new ListAppender<>();
-        addApprender(normalAppender);
+        addAppender(normalAppender);
         try (SlurmComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
             CompletableFuture<String> completableFuture = computationManager.execute(EMPTY_ENV, handler, parameters);
             LOGGER.debug("Wait for the process to finish...");
@@ -57,7 +57,7 @@ class SlurmNormalExecutionTest extends AbstractIntegrationTests {
             LOGGER.error(e.getMessage(), e);
             fail();
         } finally {
-            removeApprender(normalAppender);
+            removeAppender(normalAppender);
         }
         assertFalse(failed);
     }

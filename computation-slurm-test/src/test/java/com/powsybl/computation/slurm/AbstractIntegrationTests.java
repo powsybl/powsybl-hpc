@@ -84,12 +84,12 @@ public abstract class AbstractIntegrationTests {
 
     abstract void baseTest(SlurmComputationConfig config, Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters);
 
-    static void addApprender(ListAppender<ILoggingEvent> appender) {
+    static void addAppender(ListAppender<ILoggingEvent> appender) {
         appender.start();
         SCM_LOGGER.addAppender(appender);
     }
 
-    static void removeApprender(ListAppender<ILoggingEvent> appender) {
+    static void removeAppender(ListAppender<ILoggingEvent> appender) {
         appender.stop();
         SCM_LOGGER.detachAppender(appender);
     }

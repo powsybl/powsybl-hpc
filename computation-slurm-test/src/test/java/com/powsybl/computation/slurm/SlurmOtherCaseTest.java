@@ -149,7 +149,7 @@ class SlurmOtherCaseTest extends AbstractIntegrationTests {
         SlurmComputationParameters slurmComputationParameters = new SlurmComputationParameters(parameters, "THIS_QOS_SHOULD_NOT_EXIST_IN_SLURM");
         parameters.addExtension(SlurmComputationParameters.class, slurmComputationParameters);
         ListAppender<ILoggingEvent> appender = new ListAppender<>();
-        addApprender(appender);
+        addAppender(appender);
         try (SlurmComputationManager computationManager = new SlurmComputationManager(config)) {
             CompletableFuture<String> execute = computationManager.execute(EMPTY_ENV, supplier.get(), parameters);
             execute.join();
@@ -160,7 +160,7 @@ class SlurmOtherCaseTest extends AbstractIntegrationTests {
         } catch (CompletionException ce) {
             assertTrue(ce.getCause().getMessage().contains("Invalid qos specification"));
         } finally {
-            removeApprender(appender);
+            removeAppender(appender);
         }
     }
 

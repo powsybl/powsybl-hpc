@@ -39,7 +39,7 @@ class SlurmInvalidExecutionTest extends AbstractIntegrationTests {
     @Override
     void baseTest(SlurmComputationConfig slurmConfig, Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters) {
         ListAppender<ILoggingEvent> testAppender = new ListAppender<>();
-        addApprender(testAppender);
+        addAppender(testAppender);
         try (SlurmComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
             CompletableFuture<String> completableFuture = computationManager.execute(EMPTY_ENV, supplier.get(), parameters);
             LOGGER.debug("Wait for the process to finish...");
@@ -52,7 +52,7 @@ class SlurmInvalidExecutionTest extends AbstractIntegrationTests {
             LOGGER.error(e.getMessage(), e);
             fail();
         } finally {
-            removeApprender(testAppender);
+            removeAppender(testAppender);
         }
         // assert on main thread
         assertFalse(failed);

@@ -66,7 +66,7 @@ class SlurmCancelExecutionTest extends AbstractIntegrationTests {
             "testToStop.sh");
 
         ListAppender<ILoggingEvent> testAppender = new ListAppender<>();
-        addApprender(testAppender);
+        addAppender(testAppender);
         Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractFailInAfterHandler() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
@@ -84,14 +84,14 @@ class SlurmCancelExecutionTest extends AbstractIntegrationTests {
             assertTrue(testAppender.list.stream()
                     .anyMatch(e -> e.getFormattedMessage().contains("An exception occurred during execution of commands on slurm")));
         } finally {
-            removeApprender(testAppender);
+            removeAppender(testAppender);
         }
     }
 
     @Test
     void testLongProgramInListToCancel() {
         ListAppender<ILoggingEvent> testAppender = new ListAppender<>();
-        addApprender(testAppender);
+        addAppender(testAppender);
         Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractFailInAfterHandler() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
@@ -103,14 +103,14 @@ class SlurmCancelExecutionTest extends AbstractIntegrationTests {
             assertTrue(testAppender.list.stream()
                     .anyMatch(e -> e.getFormattedMessage().contains("An exception occurred during execution of commands on slurm")));
         } finally {
-            removeApprender(testAppender);
+            removeAppender(testAppender);
         }
     }
 
     @Test
     void testMixedProgramsToCancel() {
         ListAppender<ILoggingEvent> testAppender = new ListAppender<>();
-        addApprender(testAppender);
+        addAppender(testAppender);
         Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractFailInAfterHandler() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
@@ -122,7 +122,7 @@ class SlurmCancelExecutionTest extends AbstractIntegrationTests {
             assertTrue(testAppender.list.stream()
                     .anyMatch(e -> e.getFormattedMessage().contains("An exception occurred during execution of commands on slurm")));
         } finally {
-            removeApprender(testAppender);
+            removeAppender(testAppender);
         }
     }
 
