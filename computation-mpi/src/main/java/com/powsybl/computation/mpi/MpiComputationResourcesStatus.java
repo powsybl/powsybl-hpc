@@ -6,10 +6,10 @@
  */
 package com.powsybl.computation.mpi;
 
-import com.google.common.collect.ImmutableMap;
 import com.powsybl.computation.ComputationResourcesStatus;
+
+import java.time.ZonedDateTime;
 import java.util.Map;
-import org.joda.time.DateTime;
 
 /**
  *
@@ -17,20 +17,20 @@ import org.joda.time.DateTime;
  */
 class MpiComputationResourcesStatus implements ComputationResourcesStatus {
 
-    private final DateTime date;
+    private final ZonedDateTime date;
 
     private int availableCores = 0;
 
     private int busyCores = 0;
 
     MpiComputationResourcesStatus(MpiResources resources) {
-        date = new DateTime();
+        date = ZonedDateTime.now();
         availableCores = resources.getAvailableCores();
         busyCores = resources.getBusyCores();
     }
 
     @Override
-    public DateTime getDate() {
+    public ZonedDateTime getDate() {
         return date;
     }
 
@@ -46,7 +46,7 @@ class MpiComputationResourcesStatus implements ComputationResourcesStatus {
 
     @Override
     public Map<String, Integer> getBusyCoresPerApp() {
-        return ImmutableMap.of("all", busyCores);
+        return Map.of("all", busyCores);
     }
 
 }

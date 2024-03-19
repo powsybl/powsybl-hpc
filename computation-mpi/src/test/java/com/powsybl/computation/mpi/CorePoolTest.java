@@ -6,27 +6,28 @@
  */
 package com.powsybl.computation.mpi;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.List;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  *
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
-public class CorePoolTest {
+class CorePoolTest {
 
     public CorePoolTest() {
     }
 
     private CorePool pool;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         pool = new CorePool();
         MpiRank rank0 = new MpiRank(0);
@@ -37,34 +38,34 @@ public class CorePoolTest {
         pool.returnCore(new Core(rank1, 1));
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         pool = null;
     }
 
     @Test
-    public void testBorrowReturn() {
-        assertTrue(pool.availableCores() == 4);
+    void testBorrowReturn() {
+        assertEquals(4, pool.availableCores());
         List<Core> cores = pool.borrowCores(1);
-        assertTrue(cores.size() == 1);
-        assertTrue(pool.availableCores() == 3);
+        assertEquals(1, cores.size());
+        assertEquals(3, pool.availableCores());
         pool.returnCore(cores.get(0));
-        assertTrue(pool.availableCores() == 4);
+        assertEquals(4, pool.availableCores());
     }
 
     @Test
-    public void testBorrowAll() {
-        assertTrue(pool.availableCores() == 4);
+    void testBorrowAll() {
+        assertEquals(4, pool.availableCores());
         List<Core> allCores = pool.borrowCores(4);
-        assertTrue(allCores.size() == 4);
-        assertTrue(pool.availableCores() == 0);
+        assertEquals(4, allCores.size());
+        assertEquals(0, pool.availableCores());
         pool.returnCores(allCores);
-        assertTrue(pool.availableCores() == 4);
+        assertEquals(4, pool.availableCores());
     }
 
     @Test
-    public void testBorrowMoreThanSizePool() {
-        assertTrue(pool.availableCores() == 4);
+    void testBorrowMoreThanSizePool() {
+        assertEquals(4, pool.availableCores());
         try {
             pool.borrowCores(5);
         } catch (Exception e) {
@@ -73,25 +74,25 @@ public class CorePoolTest {
     }
 
     @Test
-    public void testPreferedCores() {
-        assertTrue(pool.availableCores() == 4);
+    void testPreferedCores() {
+        assertEquals(4, pool.availableCores());
         List<Core> cores = pool.borrowCores(1, Collections.singleton(0));
-        assertTrue(cores.size() == 1);
-        assertTrue(pool.availableCores() == 3);
+        assertEquals(1, cores.size());
+        assertEquals(3, pool.availableCores());
         pool.returnCore(cores.get(0));
-        assertTrue(pool.availableCores() == 4);
+        assertEquals(4, pool.availableCores());
     }
 
     @Test
-    public void testPreferedCoresMixed() {
-        assertTrue(pool.availableCores() == 4);
+    void testPreferedCoresMixed() {
+        assertEquals(4, pool.availableCores());
         List<Core> cores = pool.borrowCores(3, Collections.singleton(0));
-        assertTrue(cores.size() == 3);
-        assertTrue(cores.get(0).rank.num == 0);
-        assertTrue(cores.get(1).rank.num == 0);
-        assertTrue(cores.get(2).rank.num == 1);
-        assertTrue(pool.availableCores() == 1);
+        assertEquals(3, cores.size());
+        assertEquals(0, cores.get(0).rank.num);
+        assertEquals(0, cores.get(1).rank.num);
+        assertEquals(1, cores.get(2).rank.num);
+        assertEquals(1, pool.availableCores());
         pool.returnCores(cores);
-        assertTrue(pool.availableCores() == 4);
+        assertEquals(4, pool.availableCores());
     }
 }

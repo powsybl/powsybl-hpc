@@ -33,8 +33,8 @@ public abstract class AbstractSlurmJobMonitor implements Runnable {
     public void run() {
         try {
             detectJobsState(jobsSupplier.get());
-        } catch (Throwable t) {
-            LOGGER.warn("Exception in job state detection", t);
+        } catch (Exception e) {
+            LOGGER.warn("Exception in job state detection", e);
             // scheduleAtFixedRate() API said: If any execution of the task encounters an exception, subsequent executions are suppressed.
         }
     }

@@ -54,13 +54,11 @@ public final class CommandExecutionsTestFactory {
 
     /**
      * The 4th batch would fail.
-     * @param executionCount
-     * @return
      */
-    static List<CommandExecution> myEchoSimpleCmdWithUnzipZip(int executionCount) {
+    static List<CommandExecution> myEchoSimpleCmdWithUnzipZip(int executionCount, String program) {
         Command command = new SimpleCommandBuilder()
                 .id("myEcho")
-                .program("/home/dev-itesla/myapps/myecho.sh")
+                .program(program)
                 .inputFiles(new InputFile(integer -> "in" + integer + ".zip", FilePreProcessor.ARCHIVE_UNZIP))
                 .outputFiles(new OutputFile(integer -> "out" + integer, FilePostProcessor.FILE_GZIP))
                 .args(i -> Arrays.asList("in" + i, "out" + i))
@@ -116,10 +114,10 @@ public final class CommandExecutionsTestFactory {
         return Collections.singletonList(new CommandExecution(command, 3));
     }
 
-    static List<CommandExecution> longProgram(int seconds) {
+    static List<CommandExecution> longProgram(int seconds, String program) {
         Command command = new SimpleCommandBuilder()
                 .id("longProgram")
-                .program("sleep")
+                .program(program)
                 .args(seconds + "s")
                 .build();
         return Collections.singletonList(new CommandExecution(command, 1));

@@ -6,13 +6,10 @@
  */
 package com.powsybl.computation.mpi;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.protobuf.ByteString;
 import com.powsybl.commons.PowsyblException;
 import com.powsybl.computation.*;
 import com.powsybl.computation.mpi.generated.Messages;
-import org.joda.time.DateTime;
-import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,6 +18,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.nio.file.*;
+import java.time.Duration;
+import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -38,7 +37,7 @@ class MpiJobSchedulerImpl implements MpiJobScheduler {
 
     private static final int TIMEOUT = 10; // ms
 
-    private static final Map<String, String> ZIP_FS_ENV = ImmutableMap.of("create", "true");
+    private static final Map<String, String> ZIP_FS_ENV = Map.of("create", "true");
 
     private final MpiNativeServices nativeServices;
 
@@ -186,10 +185,10 @@ class MpiJobSchedulerImpl implements MpiJobScheduler {
 
     private static Messages.Task.Environment createEnvMessage(Map<String, String> variables) {
         Messages.Task.Environment.Builder builder = Messages.Task.Environment.newBuilder();
-        for (Map.Entry<String, String> var : variables.entrySet()) {
+        for (Map.Entry<String, String> entry : variables.entrySet()) {
             builder.addVariable(Messages.Task.Variable.newBuilder()
-                    .setName(var.getKey())
-                    .setValue(var.getValue())
+                    .setName(entry.getKey())
+                    .setValue(entry.getValue())
                     .build());
         }
         return builder.build();
@@ -227,7 +226,7 @@ class MpiJobSchedulerImpl implements MpiJobScheduler {
                 .setInitJob(initJob);
 
         //
-        // select which files have to be send with the message
+        // select which files have to be sent with the message
         //
         for (InputFile file : command.getInputFiles()) {
             if (file.dependsOnExecutionNumber()) {
@@ -365,7 +364,7 @@ class MpiJobSchedulerImpl implements MpiJobScheduler {
                 checkTaskCompletionTime += System.currentTimeMillis() - t0;
             }
             if (!completedTasks.isEmpty()) {
-                DateTime endTime = DateTime.now();
+                ZonedDateTime endTime = ZonedDateTime.now();
 
                 // release cores as fast as possible
                 completedTasks.forEach(task -> {
@@ -418,7 +417,7 @@ class MpiJobSchedulerImpl implements MpiJobScheduler {
                             command.toString(-1), allocatedCores, job.getWorkingDir());
                 }
 
-                DateTime startTime = DateTime.now();
+                ZonedDateTime startTime = ZonedDateTime.now();
 
                 // encode task messages
                 int oldTaskIndex = taskIndex;
@@ -489,7 +488,7 @@ class MpiJobSchedulerImpl implements MpiJobScheduler {
 
             for (MpiTask task : completedTasks) {
                 // duration of the task seen by the master in ms
-                long taskDurationSeenByMaster = new Duration(task.getStartTime(), task.getEndTime()).getMillis();
+                long taskDurationSeenByMaster = Duration.between(task.getStartTime(), task.getEndTime()).getNano() / 1000000;
 
                 // decode task result messages
                 Messages.TaskResult message = Messages.TaskResult.parseFrom(task.getResultMessage());
@@ -504,7 +503,7 @@ class MpiJobSchedulerImpl implements MpiJobScheduler {
                     copyFileToWorkingDirectory(outputFile, job, stdOutGzFileName);
 
                     // archive standard output of problematic tasks
-                    if ((stdOutArchive != null) && (message.getExitCode() != 0) && outputFile.getName().equals(stdOutGzFileName)) {
+                    if (stdOutArchive != null && message.getExitCode() != 0 && outputFile.getName().equals(stdOutGzFileName)) {
                         try (FileSystem archiveFileSystem = FileSystems.newFileSystem(URI.create("jar:file:" + stdOutArchive.toUri().getPath()), ZIP_FS_ENV)) {
                             Path dir = archiveFileSystem.getPath("/").resolve("job-" + job.getId());
                             Files.createDirectories(dir);
@@ -528,7 +527,7 @@ class MpiJobSchedulerImpl implements MpiJobScheduler {
                     LOGGER.error(e.toString(), e);
                 }
 
-                // update execution statistics
+                // update execution statistics - durations are in ms
                 statistics.logTaskEnd(task.getId(),
                         taskDurationSeenByMaster,
                         message.getCommandDurationList(),

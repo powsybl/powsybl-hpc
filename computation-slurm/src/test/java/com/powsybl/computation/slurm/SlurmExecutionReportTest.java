@@ -11,9 +11,9 @@ import com.google.common.jimfs.Jimfs;
 import com.powsybl.computation.Command;
 import com.powsybl.computation.DefaultExecutionReport;
 import com.powsybl.computation.ExecutionReport;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.*;
 import java.nio.file.FileSystem;
@@ -22,14 +22,14 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Optional;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
  * @author Yichen TANG <yichen.tang at rte-france.com>
  */
-public class SlurmExecutionReportTest {
+class SlurmExecutionReportTest {
 
     private static final String STD_OUT_PATH = "/workdir/cmdId_0.out";
 
@@ -39,7 +39,7 @@ public class SlurmExecutionReportTest {
 
     private Path workingDir;
 
-    @Before
+    @BeforeEach
     public void setUp() throws IOException {
         fileSystem = Jimfs.newFileSystem(Configuration.unix());
         workingDir = fileSystem.getPath("/workdir/");
@@ -48,7 +48,7 @@ public class SlurmExecutionReportTest {
     }
 
     @Test
-    public void test() {
+    void test() {
         ExecutionReport sut = new DefaultExecutionReport(workingDir, Collections.emptyList());
         Command command = mock(Command.class);
         when(command.getId()).thenReturn("cmdId");
@@ -70,7 +70,7 @@ public class SlurmExecutionReportTest {
         }
     }
 
-    @After
+    @AfterEach
     public void tearDown() throws IOException {
         fileSystem.close();
     }

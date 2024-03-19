@@ -14,9 +14,11 @@ import com.powsybl.computation.ComputationParameters;
 import com.powsybl.computation.ExecutionEnvironment;
 import com.powsybl.computation.ExecutionError;
 import com.powsybl.computation.ExecutionReport;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.FileSystem;
@@ -29,21 +31,23 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static com.powsybl.computation.slurm.CommandResultTestFactory.simpleOutput;
-import static org.junit.Assert.*;
-import static org.mockito.Matchers.startsWith;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.startsWith;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
  * @author Yichen TANG <yichen.tang at rte-france.com>
  */
-public class SlurmTaskTest {
+class SlurmTaskTest {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(SlurmTaskTest.class);
 
     private FileSystem fileSystem;
     private Path flagPath;
     private Path workingPath;
 
-    @Before
+    @BeforeEach
     public void setUp() throws IOException {
         fileSystem = Jimfs.newFileSystem(Configuration.unix());
         flagPath = fileSystem.getPath("/tmp/flags");
@@ -80,7 +84,7 @@ public class SlurmTaskTest {
     }
 
     @Test
-    public void testCommands() {
+    void testCommands() {
         CommandExecutor commandExecutor = mock(CommandExecutor.class);
         SlurmTaskImpl task = new SlurmTaskImpl(mockScm(commandExecutor), mockWd(), CommandExecutionsTestFactory.md5sumLargeFile(), ComputationParameters.empty(), ExecutionEnvironment.createDefault());
         assertEquals(2, task.getCommandExecutionSize());
@@ -89,7 +93,7 @@ public class SlurmTaskTest {
     }
 
     @Test
-    public void test() {
+    void test() {
         CommandExecutor commandExecutor = mock(CommandExecutor.class);
         SlurmTaskImpl task = new SlurmTaskImpl(mockScm(commandExecutor), mockWd(), CommandExecutionsTestFactory.longProgramInList(2, 3, 1), ComputationParameters.empty(), ExecutionEnvironment.createDefault());
         when(commandExecutor.execute(startsWith("sbatch")))
@@ -108,7 +112,7 @@ public class SlurmTaskTest {
             task.submit();
             testIdsRelationship(task);
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.error(e.getMessage(), e);
             fail();
         }
 
@@ -131,7 +135,7 @@ public class SlurmTaskTest {
     }
 
     @Test
-    public void testSubmitCommonUnzipFile() {
+    void testSubmitCommonUnzipFile() {
         CommandExecutor commandExecutor = mock(CommandExecutor.class);
         SlurmTaskImpl task2 = new SlurmTaskImpl(mockScm(commandExecutor), mockWd(), CommandExecutionsTestFactory.md5sumLargeFile(), ComputationParameters.empty(), ExecutionEnvironment.createDefault());
         when(commandExecutor.execute(startsWith("sbatch")))
@@ -153,7 +157,7 @@ public class SlurmTaskTest {
             assertEquals(ImmutableSet.of(1L, 2L, 3L, 4L, 5L, 6L), getPendingJobsIds(task2));
             assertEquals(Arrays.asList(1L, 2L, 5L, 6L), task2.getMasters());
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.error(e.getMessage(), e);
             fail();
         }
 
@@ -162,7 +166,7 @@ public class SlurmTaskTest {
     }
 
     @Test
-    public void baseTest() {
+    void baseTest() {
         CommandExecutor commandExecutor = mock(CommandExecutor.class);
         WorkingDirectory directory = mock(WorkingDirectory.class);
         Path path = mock(Path.class);
@@ -184,7 +188,7 @@ public class SlurmTaskTest {
         return workingDirectory;
     }
 
-    @After
+    @AfterEach
     public void tearDown() throws IOException {
         fileSystem.close();
     }

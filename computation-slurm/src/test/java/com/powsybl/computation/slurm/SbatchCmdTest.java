@@ -8,9 +8,7 @@ package com.powsybl.computation.slurm;
 
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.file.FileSystem;
@@ -18,18 +16,16 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collections;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * @author Yichen TANG <yichen.tang at rte-france.com>
  */
-public class SbatchCmdTest {
-
-    @Rule
-    public ExpectedException thrown = ExpectedException.none();
+class SbatchCmdTest {
 
     @Test
-    public void testJobArray() {
+    void testJobArray() {
         SbatchCmdBuilder builder = new SbatchCmdBuilder();
         SbatchCmd cmd = builder.jobName("array3")
                 .script("submit.sh")
@@ -44,17 +40,16 @@ public class SbatchCmdTest {
     }
 
     @Test
-    public void invalidJobArray() {
-        thrown.expect(IllegalArgumentException.class);
+    void invalidJobArray() {
         SbatchCmdBuilder builder = new SbatchCmdBuilder();
         builder.jobName("test")
-                .script("submit.sh")
-                .array(-1)
-                .build();
+                .script("submit.sh");
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> builder.array(-1));
+        assertEquals("-1 is not validate for array.", e.getMessage());
     }
 
     @Test
-    public void testAftercorr() {
+    void testAftercorr() {
         SbatchCmdBuilder builder = new SbatchCmdBuilder();
         SbatchCmd cmd = builder.jobName("jobname")
                 .script("submit.sh")
@@ -70,7 +65,7 @@ public class SbatchCmdTest {
     }
 
     @Test
-    public void testOptions() {
+    void testOptions() {
         SbatchCmdBuilder builder = new SbatchCmdBuilder();
         SbatchCmd cmd = builder.jobName("array1")
                 .script("submit.sh")
@@ -80,7 +75,7 @@ public class SbatchCmdTest {
     }
 
     @Test
-    public void testTimeout() {
+    void testTimeout() {
         SbatchCmd cmd = new SbatchCmdBuilder().jobName("foo")
                 .script("foo.sh")
                 .timeout("2:00")
@@ -95,7 +90,7 @@ public class SbatchCmdTest {
     }
 
     @Test
-    public void testQos() {
+    void testQos() {
         SbatchCmdBuilder builder = new SbatchCmdBuilder();
         SbatchCmd cmd = builder.jobName("testQos")
                 .script("submit.sh")
@@ -105,7 +100,7 @@ public class SbatchCmdTest {
     }
 
     @Test
-    public void testDeadline() {
+    void testDeadline() {
         SbatchCmdBuilder builder = new SbatchCmdBuilder();
         SbatchCmd cmd = builder.jobName("dead")
                 .script("submit.sh")
@@ -115,7 +110,7 @@ public class SbatchCmdTest {
     }
 
     @Test
-    public void testDir() throws IOException {
+    void testDir() throws IOException {
         try (FileSystem fileSystem = Jimfs.newFileSystem(Configuration.unix())) {
             Path dir = fileSystem.getPath("/tmp/foo");
             SbatchCmdBuilder builder = new SbatchCmdBuilder();
@@ -128,7 +123,7 @@ public class SbatchCmdTest {
     }
 
     @Test
-    public void testMem() {
+    void testMem() {
         SbatchCmdBuilder builder = new SbatchCmdBuilder();
         SbatchCmd cmd = builder.jobName("testMem")
                 .script("submit.sh")

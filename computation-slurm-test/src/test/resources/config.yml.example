@@ -10,3 +10,5 @@ slurm-computation-manager:
     remote-dir: FIXME
     # your local folder, not used in current tests
     local-dir: FIXME
+    # qos to use, configured on your slurm server
+    qos: FIXME

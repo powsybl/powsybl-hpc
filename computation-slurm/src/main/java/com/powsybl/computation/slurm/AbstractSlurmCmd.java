@@ -23,7 +23,7 @@ abstract class AbstractSlurmCmd<T> {
     CommandResult sendCmd(CommandExecutor commandExecutor, String cmd) throws SlurmCmdNonZeroException {
         Objects.requireNonNull(commandExecutor);
         Objects.requireNonNull(cmd);
-        LOGGER.debug("Sending cmd:" + cmd);
+        LOGGER.debug("Sending cmd: {}", cmd);
         CommandResult result = commandExecutor.execute(cmd);
         if (result.getExitCode() != 0) {
             throw new SlurmCmdNonZeroException(result);

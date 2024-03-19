@@ -13,8 +13,10 @@ import com.powsybl.computation.CommandExecution;
 import com.powsybl.computation.ComputationParameters;
 import com.powsybl.computation.ComputationParametersBuilder;
 import org.assertj.core.api.Assertions;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -26,37 +28,42 @@ import java.util.function.Supplier;
 
 import static com.powsybl.computation.slurm.CommandExecutionsTestFactory.longProgram;
 import static com.powsybl.computation.slurm.CommandExecutionsTestFactory.makeSlurmBusy;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * @author Yichen TANG <yichen.tang at rte-france.com>
  */
-@Ignore
-public class SlurmOtherCaseTest extends AbstractIntegrationTests {
+@Disabled("Slurm integration tests must be run locally.")
+class SlurmOtherCaseTest extends AbstractIntegrationTests {
+    static final Logger LOGGER = LoggerFactory.getLogger(SlurmOtherCaseTest.class);
 
     @Test
-    public void testLongProgramToCancelExternal() {
+    void testLongProgramToCancelExternal() {
         testLongProgramToCancelExternal(batchConfig);
         testLongProgramToCancelExternal(arrayConfig);
     }
 
     private void testLongProgramToCancelExternal(SlurmComputationConfig config) {
-        Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractExecutionHandler<String>() {
+        // Script configuration
+        String program = String.format("%s/%s",
+            moduleConfig.getOptionalStringProperty("program").orElse("No program configured"),
+            "testToStop.sh");
+
+        Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractExecutionHandler<>() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
-                return longProgram(200);
+                return longProgram(200, program);
             }
         };
         try (SlurmComputationManager computationManager = new SlurmComputationManager(config)) {
             CompletableFuture<String> completableFuture = computationManager.execute(EMPTY_ENV, supplier.get(), ComputationParameters.empty());
-            System.out.println("Go to interrupt on server");
+            LOGGER.warn("Please interrupt the process on the server using the command \"scancel <JobId>\"");
             Assertions.assertThatThrownBy(completableFuture::join)
-                    .isInstanceOf(CompletionException.class);
-            // TODO detail msg
-//                    .hasMessageContaining("is CANCELLED");
+                    .isInstanceOf(CompletionException.class)
+                    .hasMessageContaining("has been interrupted on slurm infrastructure");
             assertIsCleaned(computationManager.getTaskStore());
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.error(e.getMessage(), e);
             failed = true;
         } catch (CompletionException ce) {
             System.out.println("in ce");
@@ -83,19 +90,24 @@ public class SlurmOtherCaseTest extends AbstractIntegrationTests {
     }
 
     @Test
-    public void testDeadline() throws InterruptedException {
+    void testDeadline() throws InterruptedException {
         testDeadline(batchConfig);
         testDeadline(arrayConfig);
     }
 
     private void testDeadline(SlurmComputationConfig config) throws InterruptedException {
+        // Script configuration
+        String program = String.format("%s/%s",
+            moduleConfig.getOptionalStringProperty("program").orElse("No program configured"),
+            "testToStop.sh");
+
         Thread makeSlurmBusyThread = new Thread(this::runMakeSlurmBusy);
         makeSlurmBusyThread.start();
         TimeUnit.SECONDS.sleep(10);
         Supplier<AbstractExecutionHandler<Void>> deadlineTest = () -> new AbstractExecutionHandler<Void>() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
-                return longProgram(10);
+                return longProgram(10, program);
             }
         };
         try (SlurmComputationManager computationManager = new SlurmComputationManager(config)) {
@@ -108,7 +120,7 @@ public class SlurmOtherCaseTest extends AbstractIntegrationTests {
                     .isInstanceOf(CompletionException.class);
             assertIsCleaned(computationManager.getTaskStore());
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.error(e.getMessage(), e);
             failed = true;
         }
         assertFalse(failed);
@@ -116,23 +128,28 @@ public class SlurmOtherCaseTest extends AbstractIntegrationTests {
 
     // sacctmgr show qos
     @Test
-    public void testInvalidQos() {
+    void testInvalidQos() {
         testInvalidQos(batchConfig);
         testInvalidQos(arrayConfig);
     }
 
     private void testInvalidQos(SlurmComputationConfig config) {
+        // Script configuration
+        String program = String.format("%s/%s",
+            moduleConfig.getOptionalStringProperty("program").orElse("No program configured"),
+            "testToStop.sh");
+
         Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractReturnOKExecutionHandler() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
-                return longProgram(10);
+                return longProgram(10, program);
             }
         };
         ComputationParameters parameters = new ComputationParametersBuilder().setTimeout("longProgram", 60).build();
         SlurmComputationParameters slurmComputationParameters = new SlurmComputationParameters(parameters, "THIS_QOS_SHOULD_NOT_EXIST_IN_SLURM");
         parameters.addExtension(SlurmComputationParameters.class, slurmComputationParameters);
         ListAppender<ILoggingEvent> appender = new ListAppender<>();
-        addApprender(appender);
+        addAppender(appender);
         try (SlurmComputationManager computationManager = new SlurmComputationManager(config)) {
             CompletableFuture<String> execute = computationManager.execute(EMPTY_ENV, supplier.get(), parameters);
             execute.join();
@@ -143,13 +160,13 @@ public class SlurmOtherCaseTest extends AbstractIntegrationTests {
         } catch (CompletionException ce) {
             assertTrue(ce.getCause().getMessage().contains("Invalid qos specification"));
         } finally {
-            removeApprender(appender);
+            removeAppender(appender);
         }
     }
 
     // FIXME shutdown and check programmatically
     @Test
-    public void testStopSendingAfterShutdown() {
+    void testStopSendingAfterShutdown() {
         try (SlurmComputationManager computationManager = new SlurmComputationManager(batchConfig)) {
             CompletableFuture<Void> execute = computationManager.execute(EMPTY_ENV, new AbstractExecutionHandler<Void>() {
                 @Override

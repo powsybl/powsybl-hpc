@@ -2,11 +2,13 @@
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
+syntax = "proto2";
 package messages;
 
 // Author: Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
 
-option java_package = "com.powsybl.computation.mpi.messages";
+option java_multiple_files = false;
+option java_package = "com.powsybl.computation.mpi.generated";
 option java_outer_classname = "Messages";
 
 message CommonFile {
@@ -59,7 +61,7 @@ message Task {
     message Command {
         required string program = 1;
         repeated string argument = 2;
-	optional int32 timeout = 3;
+        optional int32 timeout = 3;
     }
 
     required int32 jobId = 1;
@@ -69,7 +71,7 @@ message Task {
     repeated Command command = 5;
     repeated InputFile inputFile = 6;
     repeated OutputFile outputFile = 7;
-    
+
     required bool initJob = 8;
 
     // for cleanup
@@ -83,8 +85,8 @@ message TaskResult {
     }
 
     required int32 exitCode = 1;
-    required int64 taskDuration = 2; // in ms 
-    repeated int64 commandDuration = 3; // in ms 
+    required int64 taskDuration = 2; // in ms
+    repeated int64 commandDuration = 3; // in ms
     required int64 workingDataSize = 4; // in bytes
     repeated OutputFile outputFile = 5;
 }

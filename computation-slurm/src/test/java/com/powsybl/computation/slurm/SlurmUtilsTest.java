@@ -6,18 +6,18 @@
  */
 package com.powsybl.computation.slurm;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * @author Yichen TANG <yichen.tang at rte-france.com>
  */
-public class SlurmUtilsTest {
+class SlurmUtilsTest {
 
     @Test
-    public void test() {
+    void test() {
         assertEquals("00-00:00:01", SlurmUtils.toTime(1));
         assertEquals("00-00:01:00", SlurmUtils.toTime(60));
         assertEquals("00-00:01:01", SlurmUtils.toTime(61));
