@@ -71,7 +71,7 @@
             ../../distribution-hpc/target/site/jacoco-aggregate/jacoco.xml,
         </sonar.coverage.jacoco.xmlReportPaths>
 
-        <powsyblcore.version>6.2.2</powsyblcore.version>
+        <powsyblcore.version>6.3.0</powsyblcore.version>
     </properties>
 
     <dependencyManagement>
