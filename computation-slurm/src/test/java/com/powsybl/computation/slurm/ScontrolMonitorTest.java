@@ -7,34 +7,34 @@
 package com.powsybl.computation.slurm;
 
 import com.google.common.collect.ImmutableList;
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.Matchers;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 
-import static org.junit.Assert.*;
-import static org.mockito.Matchers.anyString;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.endsWith;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
  * @author Yichen Tang <yichen.tang at rte-france.com>
  */
-public class ScontrolMonitorTest {
+class ScontrolMonitorTest {
 
     private SlurmComputationManager slurm;
     private TaskStore ts;
     private List<MockJob> jobs;
     private CommandExecutor cm;
 
-    private CommandResult runningResult = new CommandResult(0, "JobState=RUNNING", "");
-    private CommandResult cancelledResult = new CommandResult(0, "JobState=CANCELLED", "");
+    private final CommandResult runningResult = new CommandResult(0, "JobState=RUNNING", "");
+    private final CommandResult cancelledResult = new CommandResult(0, "JobState=CANCELLED", "");
 
     @Test
-    public void testAllRunning() {
+    void testAllRunning() {
         when(cm.execute(anyString())).thenReturn(runningResult);
         ScontrolMonitor monitor = new ScontrolMonitor(slurm);
         assertFalse(ts.getPendingJobs().isEmpty());
@@ -49,11 +49,11 @@ public class ScontrolMonitorTest {
     }
 
     @Test
-    public void testUnormalFound() {
+    void testUnormalFound() {
 
         // job 3 is scancelled while 1, 2 are running
         when(cm.execute(anyString())).thenReturn(runningResult);
-        when(cm.execute(Matchers.endsWith("3"))).thenReturn(cancelledResult);
+        when(cm.execute(endsWith("3"))).thenReturn(cancelledResult);
 
         ScontrolMonitor monitor = new ScontrolMonitor(slurm);
 
@@ -66,7 +66,7 @@ public class ScontrolMonitorTest {
         assertTrue(jobs.get(2).isInterrupted());
     }
 
-    @Before
+    @BeforeEach
     public void setup() {
         slurm = mock(SlurmComputationManager.class);
         ts = mock(TaskStore.class);

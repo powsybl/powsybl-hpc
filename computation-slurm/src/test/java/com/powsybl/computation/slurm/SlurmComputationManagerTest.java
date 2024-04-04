@@ -14,9 +14,9 @@ import com.powsybl.computation.CommandExecution;
 import com.powsybl.computation.ExecutionEnvironment;
 import com.powsybl.computation.ExecutionReport;
 import org.assertj.core.api.Assertions;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.file.FileSystem;
@@ -30,28 +30,27 @@ import java.util.concurrent.Executors;
 
 import static com.powsybl.computation.slurm.CommandResultTestFactory.emptyResult;
 import static com.powsybl.computation.slurm.CommandResultTestFactory.simpleOutput;
-import static org.junit.Assert.*;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.eq;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
  * @author Yichen TANG <yichen.tang at rte-france.com>
  */
-public class SlurmComputationManagerTest {
+class SlurmComputationManagerTest {
 
     private FileSystem fileSystem;
     private Path localDir;
 
     @Test
-    public void test() throws IOException {
+    void test() throws IOException {
         SlurmComputationConfig config = mock(SlurmComputationConfig.class);
         when(config.getWorkingDir()).thenReturn("/work");
         ExecutorService executorService = Executors.newCachedThreadPool();
         CommandExecutor runner = mock(CommandExecutor.class);
         when(runner.execute(anyString())).thenReturn(emptyResult());
-        when(runner.execute(eq("scontrol --version"))).thenReturn(simpleOutput("slurm 19.05.0"));
+        when(runner.execute("scontrol --version")).thenReturn(simpleOutput("slurm 19.05.0"));
 
         SlurmComputationManager sut = new SlurmComputationManager(config, executorService, runner, fileSystem, localDir);
 
@@ -93,30 +92,30 @@ public class SlurmComputationManagerTest {
             afterException.join();
             fail();
         } catch (Exception e) {
-            assertTrue(e instanceof CompletionException);
+            assertInstanceOf(CompletionException.class, e);
         }
     }
 
     @Test
-    public void testNotInstalled() {
+    void testNotInstalled() {
         SlurmComputationConfig config = mock(SlurmComputationConfig.class);
         when(config.getWorkingDir()).thenReturn("/work");
         ExecutorService executorService = mock(ExecutorService.class);
         CommandExecutor runner = mock(CommandExecutor.class);
         when(runner.execute(anyString())).thenReturn(emptyResult());
-        when(runner.execute(eq("squeue --help"))).thenReturn(new CommandResult(42, "not found", "error"));
+        when(runner.execute("squeue --help")).thenReturn(new CommandResult(42, "not found", "error"));
         Assertions.assertThatThrownBy(() -> new SlurmComputationManager(config, executorService, runner, fileSystem, localDir))
                 .isInstanceOf(SlurmException.class)
                 .hasMessage("Slurm is not installed. 'squeue --help' failed with code 42");
     }
 
-    @Before
+    @BeforeEach
     public void setUp() {
         fileSystem = Jimfs.newFileSystem(Configuration.unix());
         localDir = fileSystem.getPath("/local");
     }
 
-    @After
+    @AfterEach
     public void tearDown() throws IOException {
         fileSystem.close();
     }

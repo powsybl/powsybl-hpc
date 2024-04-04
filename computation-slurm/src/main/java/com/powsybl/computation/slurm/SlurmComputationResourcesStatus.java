@@ -7,7 +7,7 @@
 package com.powsybl.computation.slurm;
 
 import com.powsybl.computation.ComputationResourcesStatus;
-import org.joda.time.DateTime;
+import java.time.ZonedDateTime;
 
 import java.util.Collections;
 import java.util.Map;
@@ -18,12 +18,12 @@ import java.util.Objects;
  */
 class SlurmComputationResourcesStatus implements ComputationResourcesStatus {
 
-    private final DateTime dateTime;
+    private final ZonedDateTime dateTime;
     private final int availableCores;
     private final int busyCores;
     private final Map<String, Integer> busyCoresPerApp;
 
-    SlurmComputationResourcesStatus(DateTime dateTime, int availableCores, int busyCores, Map<String, Integer> busyCoresPerApp) {
+    SlurmComputationResourcesStatus(ZonedDateTime dateTime, int availableCores, int busyCores, Map<String, Integer> busyCoresPerApp) {
         this.dateTime = Objects.requireNonNull(dateTime);
         this.availableCores = availableCores;
         this.busyCores = busyCores;
@@ -31,7 +31,7 @@ class SlurmComputationResourcesStatus implements ComputationResourcesStatus {
     }
 
     @Override
-    public DateTime getDate() {
+    public ZonedDateTime getDate() {
         return dateTime;
     }
 

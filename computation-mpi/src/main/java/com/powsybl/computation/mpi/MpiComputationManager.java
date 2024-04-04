@@ -60,7 +60,7 @@ public class MpiComputationManager implements ComputationManager {
                                  Path statisticsDbDir, String statisticsDbName, MpiExecutorContext executorContext,
                                  int coresPerRank, boolean verbose, Path stdOutArchive) throws IOException, InterruptedException {
         this(localDir, new MpiJobSchedulerImpl(nativeServices, statisticsFactory, statisticsDbDir, statisticsDbName, coresPerRank,
-                                               verbose, executorContext.getSchedulerExecutor(), stdOutArchive),  executorContext);
+                                               verbose, executorContext.getSchedulerExecutor(), stdOutArchive), executorContext);
     }
 
     public MpiComputationManager(Path localDir, MpiJobScheduler scheduler, MpiExecutorContext executorContext) {

@@ -7,10 +7,9 @@
 package com.powsybl.computation.slurm;
 
 import com.google.common.base.Strings;
-import org.joda.time.DateTime;
-import org.joda.time.format.DateTimeFormat;
-import org.joda.time.format.DateTimeFormatter;
 
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -20,12 +19,10 @@ import java.util.Objects;
  * @author Sylvain Leclerc <sylvain.leclerc at rte-france.com>
  */
 class SlurmStatusManager {
-
-    // TODO timezone??
-    private static final String TIME_CMD = "date +\"%Y-%m-%d %H:%M:%S\"";
+    private static final String TIME_CMD = "date +\"%Y-%m-%d %H:%M:%S %Z\"";
     private static final String INFO_CORES_CMD = "sinfo -h -o %C";
     private static final String QUEUE_CORES_PER_JOB = "squeue -h --format=\"%C %j\"";
-    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss\n");
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss zzz\n");
 
     private final CommandExecutor commandExecutor;
 
@@ -36,7 +33,7 @@ class SlurmStatusManager {
     SlurmComputationResourcesStatus getResourcesStatus() {
         // date
         String dateOutput = commandExecutor.execute(TIME_CMD).getStdOut();
-        DateTime time = DATE_TIME_FORMATTER.parseDateTime(dateOutput);
+        ZonedDateTime time = ZonedDateTime.parse(dateOutput, DATE_TIME_FORMATTER);
 
         // core
         String coresInfoOutput = commandExecutor.execute(INFO_CORES_CMD).getStdOut();

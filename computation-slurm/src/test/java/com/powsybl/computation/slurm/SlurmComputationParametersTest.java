@@ -7,18 +7,18 @@
 package com.powsybl.computation.slurm;
 
 import com.powsybl.computation.ComputationParameters;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 
 /**
  * @author Yichen TANG <yichen.tang at rte-france.com>
  */
-public class SlurmComputationParametersTest {
+class SlurmComputationParametersTest {
 
     @Test
-    public void test() {
+    void test() {
         ComputationParameters base = mock(ComputationParameters.class);
         SlurmComputationParameters sut = new SlurmComputationParameters(base, "aQos");
         assertSame(base, sut.getExtendable());

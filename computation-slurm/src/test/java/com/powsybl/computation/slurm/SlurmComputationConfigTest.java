@@ -11,19 +11,19 @@ import com.google.common.jimfs.Jimfs;
 import com.powsybl.commons.config.InMemoryPlatformConfig;
 import com.powsybl.commons.config.MapModuleConfig;
 import com.powsybl.commons.config.PlatformConfig;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.file.FileSystem;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * @author Mathieu Bague <mathieu.bague at rte-france.com>
  */
-public class SlurmComputationConfigTest {
+class SlurmComputationConfigTest {
 
     private static final String HOSTNAME = "localhost";
     private static final int PORT = 8022;
@@ -44,7 +44,7 @@ public class SlurmComputationConfigTest {
 
     private MapModuleConfig moduleConfig;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         fileSystem = Jimfs.newFileSystem(Configuration.unix());
         InMemoryPlatformConfig platformConfig = new InMemoryPlatformConfig(fileSystem);
@@ -70,13 +70,13 @@ public class SlurmComputationConfigTest {
         this.platformConfig = platformConfig;
     }
 
-    @After
+    @AfterEach
     public void tearDown() throws IOException {
         fileSystem.close();
     }
 
     @Test
-    public void testLocal() {
+    void testLocal() {
         SlurmComputationConfig config = SlurmComputationConfig.load(platformConfig);
         assertTrue(config.isRemote());
 
@@ -91,7 +91,7 @@ public class SlurmComputationConfigTest {
     }
 
     @Test
-    public void testRemote() {
+    void testRemote() {
         SlurmComputationConfig config = SlurmComputationConfig.load(platformConfig);
         assertTrue(config.isRemote());
 

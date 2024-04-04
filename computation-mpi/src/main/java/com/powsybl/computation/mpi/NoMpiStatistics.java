@@ -9,7 +9,7 @@ package com.powsybl.computation.mpi;
 import java.io.Writer;
 import java.util.List;
 import java.util.Map;
-import org.joda.time.DateTime;
+import java.time.ZonedDateTime;
 
 /**
  *
@@ -33,7 +33,7 @@ public class NoMpiStatistics implements MpiStatistics {
     }
 
     @Override
-    public void logTaskStart(int taskId, int jobId, int taskIndex, DateTime startTime, int slaveRank, int slaveThread, long inputMessageSize) {
+    public void logTaskStart(int taskId, int jobId, int taskIndex, ZonedDateTime startTime, int slaveRank, int slaveThread, long inputMessageSize) {
         // no-op implementation
     }
 

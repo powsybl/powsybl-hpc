@@ -11,8 +11,7 @@ import com.google.common.base.Joiner.MapJoiner;
 import com.google.common.base.Splitter;
 import com.google.common.base.Splitter.MapSplitter;
 import com.powsybl.commons.PowsyblException;
-import org.joda.time.DateTime;
-import org.joda.time.Duration;
+import java.time.ZonedDateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,6 +19,8 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -72,7 +73,7 @@ public class CsvMpiStatistics implements MpiStatistics {
             final int jobId;
             final int taskIndex;
 
-            final DateTime startTime;
+            final ZonedDateTime startTime;
             final int slaveRank;
             final int slaveThread;
             final long inputMessageSize;
@@ -83,7 +84,7 @@ public class CsvMpiStatistics implements MpiStatistics {
             Long workingDataSize;
             Integer exitCode;
 
-            private TaskExecution(int taskId, int jobId, int taskIndex, DateTime startTime, int slaveRank, int slaveThread, long inputMessageSize) {
+            private TaskExecution(int taskId, int jobId, int taskIndex, ZonedDateTime startTime, int slaveRank, int slaveThread, long inputMessageSize) {
                 this.taskId = taskId;
                 this.jobId = jobId;
                 this.taskIndex = taskIndex;
@@ -177,7 +178,7 @@ public class CsvMpiStatistics implements MpiStatistics {
                         taskId = Integer.parseInt(tokens[1]);
                         jobId = Integer.parseInt(tokens[2]);
                         int taskIndex = Integer.parseInt(tokens[3]);
-                        DateTime startTime = DateTime.parse(tokens[4]);
+                        ZonedDateTime startTime = ZonedDateTime.parse(tokens[4]);
                         int slaveRank = Integer.parseInt(tokens[5]);
                         int slaveThread = Integer.parseInt(tokens[6]);
                         long inputMessageSize = Long.parseLong(tokens[7]);
@@ -297,7 +298,7 @@ public class CsvMpiStatistics implements MpiStatistics {
     }
 
     @Override
-    public void logTaskStart(int taskId, int jobId, int taskIndex, DateTime startTime, int slaveRank, int slaveThread, long inputMessageSize) {
+    public void logTaskStart(int taskId, int jobId, int taskIndex, ZonedDateTime startTime, int slaveRank, int slaveThread, long inputMessageSize) {
         try {
             internalWriter.write(TASK_START_KEY);
             internalWriter.write(CSV_SEPARATOR);
@@ -386,7 +387,7 @@ public class CsvMpiStatistics implements MpiStatistics {
                                          task.taskIndex + CSV_SEPARATOR +
                                          job.commandId + CSV_SEPARATOR +
                                          (job.tags != null ? mapJoiner.join(job.tags) : "") + CSV_SEPARATOR +
-                                         task.startTime.toString("dd/MM/YYYY HH:mm:ss") + CSV_SEPARATOR +
+                                         task.startTime.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")) + CSV_SEPARATOR +
                                          task.slaveRank + CSV_SEPARATOR +
                                          task.slaveThread + CSV_SEPARATOR +
                                          task.inputMessageSize + CSV_SEPARATOR +
@@ -498,8 +499,8 @@ public class CsvMpiStatistics implements MpiStatistics {
         Path busyCoresCsv = dbDir.resolve("busy-cores.csv");
         logWritingPath(busyCoresCsv);
 
-        final DateTime[] min = new DateTime[1];
-        final DateTime[] max = new DateTime[1];
+        final ZonedDateTime[] min = new ZonedDateTime[1];
+        final ZonedDateTime[] max = new ZonedDateTime[1];
         try (StatisticsReader reader = new StatisticsReader(csv)) {
             reader.read(new StatisticsReader.AbstractHandler() {
 
@@ -509,7 +510,7 @@ public class CsvMpiStatistics implements MpiStatistics {
                         min[0] = task.startTime;
                     }
                     if (task.taskDuration != null) {
-                        DateTime endTime = task.startTime.plusMillis((int) (long) task.taskDuration);
+                        ZonedDateTime endTime = task.startTime.plusNanos((int) (long) (task.taskDuration * 1e6));
                         if (max[0] == null || endTime.compareTo(max[0]) > 0) {
                             max[0] = endTime;
                         }
@@ -519,7 +520,7 @@ public class CsvMpiStatistics implements MpiStatistics {
             });
         }
 
-        final int secs = (int) new Duration(min[0], max[0]).getStandardSeconds() + 1;
+        final int secs = (int) Duration.between(min[0], max[0]).getSeconds() + 1;
         final int[] busyCores = new int[secs];
         Arrays.fill(busyCores, 0);
         try (StatisticsReader reader = new StatisticsReader(csv)) {
@@ -527,7 +528,7 @@ public class CsvMpiStatistics implements MpiStatistics {
 
                 @Override
                 public void onTaskEnd(StatisticsReader.TaskExecution task, StatisticsReader.JobExecution job) {
-                    int s1 = (int) new Duration(min[0], task.startTime).getStandardSeconds();
+                    int s1 = (int) Duration.between(min[0], task.startTime).getSeconds();
                     int s2;
                     if (task.taskDuration != null) {
                         s2 = s1 + (int) ((float) task.taskDuration / 1000);

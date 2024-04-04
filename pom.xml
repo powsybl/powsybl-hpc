@@ -15,11 +15,11 @@
     <parent>
         <groupId>com.powsybl</groupId>
         <artifactId>powsybl-parent</artifactId>
-        <version>4</version>
+        <version>18</version>
         <relativePath/>
     </parent>
     <artifactId>powsybl-hpc</artifactId>
-    <version>2.12.0-SNAPSHOT</version>
+    <version>3.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>powsybl HPC</name>
@@ -55,21 +55,23 @@
     </modules>
 
     <properties>
-        <commonsexec.version>1.3</commonsexec.version>
-        <jodatime.version>2.9.7</jodatime.version>
-        <jsch.version>0.1.54</jsch.version>
-        <jschext.version>0.1.10</jschext.version>
-        <jschnio.version>1.0.13</jschnio.version>
-        <logback.version>1.1.8</logback.version>
-        <mockito.version>1.10.19</mockito.version>
-        <protobuf.version>2.5.0</protobuf.version>
+        <java.version>17</java.version>
+
+        <commonsexec.version>1.4.0</commonsexec.version>
+        <jsch.version>0.2.16</jsch.version>
+        <jsch.extension.version>0.1.11</jsch.extension.version>
+        <jsch.nio.version>1.0.14</jsch.nio.version>
+        <junit-jupiter.version>5.10.1</junit-jupiter.version>
+        <logback.version>1.4.14</logback.version>
+        <mockito.version>5.10.0</mockito.version>
+        <protobuf.version>3.25.3</protobuf.version>
 
         <sonar.coverage.jacoco.xmlReportPaths>
             ../distribution-hpc/target/site/jacoco-aggregate/jacoco.xml,
             ../../distribution-hpc/target/site/jacoco-aggregate/jacoco.xml,
         </sonar.coverage.jacoco.xmlReportPaths>
 
-        <powsyblcore.version>4.1.2</powsyblcore.version>
+        <powsyblcore.version>6.3.0</powsyblcore.version>
     </properties>
 
     <dependencyManagement>
@@ -90,14 +92,14 @@
                 <version>${protobuf.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.jcraft</groupId>
+                <groupId>com.github.mwiede</groupId>
                 <artifactId>jsch</artifactId>
                 <version>${jsch.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.pastdev</groupId>
                 <artifactId>jsch-extension</artifactId>
-                <version>${jschext.version}</version>
+                <version>${jsch.extension.version}</version>
                 <exclusions>
                     <exclusion>
                         <groupId>com.jcraft</groupId>
@@ -108,12 +110,27 @@
             <dependency>
                 <groupId>com.pastdev</groupId>
                 <artifactId>jsch-nio</artifactId>
-                <version>${jschnio.version}</version>
+                <version>${jsch.nio.version}</version>
             </dependency>
             <dependency>
-                <groupId>joda-time</groupId>
-                <artifactId>joda-time</artifactId>
-                <version>${jodatime.version}</version>
+                <groupId>com.powsybl</groupId>
+                <artifactId>powsybl-commons</artifactId>
+                <version>${powsyblcore.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.powsybl</groupId>
+                <artifactId>powsybl-computation</artifactId>
+                <version>${powsyblcore.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.powsybl</groupId>
+                <artifactId>powsybl-computation-local</artifactId>
+                <version>${powsyblcore.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.powsybl</groupId>
+                <artifactId>powsybl-tools</artifactId>
+                <version>${powsyblcore.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
@@ -125,8 +142,20 @@
 
             <!-- Test dependencies -->
             <dependency>
+                <groupId>ch.qos.logback</groupId>
+                <artifactId>logback-classic</artifactId>
+                <version>${logback.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.junit.jupiter</groupId>
+                <artifactId>junit-jupiter-engine</artifactId>
+                <version>${junit-jupiter.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
                 <groupId>org.mockito</groupId>
-                <artifactId>mockito-all</artifactId>
+                <artifactId>mockito-core</artifactId>
                 <version>${mockito.version}</version>
                 <scope>test</scope>
             </dependency>

@@ -9,8 +9,8 @@ package com.powsybl.computation.slurm;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 import com.powsybl.commons.io.WorkingDirectory;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 import java.io.IOException;
 import java.nio.file.FileSystem;
@@ -29,7 +29,7 @@ public class DefaultSlurmTaskTest {
     protected Path flagPath;
     protected Path workingPath;
 
-    @Before
+    @BeforeEach
     public void setUp() throws IOException {
         fileSystem = Jimfs.newFileSystem(Configuration.unix());
         flagPath = fileSystem.getPath("/tmp/flags");
@@ -38,7 +38,7 @@ public class DefaultSlurmTaskTest {
         Files.createDirectories(flagPath);
     }
 
-    @After
+    @AfterEach
     public void tearDown() throws IOException {
         fileSystem.close();
     }

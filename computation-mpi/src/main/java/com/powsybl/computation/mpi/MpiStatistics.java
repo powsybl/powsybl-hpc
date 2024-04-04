@@ -9,7 +9,7 @@ package com.powsybl.computation.mpi;
 import java.io.Writer;
 import java.util.List;
 import java.util.Map;
-import org.joda.time.DateTime;
+import java.time.ZonedDateTime;
 
 /**
  *
@@ -54,7 +54,7 @@ public interface MpiStatistics extends AutoCloseable {
      * @param slaveThread slave thread that has managed the task
      * @param inputMessageSize input message size in bytes
      */
-    void logTaskStart(int taskId, int jobId, int taskIndex, DateTime startTime, int slaveRank, int slaveThread, long inputMessageSize);
+    void logTaskStart(int taskId, int jobId, int taskIndex, ZonedDateTime startTime, int slaveRank, int slaveThread, long inputMessageSize);
 
     /**
      * Log a task end.

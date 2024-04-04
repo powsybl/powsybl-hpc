@@ -16,7 +16,7 @@ import com.powsybl.computation.ExecutionEnvironment;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
 import org.apache.commons.io.IOUtils;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,7 +28,7 @@ import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.function.Supplier;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @author Yichen TANG <yichen.tang at rte-france.com>
@@ -41,16 +41,17 @@ public abstract class AbstractIntegrationTests {
 
     SlurmComputationConfig batchConfig;
     SlurmComputationConfig arrayConfig;
+    ModuleConfig moduleConfig;
 
     volatile boolean failed = false;
 
-    @Before
+    @BeforeEach
     public void setup() {
         YamlModuleConfigRepository configRepository = new YamlModuleConfigRepository(Paths.get("src/test/resources/config.yml"));
-        ModuleConfig config = configRepository.getModuleConfig("slurm-computation-manager")
+        moduleConfig = configRepository.getModuleConfig("slurm-computation-manager")
                 .orElseThrow(() -> new RuntimeException("Config.yaml is not good. Please recheck the config.yaml.example"));
-        batchConfig = batchConfig(config);
-        arrayConfig = arrayConfig(config);
+        batchConfig = batchConfig(moduleConfig);
+        arrayConfig = arrayConfig(moduleConfig);
         // TODO prepare myapps if necessary
     }
 
@@ -83,12 +84,12 @@ public abstract class AbstractIntegrationTests {
 
     abstract void baseTest(SlurmComputationConfig config, Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters);
 
-    static void addApprender(ListAppender<ILoggingEvent> appender) {
+    static void addAppender(ListAppender<ILoggingEvent> appender) {
         appender.start();
         SCM_LOGGER.addAppender(appender);
     }
 
-    static void removeApprender(ListAppender<ILoggingEvent> appender) {
+    static void removeAppender(ListAppender<ILoggingEvent> appender) {
         appender.stop();
         SCM_LOGGER.detachAppender(appender);
     }
@@ -98,10 +99,11 @@ public abstract class AbstractIntegrationTests {
              ZipArchiveOutputStream zos = new ZipArchiveOutputStream(Files.newOutputStream(dest))) {
             ZipArchiveEntry entry = new ZipArchiveEntry(name);
             zos.putArchiveEntry(entry);
+            assert inputStream != null;
             IOUtils.copy(inputStream, zos);
             zos.closeArchiveEntry();
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.error(e.getMessage(), e);
         }
     }
 }

@@ -13,8 +13,10 @@ import com.powsybl.computation.CommandExecution;
 import com.powsybl.computation.ComputationParameters;
 import com.powsybl.computation.ExecutionReport;
 import org.assertj.core.api.Assertions;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -23,42 +25,41 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.function.Supplier;
 
-import static com.powsybl.computation.slurm.CommandExecutionsTestFactory.invalidProgram;
-import static com.powsybl.computation.slurm.CommandExecutionsTestFactory.invalidProgramInGroup;
-import static com.powsybl.computation.slurm.CommandExecutionsTestFactory.invalidProgramInList;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
+import static com.powsybl.computation.slurm.CommandExecutionsTestFactory.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * @author Yichen TANG <yichen.tang at rte-france.com>
  */
-@Ignore
-public class SlurmInvalidExecutionTest extends AbstractIntegrationTests {
+@Disabled("Slurm integration tests must be run locally.")
+class SlurmInvalidExecutionTest extends AbstractIntegrationTests {
+    static final Logger LOGGER = LoggerFactory.getLogger(SlurmInvalidExecutionTest.class);
 
     @Override
     void baseTest(SlurmComputationConfig slurmConfig, Supplier<AbstractExecutionHandler<String>> supplier, ComputationParameters parameters) {
         ListAppender<ILoggingEvent> testAppender = new ListAppender<>();
-        addApprender(testAppender);
+        addAppender(testAppender);
         try (SlurmComputationManager computationManager = new SlurmComputationManager(slurmConfig)) {
             CompletableFuture<String> completableFuture = computationManager.execute(EMPTY_ENV, supplier.get(), parameters);
-            System.out.println("to wait finish");
+            LOGGER.debug("Wait for the process to finish...");
             // As there are errors, the after() would throw exception(in this test)
             Assertions.assertThatThrownBy(completableFuture::join)
                     .isInstanceOf(CompletionException.class)
                     .hasMessageContaining("com.powsybl.commons.PowsyblException: Error during the execution in directory");
             assertIsCleaned(computationManager.getTaskStore());
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.error(e.getMessage(), e);
             fail();
         } finally {
-            removeApprender(testAppender);
+            removeAppender(testAppender);
         }
         // assert on main thread
         assertFalse(failed);
     }
 
     @Test
-    public void testInvalidProgram() {
+    void testInvalidProgram() {
         Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractCheckErrorsExecutionHandler() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
@@ -69,7 +70,12 @@ public class SlurmInvalidExecutionTest extends AbstractIntegrationTests {
     }
 
     @Test
-    public void testInvalidInBatch() {
+    void testInvalidInBatch() {
+        // Script configuration
+        String program = String.format("%s/%s",
+            moduleConfig.getOptionalStringProperty("program").orElse("No program configured"),
+            "myecho.sh");
+
         Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractCheckErrorsExecutionHandler() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
@@ -77,14 +83,14 @@ public class SlurmInvalidExecutionTest extends AbstractIntegrationTests {
                 generateZipFileOnRemote("in1", workingDir.resolve("in1.zip"));
                 generateZipFileOnRemote("in2", workingDir.resolve("in2.zip"));
                 generateZipFileOnRemote("in3", workingDir.resolve("in3.zip"));
-                return CommandExecutionsTestFactory.myEchoSimpleCmdWithUnzipZip(4);
+                return CommandExecutionsTestFactory.myEchoSimpleCmdWithUnzipZip(4, program);
             }
         };
         baseTest(supplier);
     }
 
     @Test
-    public void testInvalidProgramInList() {
+    void testInvalidProgramInList() {
         Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractCheckErrorsExecutionHandler() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
@@ -95,7 +101,7 @@ public class SlurmInvalidExecutionTest extends AbstractIntegrationTests {
     }
 
     @Test
-    public void testInvalidProgramInGroup() {
+    void testInvalidProgramInGroup() {
         Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractCheckErrorsExecutionHandler() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
