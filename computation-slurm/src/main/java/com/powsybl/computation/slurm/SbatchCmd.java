@@ -17,7 +17,7 @@ import java.util.TreeSet;
  *
  * @author Yichen Tang <yichen.tang at rte-france.com>
  */
-class SbatchCmd extends AbstractSlurmCmd<SbatchCmdResult> {
+public class SbatchCmd extends AbstractSlurmCmd<SbatchCmdResult> {
 
     private static final String SBATCH = "sbatch";
 

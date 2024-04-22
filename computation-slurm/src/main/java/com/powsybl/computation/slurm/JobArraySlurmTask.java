@@ -38,7 +38,7 @@ class JobArraySlurmTask extends AbstractTask {
         commandByJobId = new HashMap<>();
         Long prejobId = null;
         for (int executionIdx = 0; executionIdx < executions.size(); executionIdx++) {
-            if (!canSubmit()) {
+            if (cannotSubmit()) {
                 break;
             }
             CommandExecution commandExecution = executions.get(executionIdx);
@@ -51,7 +51,7 @@ class JobArraySlurmTask extends AbstractTask {
             // a master job to copy NonExecutionDependent and PreProcess needed input files
             if (command.getInputFiles().stream()
                     .anyMatch(inputFile -> !inputFile.dependsOnExecutionNumber() && inputFile.getPreProcessor() != null)) {
-                if (!canSubmit()) {
+                if (cannotSubmit()) {
                     break;
                 }
                 SbatchScriptGenerator sbatchScriptGenerator = new SbatchScriptGenerator(flagDir);

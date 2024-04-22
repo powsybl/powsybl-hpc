@@ -43,7 +43,7 @@ public class SlurmTaskImpl extends AbstractTask {
 
     @Override
     public void submit() throws IOException {
-        if (!canSubmit()) {
+        if (cannotSubmit()) {
             return;
         }
 
@@ -60,7 +60,7 @@ public class SlurmTaskImpl extends AbstractTask {
             // a master job to copy NonExecutionDependent and PreProcess needed input files
             if (command.getInputFiles().stream()
                     .anyMatch(inputFile -> !inputFile.dependsOnExecutionNumber() && inputFile.getPreProcessor() != null)) {
-                if (!canSubmit()) {
+                if (cannotSubmit()) {
                     break outerSendingLoop;
                 }
                 SbatchScriptGenerator sbatchScriptGenerator = new SbatchScriptGenerator(flagDir);
@@ -73,7 +73,7 @@ public class SlurmTaskImpl extends AbstractTask {
 
             // no job array --> commandId_index.batch
             for (int executionIndex = 0; executionIndex < commandExecution.getExecutionCount(); executionIndex++) {
-                if (!canSubmit()) {
+                if (cannotSubmit()) {
                     break outerSendingLoop;
                 }
                 prepareBatch(command, executionIndex, commandExecution);

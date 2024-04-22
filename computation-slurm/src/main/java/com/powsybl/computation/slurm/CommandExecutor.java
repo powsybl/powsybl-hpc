@@ -11,7 +11,7 @@ package com.powsybl.computation.slurm;
  *
  * @author Sylvain Leclerc <sylvain.leclerc at rte-france.com>
  */
-interface CommandExecutor extends AutoCloseable {
+public interface CommandExecutor extends AutoCloseable {
 
     CommandResult execute(String command);
 
