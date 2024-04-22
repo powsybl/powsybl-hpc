@@ -14,27 +14,11 @@ import static java.util.Objects.requireNonNull;
  *
  * @author Sylvain Leclerc <sylvain.leclerc at rte-france.com>
  */
-class CommandResult {
-
-    private final int exitCode;
-    private final String stdOut;
-    private final String stdErr;
+record CommandResult(int exitCode, String stdOut, String stdErr) {
 
     CommandResult(int exitCode, String stdOut, String stdErr) {
         this.exitCode = exitCode;
         this.stdOut = requireNonNull(stdOut);
         this.stdErr = requireNonNull(stdErr);
-    }
-
-    int getExitCode() {
-        return exitCode;
-    }
-
-    String getStdOut() {
-        return stdOut;
-    }
-
-    String getStdErr() {
-        return stdErr;
     }
 }

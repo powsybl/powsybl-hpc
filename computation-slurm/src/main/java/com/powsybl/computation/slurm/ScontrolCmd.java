@@ -45,7 +45,7 @@ class ScontrolCmd extends AbstractSlurmCmd<ScontrolCmd.ScontrolResult> {
         }
 
         private void parse() {
-            final String stdOut = commandResult.getStdOut();
+            final String stdOut = commandResult.stdOut();
             final String[] blocks = stdOut.split("\\n\\n");
             for (String block : blocks) {
                 if (!StringUtils.isEmpty(block)) {

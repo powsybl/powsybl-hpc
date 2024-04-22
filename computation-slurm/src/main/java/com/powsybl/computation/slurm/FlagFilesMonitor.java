@@ -41,7 +41,7 @@ class FlagFilesMonitor extends AbstractSlurmJobMonitor {
         Map<Long, MonitoredJob> jobsById = jobs.stream()
                 .collect(Collectors.toMap(MonitoredJob::getJobId, job -> job));
         CommandResult execute = commandRunner.execute("ls -1 " + flagDir);
-        String stdout = execute.getStdOut();
+        String stdout = execute.stdOut();
         String[] split = stdout.split("\n");
         for (String line : split) {
             long idx = line.indexOf('_');

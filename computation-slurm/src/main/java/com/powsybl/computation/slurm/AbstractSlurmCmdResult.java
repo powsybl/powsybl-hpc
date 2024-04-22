@@ -21,6 +21,6 @@ public abstract class AbstractSlurmCmdResult implements SlurmCmdResult {
 
     @Override
     public boolean isOk() {
-        return commandResult.getExitCode() == 0;
+        return commandResult.exitCode() == 0;
     }
 }
