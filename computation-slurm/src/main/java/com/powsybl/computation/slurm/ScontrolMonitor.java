@@ -66,11 +66,9 @@ public class ScontrolMonitor extends AbstractSlurmJobMonitor {
                             job.interrupted();
                             LOGGER.info(msg);
                         }
-                        case COMPLETING, COMPLETED -> {
-                            // this monitor found task finished before flagDirMonitor
-                            // maybe store it and recheck in next run()
-                            checkedIds.add(id);
-                        }
+                        // this monitor found task finished before flagDirMonitor
+                        // maybe store it and recheck in next run()
+                        case COMPLETING, COMPLETED -> checkedIds.add(id);
                         default -> LOGGER.warn("Not implemented yet {}", jobState);
                     }
                     if (anormal) {
