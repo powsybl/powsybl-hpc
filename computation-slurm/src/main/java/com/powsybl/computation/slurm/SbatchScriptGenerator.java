@@ -14,7 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 /**
  * Generates the content of the sbatch script, to be submitted using and {@link SbatchCmd}.
@@ -44,8 +44,10 @@ class SbatchScriptGenerator {
     private static final String PRE_FILE = "PRE";
     private static final String POST_FILE = "POST";
 
-    private static final Function<String, String> WRAP_FILENAME = str -> "'" + str + "'";
-    private static final Function<String, String> VAR2ARG = str -> "\"$" + str + "\"";
+    private static final String UNEXPECTED_COMMAND_TYPE_VALUE = "Unexpected command type value: ";
+
+    private static final UnaryOperator<String> WRAP_FILENAME = str -> "'" + str + "'";
+    private static final UnaryOperator<String> VAR2ARG = str -> "\"$" + str + "\"";
 
     private final Path flagDir;
 
@@ -167,7 +169,7 @@ class SbatchScriptGenerator {
                     list.add(String.format(CHECK_EXITCODE, flagDir.toAbsolutePath(), workingDir.getFileName()));
                 }
             }
-            default -> throw new AssertionError("Unexpected command type value: " + command.getType());
+            default -> throw new AssertionError(UNEXPECTED_COMMAND_TYPE_VALUE + command.getType());
         }
     }
 
@@ -242,7 +244,7 @@ class SbatchScriptGenerator {
                     shell.add(INDENTATION_6 + subArgsJoined);
                     shell.add(SH_CASE_BREAK);
                 }
-                default -> throw new AssertionError("Unexpected command type value: " + command.getType());
+                default -> throw new AssertionError(UNEXPECTED_COMMAND_TYPE_VALUE + command.getType());
             }
         }
         shell.add("esac");
@@ -298,7 +300,7 @@ class SbatchScriptGenerator {
                     shell.add(String.format(CHECK_EXITCODE_ARRAY, flagDir.toAbsolutePath(), workingDir.getFileName()));
                 }
             }
-            default -> throw new AssertionError("Unexpected command type value: " + command.getType());
+            default -> throw new AssertionError(UNEXPECTED_COMMAND_TYPE_VALUE + command.getType());
         }
     }
 
