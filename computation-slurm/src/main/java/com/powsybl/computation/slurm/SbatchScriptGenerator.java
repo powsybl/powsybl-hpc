@@ -131,16 +131,9 @@ class SbatchScriptGenerator {
 
     private static void addUnzipCmd(List<String> shell, String unzipArg, FilePreProcessor preProcessor) {
         switch (preProcessor) {
-            case FILE_GUNZIP:
-                // gunzip the file
-                shell.add(SH_GUNZIP + unzipArg);
-                break;
-            case ARCHIVE_UNZIP:
-                // extract the archive
-                shell.add(SH_UNZIP + unzipArg);
-                break;
-            default:
-                throw new AssertionError("Unexpected FilePreProcessor value: " + preProcessor);
+            case FILE_GUNZIP -> shell.add(SH_GUNZIP + unzipArg);
+            case ARCHIVE_UNZIP -> shell.add(SH_UNZIP + unzipArg);
+            default -> throw new AssertionError("Unexpected FilePreProcessor value: " + preProcessor);
         }
     }
 
@@ -162,20 +155,19 @@ class SbatchScriptGenerator {
 
     private void cmdWithArgu(List<String> list, Command command, int executionIndex, Path workingDir) {
         switch (command.getType()) {
-            case SIMPLE:
+            case SIMPLE -> {
                 SimpleCommand simpleCmd = (SimpleCommand) command;
                 list.add(CommandUtils.commandToString(simpleCmd.getProgram(), simpleCmd.getArgs(executionIndex)));
                 list.add(String.format(CHECK_EXITCODE, flagDir.toAbsolutePath(), workingDir.getFileName()));
-                break;
-            case GROUP:
+            }
+            case GROUP -> {
                 GroupCommand groupCommand = (GroupCommand) command;
                 for (GroupCommand.SubCommand subCommand : groupCommand.getSubCommands()) {
                     list.add(CommandUtils.commandToString(subCommand.getProgram(), subCommand.getArgs(executionIndex)));
                     list.add(String.format(CHECK_EXITCODE, flagDir.toAbsolutePath(), workingDir.getFileName()));
                 }
-                break;
-            default:
-                throw new AssertionError("Unexpected command type value: " + command.getType());
+            }
+            default -> throw new AssertionError("Unexpected command type value: " + command.getType());
         }
     }
 
@@ -230,13 +222,13 @@ class SbatchScriptGenerator {
             addInputFilenames(shell, caseIdx, command);
             addOutputFilenames(shell, caseIdx, command);
             switch (command.getType()) {
-                case SIMPLE:
+                case SIMPLE -> {
                     SimpleCommand simpleCmd = (SimpleCommand) command;
                     String args = CommandUtils.commandArgsToString(simpleCmd.getArgs(caseIdx));
                     shell.add(INDENTATION_6 + SPL_CMD_ARGS + "=(" + args + ")");
                     shell.add(SH_CASE_BREAK);
-                    break;
-                case GROUP:
+                }
+                case GROUP -> {
                     GroupCommand groupCommand = (GroupCommand) command;
                     List<GroupCommand.SubCommand> subCommands = groupCommand.getSubCommands();
                     List<String> subArgs = new ArrayList<>();
@@ -249,9 +241,8 @@ class SbatchScriptGenerator {
                     String subArgsJoined = String.join(" ", subArgs);
                     shell.add(INDENTATION_6 + subArgsJoined);
                     shell.add(SH_CASE_BREAK);
-                    break;
-                default:
-                    throw new AssertionError("Unexpected command type value: " + command.getType());
+                }
+                default -> throw new AssertionError("Unexpected command type value: " + command.getType());
             }
         }
         shell.add("esac");
@@ -293,12 +284,12 @@ class SbatchScriptGenerator {
 
     private void cmd(List<String> shell, Command command, Path workingDir) {
         switch (command.getType()) {
-            case SIMPLE:
+            case SIMPLE -> {
                 SimpleCommand simpleCmd = (SimpleCommand) command;
                 simpleCmdWithArgs(shell, simpleCmd);
                 shell.add(String.format(CHECK_EXITCODE_ARRAY, flagDir.toAbsolutePath(), workingDir.getFileName()));
-                break;
-            case GROUP:
+            }
+            case GROUP -> {
                 GroupCommand groupCommand = (GroupCommand) command;
                 List<GroupCommand.SubCommand> subCommands = groupCommand.getSubCommands();
                 for (int i = 0; i < subCommands.size(); i++) {
@@ -306,9 +297,8 @@ class SbatchScriptGenerator {
                     subCmdWithArgs(shell, cmd, i);
                     shell.add(String.format(CHECK_EXITCODE_ARRAY, flagDir.toAbsolutePath(), workingDir.getFileName()));
                 }
-                break;
-            default:
-                throw new AssertionError("Unexpected command type value: " + command.getType());
+            }
+            default -> throw new AssertionError("Unexpected command type value: " + command.getType());
         }
     }
 

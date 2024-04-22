@@ -59,26 +59,19 @@ public class ScontrolMonitor extends AbstractSlurmJobMonitor {
                     SlurmConstants.JobState jobState = scontrolResult.getResult().getJobState();
                     boolean anormal = false;
                     switch (jobState) {
-                        case RUNNING:
-                        case PENDING:
-                            checkedIds.add(id);
-                            break;
-                        case TIMEOUT:
-                        case DEADLINE:
-                        case CANCELLED:
+                        case RUNNING, PENDING -> checkedIds.add(id);
+                        case TIMEOUT, DEADLINE, CANCELLED -> {
                             anormal = true;
                             String msg = "JobId: " + id + " is " + jobState;
                             job.interrupted();
                             LOGGER.info(msg);
-                            break;
-                        case COMPLETING:
-                        case COMPLETED:
+                        }
+                        case COMPLETING, COMPLETED -> {
                             // this monitor found task finished before flagDirMonitor
                             // maybe store it and recheck in next run()
                             checkedIds.add(id);
-                            break;
-                        default:
-                            LOGGER.warn("Not implemented yet {}", jobState);
+                        }
+                        default -> LOGGER.warn("Not implemented yet {}", jobState);
                     }
                     if (anormal) {
                         break; // restart
