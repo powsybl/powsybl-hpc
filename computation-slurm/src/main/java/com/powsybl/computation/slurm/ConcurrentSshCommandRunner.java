@@ -55,7 +55,7 @@ class ConcurrentSshCommandRunner extends CommandRunner {
 
     @Override
     public CommandRunner.ChannelExecWrapper open(String command) throws JSchException {
-        return getNonNullableChannel(command, null, null, null);
+        return getNonNullableChannel(command, null, null);
     }
 
     @Override
@@ -64,15 +64,15 @@ class ConcurrentSshCommandRunner extends CommandRunner {
         ByteArrayOutputStream stdErr = new ByteArrayOutputStream();
         ByteArrayOutputStream stdOut = new ByteArrayOutputStream();
 
-        CommandRunner.ChannelExecWrapper channel = getNonNullableChannel(command, null, stdOut, stdErr);
+        CommandRunner.ChannelExecWrapper channel = getNonNullableChannel(command, stdOut, stdErr);
         int exitCode = channel.close();
 
         return new CommandRunner.ExecuteResult(exitCode,
-                new String(stdOut.toByteArray(), UTF8),
-                new String(stdErr.toByteArray(), UTF8));
+            stdOut.toString(UTF8),
+            stdErr.toString(UTF8));
     }
 
-    private CommandRunner.ChannelExecWrapper getNonNullableChannel(String command, InputStream stdIn, OutputStream stdOut, OutputStream stdErr) {
+    private CommandRunner.ChannelExecWrapper getNonNullableChannel(String command, OutputStream stdOut, OutputStream stdErr) {
         CommandRunner.ChannelExecWrapper channelExecWrapper = null;
         int tried = 0;
         while (channelExecWrapper == null) {
@@ -86,7 +86,7 @@ class ConcurrentSshCommandRunner extends CommandRunner {
                 LOGGER.trace("SSH lock acquired, available permits = {}. Trying to create new SSH exec channel.", lock.availablePermits());
                 //allows to acquire a new session in case previously used one was down
                 Session session = getSession();
-                channelExecWrapper = new AutoReleaseLockChannelWrapper(session, command, stdIn, stdOut, stdErr);
+                channelExecWrapper = new AutoReleaseLockChannelWrapper(session, command, null, stdOut, stdErr);
             } catch (Exception e) {
                 lock.release();
                 LOGGER.trace("SSH lock released on exception, available permits = {}", lock.availablePermits());
