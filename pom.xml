@@ -62,7 +62,7 @@
         <jsch.extension.version>0.1.11</jsch.extension.version>
         <jsch.nio.version>1.0.14</jsch.nio.version>
         <junit-jupiter.version>5.10.2</junit-jupiter.version>
-        <logback.version>1.4.14</logback.version>
+        <logback.version>1.5.6</logback.version>
         <mockito.version>5.11.0</mockito.version>
         <protobuf.version>3.25.3</protobuf.version>
 
@@ -144,6 +144,12 @@
             <dependency>
                 <groupId>ch.qos.logback</groupId>
                 <artifactId>logback-classic</artifactId>
+                <version>${logback.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>ch.qos.logback</groupId>
+                <artifactId>logback-core</artifactId>
                 <version>${logback.version}</version>
                 <scope>test</scope>
             </dependency>
