@@ -48,7 +48,7 @@ class FlagFilesMonitor extends AbstractSlurmJobMonitor {
             if (idx > 0) {
                 // ex: mydone_workingDirxxxxxx_taskid
                 int lastIdx = line.lastIndexOf('_');
-                Long id = null;
+                long id;
                 String substring = line.substring(lastIdx + 1);
                 if (substring.contains("-")) {
                     id = Long.parseLong(substring.split("-")[0]);
