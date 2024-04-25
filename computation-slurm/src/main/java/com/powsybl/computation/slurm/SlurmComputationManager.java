@@ -378,7 +378,7 @@ public class SlurmComputationManager implements ComputationManager {
         }
 
         @Override
-        public void close() {
+        public synchronized void close() {
             if (!isDebug()) {
                 commandRunner.execute("rm -rf " + toPath().toAbsolutePath());
             }

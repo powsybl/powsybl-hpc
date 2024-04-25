@@ -48,46 +48,49 @@ public class SlurmTaskImpl extends AbstractTask {
         }
 
         commandByJobId = new HashMap<>();
-        outerSendingLoop:
         for (int commandIdx = 0; commandIdx < executions.size(); commandIdx++) {
-            CommandExecution commandExecution = executions.get(commandIdx);
-            Command command = commandExecution.getCommand();
-            SbatchCmd cmd;
-            if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Executing {} command {} in working directory {}", command.getType(), command, workingDir);
-            }
-
-            // a master job to copy NonExecutionDependent and PreProcess needed input files
-            if (command.getInputFiles().stream()
-                    .anyMatch(inputFile -> !inputFile.dependsOnExecutionNumber() && inputFile.getPreProcessor() != null)) {
-                if (cannotSubmit()) {
-                    break outerSendingLoop;
-                }
-                SbatchScriptGenerator sbatchScriptGenerator = new SbatchScriptGenerator(flagDir);
-                List<String> shell = sbatchScriptGenerator.unzipCommonInputFiles(command);
-                copyShellToRemoteWorkingDir(shell, UNZIP_INPUTS_COMMAND_ID + "_" + commandIdx);
-                cmd = buildSbatchCmd(UNZIP_INPUTS_COMMAND_ID, commandIdx, getPreJobIds(), parameters);
-                long jobId = launchSbatch(cmd);
-                newCommonUnzipJob(jobId);
-            }
-
-            // no job array --> commandId_index.batch
-            for (int executionIndex = 0; executionIndex < commandExecution.getExecutionCount(); executionIndex++) {
-                if (cannotSubmit()) {
-                    break outerSendingLoop;
-                }
-                prepareBatch(command, executionIndex, commandExecution);
-                cmd = buildSbatchCmd(command.getId(), executionIndex, getPreJobIds(), parameters);
-                long jobId = launchSbatch(cmd);
-                newBatch(jobId);
-            }
-
-            commandByJobId.put(currentMaster, command);
-            // finish binding batches
-            setCurrentMasterNull();
+            submitCommand(commandIdx);
         }
 
         aggregateMonitoredJobs();
+    }
+
+    private void submitCommand(int commandIdx) throws IOException {
+        CommandExecution commandExecution = executions.get(commandIdx);
+        Command command = commandExecution.getCommand();
+        SbatchCmd cmd;
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("Executing {} command {} in working directory {}", command.getType(), command, workingDir);
+        }
+
+        // a master job to copy NonExecutionDependent and PreProcess needed input files
+        if (command.getInputFiles().stream()
+            .anyMatch(inputFile -> !inputFile.dependsOnExecutionNumber() && inputFile.getPreProcessor() != null)) {
+            if (cannotSubmit()) {
+                return;
+            }
+            SbatchScriptGenerator sbatchScriptGenerator = new SbatchScriptGenerator(flagDir);
+            List<String> shell = sbatchScriptGenerator.unzipCommonInputFiles(command);
+            copyShellToRemoteWorkingDir(shell, UNZIP_INPUTS_COMMAND_ID + "_" + commandIdx);
+            cmd = buildSbatchCmd(UNZIP_INPUTS_COMMAND_ID, commandIdx, getPreJobIds(), parameters);
+            long jobId = launchSbatch(cmd);
+            newCommonUnzipJob(jobId);
+        }
+
+        // no job array --> commandId_index.batch
+        for (int executionIndex = 0; executionIndex < commandExecution.getExecutionCount(); executionIndex++) {
+            if (cannotSubmit()) {
+                return;
+            }
+            prepareBatch(command, executionIndex, commandExecution);
+            cmd = buildSbatchCmd(command.getId(), executionIndex, getPreJobIds(), parameters);
+            long jobId = launchSbatch(cmd);
+            newBatch(jobId);
+        }
+
+        commandByJobId.put(currentMaster, command);
+        // finish binding batches
+        setCurrentMasterNull();
     }
 
     private SbatchCmd buildSbatchCmd(String commandId, int executionIndex, List<Long> preJobIds, ComputationParameters baseParams) {

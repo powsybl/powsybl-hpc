@@ -26,7 +26,7 @@ class JobArraySlurmTask extends AbstractTask {
     private static final Logger LOGGER = LoggerFactory.getLogger(JobArraySlurmTask.class);
 
     private Long firstJobId = null;
-    private List<Long> ids = new ArrayList<>();
+    private final List<Long> ids = new ArrayList<>();
 
     JobArraySlurmTask(SlurmComputationManager scm, WorkingDirectory directory,
                       List<CommandExecution> executions, ComputationParameters parameters, ExecutionEnvironment environment) {
