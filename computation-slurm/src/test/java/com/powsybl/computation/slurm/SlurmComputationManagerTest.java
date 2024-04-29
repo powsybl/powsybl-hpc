@@ -88,12 +88,7 @@ class SlurmComputationManagerTest {
                 throw new PowsyblException("test");
             }
         });
-        try {
-            afterException.join();
-            fail();
-        } catch (Exception e) {
-            assertInstanceOf(CompletionException.class, e);
-        }
+        assertThrows(CompletionException.class, afterException::join);
     }
 
     @Test
