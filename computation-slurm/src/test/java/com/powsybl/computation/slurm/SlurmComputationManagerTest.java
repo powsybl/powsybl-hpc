@@ -63,7 +63,7 @@ class SlurmComputationManagerTest {
         Path flagDir = sut.getFlagDir();
         Assertions.assertThat(flagDir).exists();
 
-        CompletableFuture<String> normal = sut.execute(ExecutionEnvironment.createDefault(), new AbstractExecutionHandler<String>() {
+        CompletableFuture<String> normal = sut.execute(ExecutionEnvironment.createDefault(), new AbstractExecutionHandler<>() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
                 return Collections.emptyList();
@@ -77,7 +77,7 @@ class SlurmComputationManagerTest {
         String join = normal.join();
         assertEquals("OK", join);
 
-        CompletableFuture<String> afterException = sut.execute(ExecutionEnvironment.createDefault(), new AbstractExecutionHandler<String>() {
+        CompletableFuture<String> afterException = sut.execute(ExecutionEnvironment.createDefault(), new AbstractExecutionHandler<>() {
             @Override
             public List<CommandExecution> before(Path workingDir) {
                 return Collections.emptyList();
