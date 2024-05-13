@@ -11,9 +11,6 @@ import com.powsybl.computation.SimpleCommandBuilder;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
-import java.nio.file.FileSystem;
-import java.nio.file.Path;
-import java.util.concurrent.ExecutorService;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
@@ -23,9 +20,6 @@ import static org.mockito.Mockito.when;
  * @author Nicolas Rol {@literal <nicolas.rol at rte-france.com>}
  */
 class ConcurrentSshCommandRunnerTest {
-
-    private FileSystem fileSystem;
-    private Path localDir;
 
     @Test
     void test() throws IOException, JSchException {
