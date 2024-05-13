@@ -17,7 +17,7 @@ import static org.mockito.Mockito.when;
 /**
  * @author Nicolas Rol {@literal <nicolas.rol at rte-france.com>}
  */
-class AbstractSlurmCmdTest extends DefaultSlurmTaskTest {
+class SlurmCmdTest extends DefaultSlurmTaskTest {
 
     @Test
     void testException() throws IOException {
