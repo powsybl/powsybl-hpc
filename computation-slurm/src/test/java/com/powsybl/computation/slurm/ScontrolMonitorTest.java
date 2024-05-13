@@ -32,6 +32,7 @@ class ScontrolMonitorTest {
 
     private final CommandResult runningResult = new CommandResult(0, "JobState=RUNNING", "");
     private final CommandResult cancelledResult = new CommandResult(0, "JobState=CANCELLED", "");
+    private final CommandResult completedResult = new CommandResult(0, "JobState=COMPLETED", "");
 
     @Test
     void testAllRunning() {
@@ -51,7 +52,7 @@ class ScontrolMonitorTest {
     @Test
     void testUnormalFound() {
 
-        // job 3 is scancelled while 1, 2 are running
+        // job 3 is cancelled while 1, 2 are running
         when(cm.execute(anyString())).thenReturn(runningResult);
         when(cm.execute(endsWith("3"))).thenReturn(cancelledResult);
 
@@ -64,6 +65,21 @@ class ScontrolMonitorTest {
 
         assertEquals(0, jobs.stream().filter(MockJob::isDone).count());
         assertTrue(jobs.get(2).isInterrupted());
+    }
+
+    @Test
+    void testAllCompleted() {
+        when(cm.execute(anyString())).thenReturn(completedResult);
+        ScontrolMonitor monitor = new ScontrolMonitor(slurm);
+        assertFalse(ts.getPendingJobs().isEmpty());
+
+        assertEquals(0, jobs.stream().filter(MockJob::isDone).count());
+        assertEquals(0, jobs.stream().filter(MockJob::isFailed).count());
+
+        monitor.run();
+
+        assertEquals(0, jobs.stream().filter(MockJob::isDone).count());
+        assertEquals(0, jobs.stream().filter(MockJob::isFailed).count());
     }
 
     @BeforeEach
