@@ -32,10 +32,11 @@ class AbstractSlurmCmdTest extends DefaultSlurmTaskTest {
             task.submit();
             fail();
         } catch (SlurmException exception) {
-            String message = "com.powsybl.computation.slurm.SlurmCmdNonZeroException: \n" +
-                "exitcode:-1\n" +
-                "err:stdErr\n" +
-                "out:stdOut";
+            String message = """
+                com.powsybl.computation.slurm.SlurmCmdNonZeroException:\s
+                exitcode:-1
+                err:stdErr
+                out:stdOut""";
             assertEquals(message, exception.getMessage());
         }
     }
