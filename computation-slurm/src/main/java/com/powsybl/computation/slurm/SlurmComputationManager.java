@@ -302,7 +302,11 @@ public class SlurmComputationManager implements ComputationManager {
 
     @Override
     public void close() {
-        baseClose();
+        this.close(true);
+    }
+
+    void close(boolean isNotTesting) {
+        baseClose(isNotTesting);
         isClosed = true;
     }
 
@@ -310,11 +314,13 @@ public class SlurmComputationManager implements ComputationManager {
         return closeStarted;
     }
 
-    private void baseClose() {
+    private void baseClose(boolean isNotTesting) {
         LOGGER.debug("Closing SCM.");
         closeStarted = true;
 
-        stopWatchServices();
+        if (isNotTesting) {
+            stopWatchServices();
+        }
 
         // delete flags
         try {
