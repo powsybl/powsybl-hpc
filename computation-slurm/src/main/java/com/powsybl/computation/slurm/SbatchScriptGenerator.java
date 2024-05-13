@@ -47,8 +47,6 @@ class SbatchScriptGenerator {
     private static final String PRE_FILE = "PRE";
     private static final String POST_FILE = "POST";
 
-    private static final String UNEXPECTED_COMMAND_TYPE_VALUE = "Unexpected command type value: ";
-
     private static final UnaryOperator<String> WRAP_FILENAME = str -> "'" + str + "'";
     private static final UnaryOperator<String> VAR2ARG = str -> "\"$" + str + "\"";
 
