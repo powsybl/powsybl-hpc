@@ -38,7 +38,7 @@ class ConcurrentSshCommandRunnerTest {
                 .args("10s")
                 .build();
             CommandResult commandResult = commandRunner.execute(command.toString(0));
-            assertEquals(0, commandResult.getExitCode());
+            assertEquals(0, commandResult.exitCode());
         } catch (Exception e) {
             fail();
         }
