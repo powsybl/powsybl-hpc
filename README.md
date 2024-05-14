@@ -48,7 +48,7 @@ $> yum install bzip2 bzip2-devel cmake gcc-c++ make wget zlib-devel
 ### OpenMPI 
 In order to support the MPI modules, you need to compile and install the [OpenMPI](https://www.open-mpi.org/) library.
 ```
-$> wget https://www.open-mpi.org/software/ompi/v1.8/downloads/openmpi-1.8.3.tar.bz2
+$> wget https://download.open-mpi.org/release/open-mpi/v1.8/openmpi-1.8.3.tar.bz2
 $> tar xjf openmpi-1.8.3.tar.bz2
 $> cd openmpi-1.8.3
 $> ./configure --prefix=<INSTALL_DIR> --enable-mpi-thread-multiple
