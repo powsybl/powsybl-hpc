@@ -23,8 +23,8 @@ class ScontrolCmdTest {
     void test() throws SlurmCmdNonZeroException {
         CommandExecutor commandExecutor = mock(CommandExecutor.class);
         CommandResult result = mock(CommandResult.class);
-        when(result.getExitCode()).thenReturn(0);
-        when(result.getStdOut()).thenReturn("""
+        when(result.exitCode()).thenReturn(0);
+        when(result.stdOut()).thenReturn("""
             JobId=41524 JobName=metrix-chunk-1
                UserId=test(2000) GroupId=test(2000) MCS_label=N/A
                Priority=4294900045 Nice=0 Account=(null) QOS=normal
@@ -62,8 +62,8 @@ class ScontrolCmdTest {
     void testArray() throws SlurmCmdNonZeroException {
         CommandExecutor commandExecutor = mock(CommandExecutor.class);
         CommandResult result = mock(CommandResult.class);
-        when(result.getExitCode()).thenReturn(0);
-        when(result.getStdOut()).thenReturn("""
+        when(result.exitCode()).thenReturn(0);
+        when(result.stdOut()).thenReturn("""
             JobId=175667 ArrayJobId=175667 ArrayTaskId=1 JobName=cmdId
                UserId=test(619800090) GroupId=test(619800090) MCS_label=N/A
                Priority=1000 Nice=0 Account=test QOS=test

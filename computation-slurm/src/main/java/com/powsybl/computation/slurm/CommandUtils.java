@@ -41,7 +41,6 @@ final class CommandUtils {
 
     /**
      * Generates a command's argu string, with each argument wrapped with quotes.
-     * @param args
      * @return the argu's string
      */
     static String commandArgsToString(List<String> args) {

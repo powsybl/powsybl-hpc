@@ -32,18 +32,18 @@ class SlurmStatusManager {
 
     SlurmComputationResourcesStatus getResourcesStatus() {
         // date
-        String dateOutput = commandExecutor.execute(TIME_CMD).getStdOut();
+        String dateOutput = commandExecutor.execute(TIME_CMD).stdOut();
         ZonedDateTime time = ZonedDateTime.parse(dateOutput, DATE_TIME_FORMATTER);
 
         // core
-        String coresInfoOutput = commandExecutor.execute(INFO_CORES_CMD).getStdOut();
+        String coresInfoOutput = commandExecutor.execute(INFO_CORES_CMD).stdOut();
         String[] splits = coresInfoOutput.split("/");
         int availCores = Integer.parseInt(splits[1]);
         int busyCores = Integer.parseInt(splits[0]);
 
         // job
         Map<String, Integer> coresPerApp = new HashMap<>();
-        String jobOutput = commandExecutor.execute(QUEUE_CORES_PER_JOB).getStdOut();
+        String jobOutput = commandExecutor.execute(QUEUE_CORES_PER_JOB).stdOut();
         if (!Strings.isNullOrEmpty(jobOutput)) {
             String[] jobLines = jobOutput.split("\n");
             for (String jobLine : jobLines) {
