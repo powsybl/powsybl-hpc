@@ -16,8 +16,8 @@ public class SlurmCmdNonZeroException extends Exception {
     }
 
     SlurmCmdNonZeroException(CommandResult commandResult) {
-        super("\nexitcode:" + commandResult.getExitCode() +
-                "\nerr:" + commandResult.getStdErr() +
-                "\nout:" + commandResult.getStdOut());
+        super("\nexitcode:" + commandResult.exitCode() +
+                "\nerr:" + commandResult.stdErr() +
+                "\nout:" + commandResult.stdOut());
     }
 }

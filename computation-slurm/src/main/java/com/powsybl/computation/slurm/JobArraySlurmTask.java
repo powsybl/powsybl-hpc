@@ -26,7 +26,7 @@ class JobArraySlurmTask extends AbstractTask {
     private static final Logger LOGGER = LoggerFactory.getLogger(JobArraySlurmTask.class);
 
     private Long firstJobId = null;
-    private List<Long> ids = new ArrayList<>();
+    private final List<Long> ids = new ArrayList<>();
 
     JobArraySlurmTask(SlurmComputationManager scm, WorkingDirectory directory,
                       List<CommandExecution> executions, ComputationParameters parameters, ExecutionEnvironment environment) {
@@ -38,7 +38,7 @@ class JobArraySlurmTask extends AbstractTask {
         commandByJobId = new HashMap<>();
         Long prejobId = null;
         for (int executionIdx = 0; executionIdx < executions.size(); executionIdx++) {
-            if (!canSubmit()) {
+            if (cannotSubmit()) {
                 break;
             }
             CommandExecution commandExecution = executions.get(executionIdx);
@@ -51,7 +51,7 @@ class JobArraySlurmTask extends AbstractTask {
             // a master job to copy NonExecutionDependent and PreProcess needed input files
             if (command.getInputFiles().stream()
                     .anyMatch(inputFile -> !inputFile.dependsOnExecutionNumber() && inputFile.getPreProcessor() != null)) {
-                if (!canSubmit()) {
+                if (cannotSubmit()) {
                     break;
                 }
                 SbatchScriptGenerator sbatchScriptGenerator = new SbatchScriptGenerator(flagDir);
@@ -60,10 +60,7 @@ class JobArraySlurmTask extends AbstractTask {
                 copyShellToRemoteWorkingDir(shell, UNZIP_INPUTS_COMMAND_ID + "_" + executionIdx);
                 cmd = buildSbatchCmd(UNZIP_INPUTS_COMMAND_ID, batchName, prejobId, parameters);
                 prejobId = launchSbatch(cmd);
-                if (firstJobId == null) {
-                    firstJobId = prejobId;
-                    LOGGER.debug("First jobId : {}", firstJobId);
-                }
+                checkFirstJob(prejobId);
                 ids.add(prejobId);
                 jobs.add(new CompletableMonitoredJob(prejobId, false));
             }
@@ -71,10 +68,7 @@ class JobArraySlurmTask extends AbstractTask {
             String batchName = prepareBatch(commandExecution, isLast);
             cmd = buildSbatchCmd(commandExecution.getExecutionCount(), command.getId(), batchName, prejobId, parameters);
             prejobId = launchSbatch(cmd);
-            if (firstJobId == null) {
-                firstJobId = prejobId;
-                LOGGER.debug("First jobId : {}", firstJobId);
-            }
+            checkFirstJob(prejobId);
             ids.add(prejobId);
             CompletableMonitoredJob completableMonitoredJob = new CompletableMonitoredJob(prejobId, isLast);
             completableMonitoredJob.setCounter(commandExecution.getExecutionCount());
@@ -83,6 +77,13 @@ class JobArraySlurmTask extends AbstractTask {
         }
 
         aggregateMonitoredJobs();
+    }
+
+    private void checkFirstJob(Long prejobId) {
+        if (firstJobId == null) {
+            firstJobId = prejobId;
+            LOGGER.debug("First jobId : {}", firstJobId);
+        }
     }
 
     @Override
