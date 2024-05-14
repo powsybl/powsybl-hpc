@@ -32,7 +32,7 @@ To build the Java modules, you need the following requirements:
 - Maven *(3.8.0 or greater)*
 
 ```
-$> yum install java-1.17.0-openjdk maven 
+$> yum install java-17-openjdk maven 
 ```
 
 To build the C++ modules, you need the additional requirements:
