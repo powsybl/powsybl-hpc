@@ -14,7 +14,6 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  *  A job monitor which uses "scontrol show job ID_OF_JOB" to get state of job,
@@ -44,54 +43,56 @@ public class ScontrolMonitor extends AbstractSlurmJobMonitor {
         while (!cleaned) {
             List<MonitoredJob> sorted = jobs.stream()
                     .sorted(Comparator.comparing(MonitoredJob::getJobId))
-                    .collect(Collectors.toList());
+                    .toList();
             // start from min id
             // find the first unmoral state
             // call job.interruptJob()
             // restart until tracingIds are all running or pending
             for (MonitoredJob job : sorted) {
                 long id = job.getJobId();
-                if (checkedIds.contains(id)) {
-                    continue;
-                }
-                ScontrolCmd scontrolCmd = ScontrolCmdFactory.showJob(id);
-                try {
-                    ScontrolCmd.ScontrolResult scontrolResult = scontrolCmd.send(commandRunner);
-                    SlurmConstants.JobState jobState = scontrolResult.getResult().getJobState();
-                    boolean anormal = false;
-                    switch (jobState) {
-                        case RUNNING:
-                        case PENDING:
-                            checkedIds.add(id);
-                            break;
-                        case TIMEOUT:
-                        case DEADLINE:
-                        case CANCELLED:
-                            anormal = true;
-                            String msg = "JobId: " + id + " is " + jobState;
-                            job.interrupted();
-                            LOGGER.info(msg);
-                            break;
-                        case COMPLETING:
-                        case COMPLETED:
-                            // this monitor found task finished before flagDirMonitor
-                            // maybe store it and recheck in next run()
-                            checkedIds.add(id);
-                            break;
-                        default:
-                            LOGGER.warn("Not implemented yet {}", jobState);
+                if (!checkedIds.contains(id)) {
+                    ScontrolCmd scontrolCmd = ScontrolCmdFactory.showJob(id);
+                    try {
+                        ScontrolCmd.ScontrolResult scontrolResult = scontrolCmd.send(commandRunner);
+                        SlurmConstants.JobState jobState = scontrolResult.getResult().getJobState();
+                        boolean anormal = checkJobState(job, jobState, checkedIds, id);
+                        if (anormal) {
+                            break; // restart
+                        }
+                    } catch (SlurmCmdNonZeroException e) {
+                        LOGGER.warn("Scontrol not work", e);
                     }
-                    if (anormal) {
-                        break; // restart
-                    }
-                } catch (SlurmCmdNonZeroException e) {
-                    LOGGER.warn("Scontrol not work", e);
                 }
             }
             cleaned = true;
         }
         LOGGER.info("Scontrol monitor ends {}...", counter);
         counter++;
+    }
+
+    private boolean checkJobState(MonitoredJob job, SlurmConstants.JobState jobState, Set<Long> checkedIds, long id) {
+        return switch (jobState) {
+            case RUNNING, PENDING -> {
+                checkedIds.add(id);
+                yield false;
+            }
+            case TIMEOUT, DEADLINE, CANCELLED -> {
+                String msg = "JobId: " + id + " is " + jobState;
+                job.interrupted();
+                LOGGER.info(msg);
+                yield true;
+            }
+            case COMPLETING, COMPLETED -> {
+                // this monitor found task finished before flagDirMonitor
+                // maybe store it and recheck in next run()
+                checkedIds.add(id);
+                yield false;
+            }
+            default -> {
+                LOGGER.warn("Not implemented yet {}", jobState);
+                yield false;
+            }
+        };
     }
 
 }

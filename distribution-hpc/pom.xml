@@ -32,7 +32,6 @@
         <dependency>
             <groupId>com.powsybl</groupId>
             <artifactId>powsybl-computation-local</artifactId>
-            <version>${powsyblcore.version}</version>
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>

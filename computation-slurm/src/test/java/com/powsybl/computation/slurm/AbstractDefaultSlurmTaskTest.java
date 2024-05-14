@@ -24,7 +24,7 @@ import static org.mockito.Mockito.when;
 /**
  * @author Yichen TANG <yichen.tang at rte-france.com>
  */
-public class DefaultSlurmTaskTest {
+public abstract class AbstractDefaultSlurmTaskTest {
 
     protected FileSystem fileSystem;
     protected Path flagPath;

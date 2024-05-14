@@ -58,13 +58,13 @@ public class SlurmComputationManager implements ComputationManager {
     private final TaskStore taskStore;
 
     private final ScheduledExecutorService flagsDirMonitorService = Executors.newScheduledThreadPool(1);
-    private ScheduledFuture flagsDirMonitorFuture;
+    private ScheduledFuture<?> flagsDirMonitorFuture;
 
     private final ScheduledExecutorService scontrolMonitorService = Executors.newScheduledThreadPool(1);
-    private ScheduledFuture scontrolMonitorFuture;
+    private ScheduledFuture<?> scontrolMonitorFuture;
 
     private volatile boolean isClosed = false; // avoid twice close in normal process
-    private volatile boolean closeStarted = false; // To stop continuing send new jobs while closing
+    private volatile boolean closeStarted = false; // To stop continuing to send new jobs while closing
 
     public SlurmComputationManager(SlurmComputationConfig config) throws IOException {
         this.config = requireNonNull(config);
@@ -130,7 +130,7 @@ public class SlurmComputationManager implements ComputationManager {
 
     private void checkSlurmInstall() {
         for (String program : new String[]{"squeue", "sinfo", "srun", "sbatch", "scontrol"}) {
-            int exitCode = commandRunner.execute(program + " --help").getExitCode();
+            int exitCode = commandRunner.execute(program + " --help").exitCode();
             if (exitCode != 0) {
                 throw new SlurmException("Slurm is not installed. '" + program + " --help' failed with code " + exitCode);
             }
@@ -195,7 +195,7 @@ public class SlurmComputationManager implements ComputationManager {
     @Override
     public String getVersion() {
         // get slurm version
-        return commandRunner.execute("scontrol --version").getStdOut().trim();
+        return commandRunner.execute("scontrol --version").stdOut().trim();
     }
 
     @Override
@@ -217,7 +217,7 @@ public class SlurmComputationManager implements ComputationManager {
 
         //We use a completable future bound to the actual task to be able to interrupt the underlying thread via cancel
         //so that for example client code in "before" can be interrupted
-        CompletableFutureTask interruptible = new CompletableFutureTask<>(() -> {
+        CompletableFutureTask<?> interruptible = new CompletableFutureTask<>(() -> {
             doExecute(result, environment, handler, parameters);
             return null;
         }).runAsync(executorService);
@@ -303,7 +303,11 @@ public class SlurmComputationManager implements ComputationManager {
 
     @Override
     public void close() {
-        baseClose();
+        this.close(true);
+    }
+
+    void close(boolean isNotTesting) {
+        baseClose(isNotTesting);
         isClosed = true;
     }
 
@@ -311,15 +315,17 @@ public class SlurmComputationManager implements ComputationManager {
         return closeStarted;
     }
 
-    private void baseClose() {
+    private void baseClose(boolean isNotTesting) {
         LOGGER.debug("Closing SCM.");
         closeStarted = true;
 
-        stopWatchServices();
+        if (isNotTesting) {
+            stopWatchServices();
+        }
 
         // delete flags
         try {
-            commandRunner.execute("rm -rf " + flagDir.toAbsolutePath().toString());
+            commandRunner.execute("rm -rf " + flagDir.toAbsolutePath());
         } catch (Exception e) {
             LOGGER.warn(e.toString(), e);
             throw new SlurmException(e);
@@ -336,18 +342,22 @@ public class SlurmComputationManager implements ComputationManager {
         } finally {
             try {
                 commandRunner.close();
-                try {
-                    fileSystem.close();
-                } catch (UnsupportedOperationException e) {
-                    //Filesystem closing may not be supported.
-                    LOGGER.info(e.toString(), e);
-                }
+                closeFileSystem(fileSystem);
             } catch (IOException e) {
                 LOGGER.error(e.toString(), e);
             }
         }
 
         LOGGER.debug("Slurm Computation Manager closed");
+    }
+
+    private void closeFileSystem(FileSystem fileSystem) throws IOException {
+        try {
+            fileSystem.close();
+        } catch (UnsupportedOperationException e) {
+            //Filesystem closing may not be supported.
+            LOGGER.info(e.toString(), e);
+        }
     }
 
     private void stopWatchServices() {
@@ -379,7 +389,7 @@ public class SlurmComputationManager implements ComputationManager {
         }
 
         @Override
-        public void close() {
+        public synchronized void close() {
             if (!isDebug()) {
                 commandRunner.execute("rm -rf " + toPath().toAbsolutePath());
             }

@@ -27,7 +27,7 @@ import static org.mockito.Mockito.when;
 /**
  * @author Yichen TANG <yichen.tang at rte-france.com>
  */
-class JobArraySlurmTaskTest extends DefaultSlurmTaskTest {
+class JobArraySlurmTaskTest extends AbstractDefaultSlurmTaskTest {
 
     @Test
     void testCounterSum() throws IOException {

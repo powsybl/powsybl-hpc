@@ -42,14 +42,14 @@ class FlagFilesMonitor extends AbstractSlurmJobMonitor {
         Map<Long, MonitoredJob> jobsById = jobs.stream()
                 .collect(Collectors.toMap(MonitoredJob::getJobId, job -> job));
         CommandResult execute = commandRunner.execute("ls -1 " + flagDir);
-        String stdout = execute.getStdOut();
+        String stdout = execute.stdOut();
         String[] split = stdout.split("\n");
         for (String line : split) {
             long idx = line.indexOf('_');
             if (idx > 0) {
                 // ex: mydone_workingDirxxxxxx_taskid
                 int lastIdx = line.lastIndexOf('_');
-                Long id = null;
+                long id;
                 String substring = line.substring(lastIdx + 1);
                 if (substring.contains("-")) {
                     id = Long.parseLong(substring.split("-")[0]);

@@ -20,7 +20,6 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static com.powsybl.computation.slurm.SlurmConstants.BATCH_EXT;
@@ -33,9 +32,7 @@ public abstract class AbstractTask implements SlurmTask {
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractTask.class);
 
     protected static final String UNZIP_INPUTS_COMMAND_ID = "unzip_inputs_command";
-    protected static final Pattern DIGITAL_PATTERN = Pattern.compile("\\d+");
     private static final String CLOSE_START_NO_MORE_SEND_INFO = "SCM close started and no more send sbatch to slurm";
-    private static final String SACCT_NONZERO_JOB = "sacct --jobs=%s -n --format=\"jobid,exitcode\" | grep -v \"0:0\" | grep -v \"\\.\"";
 
     protected final Path workingDir;
     protected final Path flagDir;
@@ -65,16 +62,16 @@ public abstract class AbstractTask implements SlurmTask {
     /**
      * Check if task has already been completed, or if computation manager is closing.
      */
-    protected boolean canSubmit() {
+    protected boolean cannotSubmit() {
         if (scm.isCloseStarted()) {
             LOGGER.info(CLOSE_START_NO_MORE_SEND_INFO);
-            return false;
+            return true;
         }
         if (isCompleted()) {
             LOGGER.info("Stopping jobs submission for task in {}: task has been interrupted.", workingDir);
-            return false;
+            return true;
         }
-        return true;
+        return false;
     }
 
     protected long launchSbatch(SbatchCmd cmd) {
@@ -114,7 +111,7 @@ public abstract class AbstractTask implements SlurmTask {
     }
 
     final void aggregateMonitoredJobs() {
-        CompletableFuture[] monitoredJobsFutures = jobs.stream()
+        CompletableFuture<?>[] monitoredJobsFutures = jobs.stream()
                 .filter(CompletableMonitoredJob::isCompletionRequired)
                 .map(CompletableMonitoredJob::getCompletableFuture)
                 .toArray(CompletableFuture[]::new);
@@ -184,7 +181,7 @@ public abstract class AbstractTask implements SlurmTask {
         return taskCompletion.isDone();
     }
 
-    class CompletableMonitoredJob implements MonitoredJob {
+    public class CompletableMonitoredJob implements MonitoredJob {
 
         private final long jobId;
         private final CompletableFuture<Void> completed;

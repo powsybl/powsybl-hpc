@@ -46,7 +46,7 @@ class ScontrolCmd extends AbstractSlurmCmd<ScontrolCmd.ScontrolResult> {
         }
 
         private void parse() {
-            final String stdOut = commandResult.getStdOut();
+            final String stdOut = commandResult.stdOut();
             final String[] blocks = stdOut.split("\\n\\n");
             for (String block : blocks) {
                 if (!StringUtils.isEmpty(block)) {
@@ -124,12 +124,10 @@ class ScontrolCmd extends AbstractSlurmCmd<ScontrolCmd.ScontrolResult> {
         }
 
         private void parse() {
-            switch (type) {
-                case SHOW_JOB:
-                    parseShowJob();
-                    break;
-                default:
-                    throw new SlurmException("Not implemented yet for type:" + type);
+            if (type == ScontrolType.SHOW_JOB) {
+                parseShowJob();
+            } else {
+                throw new SlurmException("Not implemented yet for type:" + type);
             }
         }
 

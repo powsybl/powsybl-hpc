@@ -150,10 +150,10 @@ class SbatchScriptGeneratorTest {
         List<CommandExecution> commandExecutions = CommandExecutionsTestFactory.commandFiles(3);
         Command command = commandExecutions.get(0).getCommand();
         List<String> shell = new SbatchScriptGenerator(flagPath).unzipCommonInputFiles(command);
-        assertEquals(expectedtestOnlyUnzipBatch(), shell);
+        assertEquals(expectedTestOnlyUnzipBatch(), shell);
     }
 
-    private static List<String> expectedtestOnlyUnzipBatch() {
+    private static List<String> expectedTestOnlyUnzipBatch() {
         List<String> shell = new ArrayList<>();
         shell.add("#!/bin/sh");
         shell.add("unzip -o -q 'foo.zip'");

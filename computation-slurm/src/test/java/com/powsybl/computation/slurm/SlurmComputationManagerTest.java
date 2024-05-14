@@ -53,47 +53,49 @@ class SlurmComputationManagerTest {
         when(runner.execute(anyString())).thenReturn(emptyResult());
         when(runner.execute("scontrol --version")).thenReturn(simpleOutput("slurm 19.05.0"));
 
-        SlurmComputationManager sut = new SlurmComputationManager(config, executorService, runner, fileSystem, localDir);
-
-        assertSame(executorService, sut.getExecutor());
-        assertSame(runner, sut.getCommandRunner());
-        assertSame(localDir, sut.getLocalDir());
-        assertEquals("slurm 19.05.0", sut.getVersion());
-        assertNotNull(sut.getTaskStore());
-
-        Path flagDir = sut.getFlagDir();
-        Assertions.assertThat(flagDir).exists();
-
-        CompletableFuture<String> normal = sut.execute(ExecutionEnvironment.createDefault(), new AbstractExecutionHandler<String>() {
-            @Override
-            public List<CommandExecution> before(Path workingDir) {
-                return Collections.emptyList();
-            }
-
-            @Override
-            public String after(Path workingDir, ExecutionReport report) {
-                return "OK";
-            }
-        });
-        String join = normal.join();
-        assertEquals("OK", join);
-
-        CompletableFuture<String> afterException = sut.execute(ExecutionEnvironment.createDefault(), new AbstractExecutionHandler<String>() {
-            @Override
-            public List<CommandExecution> before(Path workingDir) {
-                return Collections.emptyList();
-            }
-
-            @Override
-            public String after(Path workingDir, ExecutionReport report) {
-                throw new PowsyblException("test");
-            }
-        });
         try {
-            afterException.join();
-            fail();
+            SlurmComputationManager sut = new SlurmComputationManager(config, executorService, runner, fileSystem, localDir);
+
+            assertSame(executorService, sut.getExecutor());
+            assertSame(runner, sut.getCommandRunner());
+            assertSame(localDir, sut.getLocalDir());
+            assertEquals("slurm 19.05.0", sut.getVersion());
+            assertNotNull(sut.getTaskStore());
+
+            Path flagDir = sut.getFlagDir();
+            Assertions.assertThat(flagDir).exists();
+
+            CompletableFuture<String> normal = sut.execute(ExecutionEnvironment.createDefault(), new AbstractExecutionHandler<>() {
+                @Override
+                public List<CommandExecution> before(Path workingDir) {
+                    return Collections.emptyList();
+                }
+
+                @Override
+                public String after(Path workingDir, ExecutionReport report) {
+                    return "OK";
+                }
+            });
+            String join = normal.join();
+            assertEquals("OK", join);
+
+            CompletableFuture<String> afterException = sut.execute(ExecutionEnvironment.createDefault(), new AbstractExecutionHandler<>() {
+                @Override
+                public List<CommandExecution> before(Path workingDir) {
+                    return Collections.emptyList();
+                }
+
+                @Override
+                public String after(Path workingDir, ExecutionReport report) {
+                    throw new PowsyblException("test");
+                }
+            });
+            assertThrows(CompletionException.class, afterException::join);
+
+            // Closing in test mode
+            sut.close(false);
         } catch (Exception e) {
-            assertInstanceOf(CompletionException.class, e);
+            fail(e);
         }
     }
 

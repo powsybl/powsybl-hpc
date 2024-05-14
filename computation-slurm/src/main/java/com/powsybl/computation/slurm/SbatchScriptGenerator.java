@@ -15,7 +15,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Function;
+import java.util.function.UnaryOperator;
+
+import static com.powsybl.computation.CommandType.SIMPLE;
+import static com.powsybl.computation.FilePreProcessor.FILE_GUNZIP;
 
 /**
  * Generates the content of the sbatch script, to be submitted using and {@link SbatchCmd}.
@@ -45,8 +48,8 @@ class SbatchScriptGenerator {
     private static final String PRE_FILE = "PRE";
     private static final String POST_FILE = "POST";
 
-    private static final Function<String, String> WRAP_FILENAME = str -> "'" + str + "'";
-    private static final Function<String, String> VAR2ARG = str -> "\"$" + str + "\"";
+    private static final UnaryOperator<String> WRAP_FILENAME = str -> "'" + str + "'";
+    private static final UnaryOperator<String> VAR2ARG = str -> "\"$" + str + "\"";
 
     private final Path flagDir;
 
@@ -131,17 +134,11 @@ class SbatchScriptGenerator {
     }
 
     private static void addUnzipCmd(List<String> shell, String unzipArg, FilePreProcessor preProcessor) {
-        switch (preProcessor) {
-            case FILE_GUNZIP:
-                // gunzip the file
-                shell.add(SH_GUNZIP + unzipArg);
-                break;
-            case ARCHIVE_UNZIP:
-                // extract the archive
-                shell.add(SH_UNZIP + unzipArg);
-                break;
-            default:
-                throw new AssertionError("Unexpected FilePreProcessor value: " + preProcessor);
+        // Only two values in the ENUM so an if is used
+        if (preProcessor == FILE_GUNZIP) {
+            shell.add(SH_GUNZIP + unzipArg);
+        } else {
+            shell.add(SH_UNZIP + unzipArg);
         }
     }
 
@@ -162,21 +159,17 @@ class SbatchScriptGenerator {
     }
 
     private void cmdWithArgu(List<String> list, Command command, int executionIndex, Path workingDir) {
-        switch (command.getType()) {
-            case SIMPLE:
-                SimpleCommand simpleCmd = (SimpleCommand) command;
-                list.add(CommandUtils.commandToString(simpleCmd.getProgram(), simpleCmd.getArgs(executionIndex)));
+        // Only two values in the ENUM so an if is used
+        if (command.getType() == SIMPLE) {
+            SimpleCommand simpleCmd = (SimpleCommand) command;
+            list.add(CommandUtils.commandToString(simpleCmd.getProgram(), simpleCmd.getArgs(executionIndex)));
+            list.add(String.format(CHECK_EXITCODE, flagDir.toAbsolutePath(), workingDir.getFileName()));
+        } else {
+            GroupCommand groupCommand = (GroupCommand) command;
+            for (GroupCommand.SubCommand subCommand : groupCommand.getSubCommands()) {
+                list.add(CommandUtils.commandToString(subCommand.getProgram(), subCommand.getArgs(executionIndex)));
                 list.add(String.format(CHECK_EXITCODE, flagDir.toAbsolutePath(), workingDir.getFileName()));
-                break;
-            case GROUP:
-                GroupCommand groupCommand = (GroupCommand) command;
-                for (GroupCommand.SubCommand subCommand : groupCommand.getSubCommands()) {
-                    list.add(CommandUtils.commandToString(subCommand.getProgram(), subCommand.getArgs(executionIndex)));
-                    list.add(String.format(CHECK_EXITCODE, flagDir.toAbsolutePath(), workingDir.getFileName()));
-                }
-                break;
-            default:
-                throw new AssertionError("Unexpected command type value: " + command.getType());
+            }
         }
     }
 
@@ -230,29 +223,25 @@ class SbatchScriptGenerator {
             shell.add(INDENTATION_4 + caseIdx + ")");
             addInputFilenames(shell, caseIdx, command);
             addOutputFilenames(shell, caseIdx, command);
-            switch (command.getType()) {
-                case SIMPLE:
-                    SimpleCommand simpleCmd = (SimpleCommand) command;
-                    String args = CommandUtils.commandArgsToString(simpleCmd.getArgs(caseIdx));
-                    shell.add(INDENTATION_6 + SPL_CMD_ARGS + "=(" + args + ")");
-                    shell.add(SH_CASE_BREAK);
-                    break;
-                case GROUP:
-                    GroupCommand groupCommand = (GroupCommand) command;
-                    List<GroupCommand.SubCommand> subCommands = groupCommand.getSubCommands();
-                    List<String> subArgs = new ArrayList<>();
-                    for (int i = 0; i < subCommands.size(); i++) {
-                        GroupCommand.SubCommand cmd = subCommands.get(i);
-                        String argsSub = CommandUtils.commandArgsToString(cmd.getArgs(caseIdx));
-                        String de = SUB_CMD_ARGS + i + "=(" + argsSub + ")";
-                        subArgs.add(de);
-                    }
-                    String subArgsJoined = String.join(" ", subArgs);
-                    shell.add(INDENTATION_6 + subArgsJoined);
-                    shell.add(SH_CASE_BREAK);
-                    break;
-                default:
-                    throw new AssertionError("Unexpected command type value: " + command.getType());
+            // Only two values in the ENUM so an if is used
+            if (command.getType() == SIMPLE) {
+                SimpleCommand simpleCmd = (SimpleCommand) command;
+                String args = CommandUtils.commandArgsToString(simpleCmd.getArgs(caseIdx));
+                shell.add(INDENTATION_6 + SPL_CMD_ARGS + "=(" + args + ")");
+                shell.add(SH_CASE_BREAK);
+            } else {
+                GroupCommand groupCommand = (GroupCommand) command;
+                List<GroupCommand.SubCommand> subCommands = groupCommand.getSubCommands();
+                List<String> subArgs = new ArrayList<>();
+                for (int i = 0; i < subCommands.size(); i++) {
+                    GroupCommand.SubCommand cmd = subCommands.get(i);
+                    String argsSub = CommandUtils.commandArgsToString(cmd.getArgs(caseIdx));
+                    String de = SUB_CMD_ARGS + i + "=(" + argsSub + ")";
+                    subArgs.add(de);
+                }
+                String subArgsJoined = String.join(" ", subArgs);
+                shell.add(INDENTATION_6 + subArgsJoined);
+                shell.add(SH_CASE_BREAK);
             }
         }
         shell.add("esac");
@@ -293,23 +282,19 @@ class SbatchScriptGenerator {
     }
 
     private void cmd(List<String> shell, Command command, Path workingDir) {
-        switch (command.getType()) {
-            case SIMPLE:
-                SimpleCommand simpleCmd = (SimpleCommand) command;
-                simpleCmdWithArgs(shell, simpleCmd);
+        // Only two values in the ENUM so an if is used
+        if (command.getType() == SIMPLE) {
+            SimpleCommand simpleCmd = (SimpleCommand) command;
+            simpleCmdWithArgs(shell, simpleCmd);
+            shell.add(String.format(CHECK_EXITCODE_ARRAY, flagDir.toAbsolutePath(), workingDir.getFileName()));
+        } else {
+            GroupCommand groupCommand = (GroupCommand) command;
+            List<GroupCommand.SubCommand> subCommands = groupCommand.getSubCommands();
+            for (int i = 0; i < subCommands.size(); i++) {
+                GroupCommand.SubCommand cmd = subCommands.get(i);
+                subCmdWithArgs(shell, cmd, i);
                 shell.add(String.format(CHECK_EXITCODE_ARRAY, flagDir.toAbsolutePath(), workingDir.getFileName()));
-                break;
-            case GROUP:
-                GroupCommand groupCommand = (GroupCommand) command;
-                List<GroupCommand.SubCommand> subCommands = groupCommand.getSubCommands();
-                for (int i = 0; i < subCommands.size(); i++) {
-                    GroupCommand.SubCommand cmd = subCommands.get(i);
-                    subCmdWithArgs(shell, cmd, i);
-                    shell.add(String.format(CHECK_EXITCODE_ARRAY, flagDir.toAbsolutePath(), workingDir.getFileName()));
-                }
-                break;
-            default:
-                throw new AssertionError("Unexpected command type value: " + command.getType());
+            }
         }
     }
 
