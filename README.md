@@ -4,7 +4,6 @@
 [![Coverage Status](https://sonarcloud.io/api/project_badges/measure?project=com.powsybl%3Apowsybl-hpc&metric=coverage)](https://sonarcloud.io/component_measures?id=com.powsybl%3Apowsybl-hpc&metric=coverage)
 [![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=com.powsybl%3Apowsybl-hpc&metric=alert_status)](https://sonarcloud.io/dashboard?id=com.powsybl%3Apowsybl-hpc)
 [![MPL-2.0 License](https://img.shields.io/badge/license-MPL_2.0-blue.svg)](https://www.mozilla.org/en-US/MPL/2.0/)
-[![Join the community on Spectrum](https://withspectrum.github.io/badge/badge.svg)](https://spectrum.chat/powsybl)
 [![Slack](https://img.shields.io/badge/slack-powsybl-blueviolet.svg?logo=slack)](https://join.slack.com/t/powsybl/shared_invite/zt-rzvbuzjk-nxi0boim1RKPS5PjieI0rA)
 [![Javadocs](https://www.javadoc.io/badge/com.powsybl/powsybl-hpc.svg?color=blue)](https://www.javadoc.io/doc/com.powsybl/powsybl-hpc)
 
@@ -15,7 +14,7 @@ features.
 PowSyBl is part of the LF Energy Foundation, a project of The Linux Foundation that supports open source innovation projects
 within the energy and electricity sectors.
 
-<p align="center">
+<p style="text-align:center">
 <img src="https://raw.githubusercontent.com/powsybl/powsybl-gse/main/gse-spi/src/main/resources/images/logo_lfe_powsybl.svg?sanitize=true" alt="PowSyBl Logo" width="50%"/>
 </p>
 
@@ -29,11 +28,11 @@ The project contains both Java and C++ modules. If you are only interested in th
 the Java part only. If you're also interested in the MPI computation manager, you need to compiler C++ modules also.
 
 To build the Java modules, you need the following requirements:
-- JDK *(1.8 or greater)*
-- Maven *(3.3.9 or greater)*
+- JDK *(17 or greater)*
+- Maven *(3.8.0 or greater)*
 
 ```
-$> yum install java-1.8.0-openjdk maven 
+$> yum install java-17-openjdk maven 
 ```
 
 To build the C++ modules, you need the additional requirements:
@@ -49,7 +48,7 @@ $> yum install bzip2 bzip2-devel cmake gcc-c++ make wget zlib-devel
 ### OpenMPI 
 In order to support the MPI modules, you need to compile and install the [OpenMPI](https://www.open-mpi.org/) library.
 ```
-$> wget http://www.open-mpi.org/software/ompi/v1.8/downloads/openmpi-1.8.3.tar.bz2
+$> wget https://download.open-mpi.org/release/open-mpi/v1.8/openmpi-1.8.3.tar.bz2
 $> tar xjf openmpi-1.8.3.tar.bz2
 $> cd openmpi-1.8.3
 $> ./configure --prefix=<INSTALL_DIR> --enable-mpi-thread-multiple
