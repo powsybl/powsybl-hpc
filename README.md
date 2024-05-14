@@ -14,7 +14,7 @@ features.
 PowSyBl is part of the LF Energy Foundation, a project of The Linux Foundation that supports open source innovation projects
 within the energy and electricity sectors.
 
-<p align="center">
+<p style="text-align:center">
 <img src="https://raw.githubusercontent.com/powsybl/powsybl-gse/main/gse-spi/src/main/resources/images/logo_lfe_powsybl.svg?sanitize=true" alt="PowSyBl Logo" width="50%"/>
 </p>
 
@@ -48,7 +48,7 @@ $> yum install bzip2 bzip2-devel cmake gcc-c++ make wget zlib-devel
 ### OpenMPI 
 In order to support the MPI modules, you need to compile and install the [OpenMPI](https://www.open-mpi.org/) library.
 ```
-$> wget http://www.open-mpi.org/software/ompi/v1.8/downloads/openmpi-1.8.3.tar.bz2
+$> wget https://www.open-mpi.org/software/ompi/v1.8/downloads/openmpi-1.8.3.tar.bz2
 $> tar xjf openmpi-1.8.3.tar.bz2
 $> cd openmpi-1.8.3
 $> ./configure --prefix=<INSTALL_DIR> --enable-mpi-thread-multiple
