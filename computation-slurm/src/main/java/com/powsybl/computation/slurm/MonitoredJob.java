@@ -12,7 +12,7 @@ package com.powsybl.computation.slurm;
  * An individual job submitted to slurm, an which completion or failure
  * needs to be monitored.
  *
- * @author Sylvain Leclerc <sylvain.leclerc at rte-france.com>
+ * @author Sylvain Leclerc {@literal <sylvain.leclerc at rte-france.com>}
  */
 public interface MonitoredJob {
 

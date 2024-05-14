@@ -13,7 +13,7 @@ import static java.util.Objects.requireNonNull;
  * The results of the execution of a shell command:
  * the exit code, and standard output and standard error as strings.
  *
- * @author Sylvain Leclerc <sylvain.leclerc at rte-france.com>
+ * @author Sylvain Leclerc {@literal <sylvain.leclerc at rte-france.com>}
  */
 public record CommandResult(int exitCode, String stdOut, String stdErr) {
 

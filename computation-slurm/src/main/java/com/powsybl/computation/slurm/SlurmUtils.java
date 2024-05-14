@@ -10,7 +10,7 @@ package com.powsybl.computation.slurm;
 import com.google.common.base.Preconditions;
 
 /**
- * @author Yichen TANG <yichen.tang at rte-france.com>
+ * @author Yichen TANG {@literal <yichen.tang at rte-france.com>}
  */
 final class SlurmUtils {
 

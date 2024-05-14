@@ -16,7 +16,7 @@ import java.util.TreeSet;
  *
  * Sbatch scripts will be submitted using that kind of command.
  *
- * @author Yichen Tang <yichen.tang at rte-france.com>
+ * @author Yichen Tang {@literal <yichen.tang at rte-france.com>}
  */
 public class SbatchCmd extends AbstractSlurmCmd<SbatchCmdResult> {
 

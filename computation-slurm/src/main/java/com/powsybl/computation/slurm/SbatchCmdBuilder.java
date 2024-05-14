@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
  * Builds an {@link SbatchCmd}, used to submit script execution to Slurm.
  * @see <a href="https://slurm.schedmd.com/sbatch.html">Sbatch</a>
  *
- * @author Yichen Tang <yichen.tang at rte-france.com>
+ * @author Yichen Tang {@literal <yichen.tang at rte-france.com>}
  */
 class SbatchCmdBuilder {
 

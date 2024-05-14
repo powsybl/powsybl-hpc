@@ -23,7 +23,7 @@ import java.util.Objects;
 /**
  * Executes shell commands using the local OS.
  *
- * @author Sylvain Leclerc <sylvain.leclerc at rte-france.com>
+ * @author Sylvain Leclerc {@literal <sylvain.leclerc at rte-france.com>}
  */
 class LocalCommandExecutor implements CommandExecutor {
 

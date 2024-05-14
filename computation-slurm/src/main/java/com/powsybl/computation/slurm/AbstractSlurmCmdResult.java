@@ -10,7 +10,7 @@ package com.powsybl.computation.slurm;
 import java.util.Objects;
 
 /**
- * @author Yichen Tang <yichen.tang at rte-france.com>
+ * @author Yichen Tang {@literal <yichen.tang at rte-france.com>}
  */
 public abstract class AbstractSlurmCmdResult implements SlurmCmdResult {
 

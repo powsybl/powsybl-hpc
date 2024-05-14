@@ -32,8 +32,8 @@ import java.util.concurrent.*;
 import static java.util.Objects.requireNonNull;
 
 /**
- * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
- * @author Yichen Tang <yichen.tang at rte-france.com>
+ * @author Geoffroy Jamgotchian {@literal <geoffroy.jamgotchian at rte-france.com>}
+ * @author Yichen Tang {@literal <yichen.tang at rte-france.com>}
  */
 public class SlurmComputationManager implements ComputationManager {
 

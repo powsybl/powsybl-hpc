@@ -16,11 +16,11 @@ import java.util.List;
 import java.util.Set;
 
 /**
- *  A job monitor which uses "scontrol show job ID_OF_JOB" to get state of job,
- *  in case, the job itself can not finish completely.
- *  (For example, scancel on slurm directly or timeout)
+ * A job monitor which uses "scontrol show job ID_OF_JOB" to get state of job,
+ * in case, the job itself can not finish completely.
+ * (For example, scancel on slurm directly or timeout)
  *
- *  @author Yichen Tang <yichen.tang at rte-france.com>
+ * @author Yichen Tang {@literal <yichen.tang at rte-france.com>}
  */
 public class ScontrolMonitor extends AbstractSlurmJobMonitor {
 

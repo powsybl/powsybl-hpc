@@ -19,7 +19,7 @@ import java.util.Objects;
  * Executes shell commands through an SSH connection,
  * using an underlying JSCH {@link CommandRunner}.
  *
- * @author Sylvain Leclerc <sylvain.leclerc at rte-france.com>
+ * @author Sylvain Leclerc {@literal <sylvain.leclerc at rte-france.com>}
  */
 class SshCommandExecutor implements CommandExecutor {
 

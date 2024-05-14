@@ -10,7 +10,7 @@ package com.powsybl.computation.slurm;
 /**
  * @see <a href="https://slurm.schedmd.com/scontrol.html">Scontrol</a>
  *
- * @author Yichen Tang <yichen.tang at rte-france.com>
+ * @author Yichen Tang {@literal <yichen.tang at rte-france.com>}
  */
 public final class ScontrolCmdFactory {
 

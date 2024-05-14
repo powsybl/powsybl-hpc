@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
 import static com.powsybl.computation.slurm.SlurmConstants.BATCH_EXT;
 
 /**
- * @author Yichen TANG <yichen.tang at rte-france.com>
+ * @author Yichen TANG {@literal <yichen.tang at rte-france.com>}
  */
 public abstract class AbstractTask implements SlurmTask {
 
