@@ -28,11 +28,11 @@ The project contains both Java and C++ modules. If you are only interested in th
 the Java part only. If you're also interested in the MPI computation manager, you need to compiler C++ modules also.
 
 To build the Java modules, you need the following requirements:
-- JDK *(1.8 or greater)*
-- Maven *(3.3.9 or greater)*
+- JDK *(17 or greater)*
+- Maven *(3.8.0 or greater)*
 
 ```
-$> yum install java-1.8.0-openjdk maven 
+$> yum install java-1.17.0-openjdk maven 
 ```
 
 To build the C++ modules, you need the additional requirements:
