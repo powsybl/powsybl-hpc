@@ -9,7 +9,7 @@ package com.powsybl.computation.slurm;
 /**
  * Simple interface to execute shell commands, 1 at a time.
  *
- * @author Sylvain Leclerc <sylvain.leclerc at rte-france.com>
+ * @author Sylvain Leclerc {@literal <sylvain.leclerc at rte-france.com>}
  */
 public interface CommandExecutor extends AutoCloseable {
 

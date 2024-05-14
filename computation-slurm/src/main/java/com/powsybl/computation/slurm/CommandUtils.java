@@ -13,7 +13,7 @@ import java.util.stream.Collector;
 import static java.util.Objects.requireNonNull;
 
 /**
- * @author Sylvain Leclerc <sylvain.leclerc at rte-france.com>
+ * @author Sylvain Leclerc {@literal <sylvain.leclerc at rte-france.com>}
  */
 final class CommandUtils {
 

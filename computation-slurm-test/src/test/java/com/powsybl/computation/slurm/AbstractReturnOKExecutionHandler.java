@@ -13,7 +13,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 
 /**
- * @author Yichen TANG <yichen.tang at rte-france.com>
+ * @author Yichen TANG {@literal <yichen.tang at rte-france.com>}
  */
 abstract class AbstractReturnOKExecutionHandler extends AbstractExecutionHandler<String> {
     @Override

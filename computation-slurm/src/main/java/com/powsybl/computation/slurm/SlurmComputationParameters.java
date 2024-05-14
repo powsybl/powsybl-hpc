@@ -14,7 +14,7 @@ import java.util.Optional;
 import java.util.OptionalInt;
 
 /**
- * @author Yichen TANG <yichen.tang at rte-france.com>
+ * @author Yichen TANG {@literal <yichen.tang at rte-france.com>}
  */
 public class SlurmComputationParameters extends AbstractExtension<ComputationParameters> {
 

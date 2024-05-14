@@ -19,7 +19,7 @@ import static java.util.Objects.requireNonNull;
 /**
  * A job monitor which relies on the creation of "flag" files at the end of submitted jobs.
  *
- * @author Yichen Tang <yichen.tang at rte-france.com>
+ * @author Yichen Tang {@literal <yichen.tang at rte-france.com>}
  */
 class FlagFilesMonitor extends AbstractSlurmJobMonitor {
 

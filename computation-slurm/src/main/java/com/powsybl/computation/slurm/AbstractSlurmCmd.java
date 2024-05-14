@@ -12,7 +12,7 @@ import org.slf4j.LoggerFactory;
 import java.util.Objects;
 
 /**
- * @author Yichen Tang <yichen.tang at rte-france.com>
+ * @author Yichen Tang {@literal <yichen.tang at rte-france.com>}
  */
 abstract class AbstractSlurmCmd<T> {
 

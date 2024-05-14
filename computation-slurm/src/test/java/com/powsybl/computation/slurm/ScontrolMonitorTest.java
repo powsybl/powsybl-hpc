@@ -25,7 +25,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * @author Yichen Tang <yichen.tang at rte-france.com>
+ * @author Yichen Tang {@literal <yichen.tang at rte-france.com>}
  */
 class ScontrolMonitorTest {
 

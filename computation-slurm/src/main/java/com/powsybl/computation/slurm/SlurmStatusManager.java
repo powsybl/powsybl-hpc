@@ -15,8 +15,8 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * @author Yichen Tang <yichen.tang at rte-france.com>
- * @author Sylvain Leclerc <sylvain.leclerc at rte-france.com>
+ * @author Yichen Tang {@literal <yichen.tang at rte-france.com>}
+ * @author Sylvain Leclerc {@literal <sylvain.leclerc at rte-france.com>}
  */
 class SlurmStatusManager {
     private static final String TIME_CMD = "date +\"%Y-%m-%d %H:%M:%S %Z\"";

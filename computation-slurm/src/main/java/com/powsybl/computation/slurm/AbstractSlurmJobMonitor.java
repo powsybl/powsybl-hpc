@@ -17,7 +17,7 @@ import java.util.function.Supplier;
  * Abstract base class for jobs monitors, in charge of monitoring the status
  * of submitted jobs.
  *
- * @author Sylvain Leclerc <sylvain.leclerc at rte-france.com>
+ * @author Sylvain Leclerc {@literal <sylvain.leclerc at rte-france.com>}
  */
 public abstract class AbstractSlurmJobMonitor implements Runnable {
 

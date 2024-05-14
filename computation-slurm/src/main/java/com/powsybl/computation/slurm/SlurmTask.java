@@ -17,7 +17,7 @@ import java.util.concurrent.ExecutionException;
  * Represents a user submitted tasks, which will probably required the execution
  * of multiple underlying individual jobs on the slurm infrastructure.
  *
- * @author Sylvain Leclerc <sylvain.leclerc at rte-france.com>
+ * @author Sylvain Leclerc {@literal <sylvain.leclerc at rte-france.com>}
  */
 public interface SlurmTask {
 

@@ -22,8 +22,8 @@ import static com.powsybl.computation.FilePreProcessor.FILE_GUNZIP;
 /**
  * Generates the content of the sbatch script, to be submitted using and {@link SbatchCmd}.
  *
- * @author Yichen Tang <yichen.tang at rte-france.com>
- * @author Sylvain Leclerc <sylvain.leclerc at rte-france.com>
+ * @author Yichen Tang {@literal <yichen.tang at rte-france.com>}
+ * @author Sylvain Leclerc {@literal <sylvain.leclerc at rte-france.com>}
  */
 class SbatchScriptGenerator {
 
