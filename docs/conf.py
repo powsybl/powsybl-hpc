@@ -165,4 +165,4 @@ def replace_versions(intersphinx_mapping, file):
                 break
     return intersphinx_mapping
 
-# intersphinx_mapping = replace_versions(intersphinx_mapping, file_with_version)
+intersphinx_mapping = replace_versions(intersphinx_mapping, file_with_version)
