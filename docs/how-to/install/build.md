@@ -22,15 +22,15 @@ A more detailled description of the install.sh script options follows:
 
 ### Targets
 
-| Target | Description |
-| ------ | ----------- |
-| clean | Clean modules |
-| clean-thirdparty | Clean the thirdparty libraries |
-| compile | Compile modules |
-| package | Compile modules and create a distributable package |
-| __install__ | __Compile modules and install it__ |
-| docs | Generate the documentation (Doxygen/Javadoc) |
-| help | Display this help |
+| Target           | Description                                        |
+|------------------|----------------------------------------------------|
+| clean            | Clean modules                                      |
+| clean-thirdparty | Clean the thirdparty libraries                     |
+| compile          | Compile modules                                    |
+| package          | Compile modules and create a distributable package |
+| __install__      | __Compile modules and install it__                 |
+| docs             | Generate the documentation (Doxygen/Javadoc)       |
+| help             | Display this help                                  |
 
 ### Options
 
@@ -39,20 +39,20 @@ updated each time you use the install.sh script.
 
 ### Global options
 
-| Option | Description | Default value |
-| ------ | ----------- | ------------- |
-| --help | Display this help | |
+| Option   | Description                    | Default value |
+|----------|--------------------------------|---------------|
+| --help   | Display this help              |               |
 | --prefix | Set the installation directory | $HOME/powsybl |
 
 #### Third-parties
 
-| Option | Description | Default value |
-| ------ | ----------- | ------------- |
-| --with-thirdparty | Enable the compilation of thirdparty libraries | |
-| --without-thirdparty | Disable the compilation of thirdparty libraries | |
-| --thirdparty-prefix | Set the thirdparty installation directory | $HOME/powsybl_thirdparty |
-| --thirdparty-download | Sets false to compile thirdparty libraries from a local repository | true |
-| --thirdparty-packs | Sets the thirdparty libraries local repository | $HOME/powsybl_packs |
+| Option                | Description                                                        | Default value            |
+|-----------------------|--------------------------------------------------------------------|--------------------------|
+| --with-thirdparty     | Enable the compilation of thirdparty libraries                     |                          |
+| --without-thirdparty  | Disable the compilation of thirdparty libraries                    |                          |
+| --thirdparty-prefix   | Set the thirdparty installation directory                          | $HOME/powsybl_thirdparty |
+| --thirdparty-download | Sets false to compile thirdparty libraries from a local repository | true                     |
+| --thirdparty-packs    | Sets the thirdparty libraries local repository                     | $HOME/powsybl_packs      |
 
 #### Default configuration file
 ```
