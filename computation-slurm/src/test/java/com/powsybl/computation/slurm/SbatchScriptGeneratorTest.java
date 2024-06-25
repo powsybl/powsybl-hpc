@@ -7,7 +7,6 @@
  */
 package com.powsybl.computation.slurm;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 import com.powsybl.computation.Command;
@@ -61,7 +60,7 @@ class SbatchScriptGeneratorTest {
         env.put("FOO_PATH", "/home/foo/java");
 
         List<String> shell = new SbatchScriptGenerator(flagPath).parser(command, 0, workingPath, env);
-        assertEquals(ImmutableList.of("#!/bin/sh",
+        assertEquals(List.of("#!/bin/sh",
                 "export FOO_PATH=/home/foo/java:$FOO_PATH; export foo=bar; ",
                 "echo \"test\"",
                 "rc=$?; if [[ $rc != 0 ]]; then touch /tmp/flags/myerror_workingPath_12345_$SLURM_JOBID; exit $rc; fi",
@@ -74,7 +73,7 @@ class SbatchScriptGeneratorTest {
         CommandExecution commandExecution = commandExecutions.get(commandIdx);
         Command command = commandExecution.getCommand();
         List<String> shell = new SbatchScriptGenerator(flagPath).parser(command, 0, workingPath, Collections.emptyMap());
-        assertEquals(ImmutableList.of("#!/bin/sh",
+        assertEquals(List.of("#!/bin/sh",
                 "echo \"test\"",
                 "rc=$?; if [[ $rc != 0 ]]; then touch /tmp/flags/myerror_workingPath_12345_$SLURM_JOBID; exit $rc; fi",
                 "touch /tmp/flags/mydone_workingPath_12345_$SLURM_JOBID"), shell);
@@ -87,7 +86,7 @@ class SbatchScriptGeneratorTest {
         Command command = commandExecution.getCommand();
         List<String> shell = new SbatchScriptGenerator(flagPath).parser(command, 0, workingPath, Collections.emptyMap());
         // not array job
-        assertEquals(ImmutableList.of("#!/bin/sh",
+        assertEquals(List.of("#!/bin/sh",
                 "touch \"line 1,line 2\" \"v2\"",
                 "rc=$?; if [[ $rc != 0 ]]; then touch /tmp/flags/myerror_workingPath_12345_$SLURM_JOBID; exit $rc; fi",
                 "touch /tmp/flags/mydone_workingPath_12345_$SLURM_JOBID"), shell);
@@ -100,7 +99,7 @@ class SbatchScriptGeneratorTest {
         CommandExecution commandExecution = commandExecutions.get(commandIdx);
         Command command = commandExecution.getCommand();
         List<String> shell = new SbatchScriptGenerator(flagPath).parser(command, 0, workingPath, Collections.emptyMap());
-        assertEquals(ImmutableList.of("#!/bin/sh",
+        assertEquals(List.of("#!/bin/sh",
                 "echo \"te1st0\"",
                 "rc=$?; if [[ $rc != 0 ]]; then touch /tmp/flags/myerror_workingPath_12345_$SLURM_JOBID; exit $rc; fi",
                 "touch /tmp/flags/mydone_workingPath_12345_$SLURM_JOBID"), shell);
@@ -116,7 +115,7 @@ class SbatchScriptGeneratorTest {
         CommandExecution commandExecution = commandExecutions.get(commandIdx);
         Command command = commandExecution.getCommand();
         List<String> shell = new SbatchScriptGenerator(flagPath).parser(command, 0, workingPath, Collections.emptyMap());
-        assertEquals(ImmutableList.of("#!/bin/sh",
+        assertEquals(List.of("#!/bin/sh",
                 "unzip -o -q 'in0.zip'",
                 "/home/test/myecho.sh \"in0\" \"out0\"",
                 "rc=$?; if [[ $rc != 0 ]]; then touch /tmp/flags/myerror_workingPath_12345_$SLURM_JOBID; exit $rc; fi",
@@ -166,7 +165,7 @@ class SbatchScriptGeneratorTest {
         CommandExecution commandExecution = commandExecutions.get(0);
         Command command = commandExecution.getCommand();
         List<String> shell = new SbatchScriptGenerator(flagPath).parser(command, 0, workingPath, Collections.emptyMap());
-        assertEquals(ImmutableList.of("#!/bin/sh",
+        assertEquals(List.of("#!/bin/sh",
                 "sleep \"5s\"",
                 "rc=$?; if [[ $rc != 0 ]]; then touch /tmp/flags/myerror_workingPath_12345_$SLURM_JOBID; exit $rc; fi",
                 "echo \"sub2\"",

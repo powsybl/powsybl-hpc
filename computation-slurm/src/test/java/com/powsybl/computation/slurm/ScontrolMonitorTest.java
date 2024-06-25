@@ -130,11 +130,11 @@ class ScontrolMonitorTest {
     }
 
     private List<MockJob> mockJobs() {
-        List<MockJob> jobs = LongStream.range(1, 7)
+        List<MockJob> mockJobs = LongStream.range(1, 7)
                 .mapToObj(MockJob::new)
                 .collect(Collectors.toList());
-        when(ts.getPendingJobs()).thenReturn(ImmutableList.copyOf(jobs));
-        return jobs;
+        when(ts.getPendingJobs()).thenReturn(ImmutableList.copyOf(mockJobs));
+        return mockJobs;
     }
 
     private static final class MockJob implements MonitoredJob {

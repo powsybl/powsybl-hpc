@@ -61,8 +61,8 @@ class SlurmTaskTest {
         List<Long> masters = task.getMasters();
         assertEquals(1L, (long) task.getFirstJobId());
         assertEquals(Arrays.asList(1L, 3L, 6L), masters);
-        assertEquals(ImmutableSet.of(1L, 2L, 3L, 4L, 5L, 6L), getPendingJobsIds(task));
-        assertEquals(ImmutableSet.of(1L, 2L, 3L, 4L, 5L, 6L), task.getAllJobIds());
+        assertEquals(Set.of(1L, 2L, 3L, 4L, 5L, 6L), getPendingJobsIds(task));
+        assertEquals(Set.of(1L, 2L, 3L, 4L, 5L, 6L), task.getAllJobIds());
 
         // sub task
         assertEquals(Arrays.asList(4L, 5L), task.getBatches(3L));
@@ -128,7 +128,7 @@ class SlurmTaskTest {
         // untracing
         getPendingJob(task, 1L).done();
         getPendingJob(task, 2L).done();
-        assertEquals(ImmutableSet.of(3L, 4L, 5L, 6L), getPendingJobsIds(task));
+        assertEquals(Set.of(3L, 4L, 5L, 6L), getPendingJobsIds(task));
 
         //interrupt
         task.interrupt();
@@ -155,7 +155,7 @@ class SlurmTaskTest {
         // 6
         try {
             task2.submit();
-            assertEquals(ImmutableSet.of(1L, 2L, 3L, 4L, 5L, 6L), getPendingJobsIds(task2));
+            assertEquals(Set.of(1L, 2L, 3L, 4L, 5L, 6L), getPendingJobsIds(task2));
             assertEquals(Arrays.asList(1L, 2L, 5L, 6L), task2.getMasters());
         } catch (IOException e) {
             LOGGER.error(e.getMessage(), e);

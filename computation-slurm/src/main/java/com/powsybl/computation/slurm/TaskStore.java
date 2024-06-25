@@ -52,7 +52,7 @@ class TaskStore {
     // === integration test ===
     // ========================
     boolean isEmpty() {
-        System.out.println("taskByDir empty:" + tasks.isEmpty());
+        LOGGER.info("taskByDir empty: {}", tasks.isEmpty());
         return tasks.isEmpty();
     }
 }
