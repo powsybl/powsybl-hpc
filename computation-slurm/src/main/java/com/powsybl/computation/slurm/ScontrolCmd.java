@@ -27,7 +27,7 @@ class ScontrolCmd extends AbstractSlurmCmd<ScontrolCmd.ScontrolResult> {
     }
 
     enum ScontrolType {
-        SHOW_JOB;
+        SHOW_JOB
     }
 
     @Override

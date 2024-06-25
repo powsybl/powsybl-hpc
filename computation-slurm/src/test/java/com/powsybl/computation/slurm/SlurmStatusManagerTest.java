@@ -7,7 +7,6 @@
  */
 package com.powsybl.computation.slurm;
 
-import com.google.common.collect.ImmutableMap;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 

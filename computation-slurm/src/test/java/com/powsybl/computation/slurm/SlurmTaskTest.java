@@ -7,7 +7,6 @@
  */
 package com.powsybl.computation.slurm;
 
-import com.google.common.collect.ImmutableSet;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 import com.powsybl.commons.io.WorkingDirectory;

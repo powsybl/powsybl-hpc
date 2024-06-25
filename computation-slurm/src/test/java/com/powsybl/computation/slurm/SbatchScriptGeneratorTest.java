@@ -183,7 +183,7 @@ class SbatchScriptGeneratorTest {
     private void assertCommandExecutionToShell(CommandExecution commandExecution, String expected) {
         SbatchScriptGenerator shellGenerator = new SbatchScriptGenerator(flagPath);
         List<String> shell = shellGenerator.parser(commandExecution, workingPath, Collections.emptyMap(), true);
-        List<String> expectedShell = null;
+        List<String> expectedShell;
         try {
             expectedShell = Files.readAllLines(Paths.get(Objects.requireNonNull(this.getClass().getResource("/expectedShell/" + expected)).toURI()), StandardCharsets.UTF_8);
             assertEquals(expectedShell, shell);
