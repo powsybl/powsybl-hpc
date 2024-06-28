@@ -117,36 +117,32 @@ public class SlurmComputationConfig {
     }
 
     public static SlurmComputationConfig load(PlatformConfig platformConfig) {
-        Optional<ModuleConfig> optionalConfig = platformConfig.getOptionalModuleConfig("slurm-computation-manager");
-        if (optionalConfig.isPresent()) {
-            ModuleConfig config = optionalConfig.get();
+        ModuleConfig config = platformConfig.getOptionalModuleConfig("slurm-computation-manager")
+            .orElseThrow(() -> new PowsyblException("slurm-computation-manager module config not found in platform config"));
 
-            boolean remote = config.getBooleanProperty("remote", DEFAULT_REMOTE);
+        boolean remote = config.getBooleanProperty("remote", DEFAULT_REMOTE);
 
-            Path localDir = config.getPathProperty("local-dir");
-            int pollingInSecond = config.getIntProperty("polling-time", DEFAULT_POLLING);
-            int scontrolInMinute = config.getIntProperty("scontrol-time", DEFAULT_SCONTROL_INTERVAL);
-            boolean arrayJob = config.getBooleanProperty("job-array", DEFAULT_JOB_ARRAY);
+        Path localDir = config.getPathProperty("local-dir");
+        int pollingInSecond = config.getIntProperty("polling-time", DEFAULT_POLLING);
+        int scontrolInMinute = config.getIntProperty("scontrol-time", DEFAULT_SCONTROL_INTERVAL);
+        boolean arrayJob = config.getBooleanProperty("job-array", DEFAULT_JOB_ARRAY);
 
-            if (remote) {
-                String workingDir = config.getStringProperty("remote-dir");
+        if (remote) {
+            String workingDir = config.getStringProperty("remote-dir");
 
-                String host = config.getStringProperty("hostname");
-                int port = config.getIntProperty("port", DEFAULT_PORT);
-                String userName = config.getStringProperty("username");
-                String password = config.getStringProperty("password");
-                int maxSshConnection = config.getIntProperty("max-ssh-connection", DEFAULT_MAX_SSH_CONNECTION);
-                int maxRetry = config.getIntProperty("max-retry", DEFAULT_MAX_RETRY);
-                SshConfig sshConfig = new SshConfig(host, port, userName, password, maxSshConnection, maxRetry);
+            String host = config.getStringProperty("hostname");
+            int port = config.getIntProperty("port", DEFAULT_PORT);
+            String userName = config.getStringProperty("username");
+            String password = config.getStringProperty("password");
+            int maxSshConnection = config.getIntProperty("max-ssh-connection", DEFAULT_MAX_SSH_CONNECTION);
+            int maxRetry = config.getIntProperty("max-retry", DEFAULT_MAX_RETRY);
+            SshConfig sshConfig = new SshConfig(host, port, userName, password, maxSshConnection, maxRetry);
 
-                return new SlurmComputationConfig(sshConfig, workingDir, localDir, pollingInSecond, scontrolInMinute, arrayJob);
-            } else {
-                String workingDir = config.getStringProperty("working-dir");
-
-                return new SlurmComputationConfig(workingDir, localDir, pollingInSecond, scontrolInMinute, arrayJob);
-            }
+            return new SlurmComputationConfig(sshConfig, workingDir, localDir, pollingInSecond, scontrolInMinute, arrayJob);
         } else {
-            throw new PowsyblException("slurm-computation-manager module config not found in platform config");
+            String workingDir = config.getStringProperty("working-dir");
+
+            return new SlurmComputationConfig(workingDir, localDir, pollingInSecond, scontrolInMinute, arrayJob);
         }
     }
 
