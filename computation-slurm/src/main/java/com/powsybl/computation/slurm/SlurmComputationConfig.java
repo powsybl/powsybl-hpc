@@ -12,7 +12,6 @@ import com.powsybl.commons.config.ModuleConfig;
 import com.powsybl.commons.config.PlatformConfig;
 
 import java.nio.file.Path;
-import java.util.Optional;
 
 import static java.util.Objects.requireNonNull;
 
