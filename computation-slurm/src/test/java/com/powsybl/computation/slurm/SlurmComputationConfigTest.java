@@ -9,6 +9,7 @@ package com.powsybl.computation.slurm;
 
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
+import com.powsybl.commons.PowsyblException;
 import com.powsybl.commons.config.InMemoryPlatformConfig;
 import com.powsybl.commons.config.MapModuleConfig;
 import com.powsybl.commons.config.PlatformConfig;
@@ -110,5 +111,12 @@ class SlurmComputationConfigTest {
         assertEquals(POLLING_INTERVAL, config.getPollingInterval());
         assertEquals(SCONTROL_INTERVAL, config.getScontrolInterval());
         assertEquals(JOB_ARRAY, config.isJobArray());
+    }
+
+    @Test
+    void testModuleAbsent() {
+        platformConfig = new InMemoryPlatformConfig(fileSystem);
+        PowsyblException exception = assertThrows(PowsyblException.class, () -> SlurmComputationConfig.load(platformConfig));
+        assertEquals("slurm-computation-manager module config not found in platform config", exception.getMessage());
     }
 }

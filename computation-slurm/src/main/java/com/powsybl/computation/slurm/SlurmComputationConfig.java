@@ -7,6 +7,7 @@
  */
 package com.powsybl.computation.slurm;
 
+import com.powsybl.commons.PowsyblException;
 import com.powsybl.commons.config.ModuleConfig;
 import com.powsybl.commons.config.PlatformConfig;
 
@@ -115,7 +116,8 @@ public class SlurmComputationConfig {
     }
 
     public static SlurmComputationConfig load(PlatformConfig platformConfig) {
-        ModuleConfig config = platformConfig.getModuleConfig("slurm-computation-manager");
+        ModuleConfig config = platformConfig.getOptionalModuleConfig("slurm-computation-manager")
+            .orElseThrow(() -> new PowsyblException("slurm-computation-manager module config not found in platform config"));
 
         boolean remote = config.getBooleanProperty("remote", DEFAULT_REMOTE);
 
