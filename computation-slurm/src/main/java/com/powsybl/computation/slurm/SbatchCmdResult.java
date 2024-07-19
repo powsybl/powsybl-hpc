@@ -18,10 +18,10 @@ class SbatchCmdResult extends AbstractSlurmCmdResult {
 
     long getSubmittedJobId() throws SlurmCmdNonZeroException {
         if (isOk()) {
-            String jobId = commandResult.stdOut().replaceAll("[^0-9]", "");
+            String jobId = commandResult.stdOut().replaceAll("\\D", "");
             return Long.parseLong(jobId);
         } else {
-            throw new SlurmCmdNonZeroException("Sbatch failed:" + toString() +
+            throw new SlurmCmdNonZeroException("Sbatch failed:" + this +
                     "\nexitcode:" + commandResult.exitCode() +
                     "\nerr:" + commandResult.stdErr() +
                     "\nout:" + commandResult.stdOut());
