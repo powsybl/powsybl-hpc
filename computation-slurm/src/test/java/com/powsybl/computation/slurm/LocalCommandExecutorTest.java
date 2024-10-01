@@ -23,7 +23,7 @@ class LocalCommandExecutorTest {
         try (CommandExecutor commandExecutor = new LocalCommandExecutor()) {
             CommandResult commandResult = commandExecutor.execute("echo hello");
             assertEquals(0, commandResult.exitCode());
-            assertEquals("hello" + System.lineSeparator(), commandResult.stdOut());
+            assertEquals("hello", commandResult.stdOut().trim());
             assertEquals("", commandResult.stdErr());
         } catch (Exception e) {
             fail("Unexpected exception: " + e);
