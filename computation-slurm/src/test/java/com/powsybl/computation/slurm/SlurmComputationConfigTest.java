@@ -49,9 +49,9 @@ class SlurmComputationConfigTest {
     @BeforeEach
     public void setUp() {
         fileSystem = Jimfs.newFileSystem(Configuration.unix());
-        InMemoryPlatformConfig platformConfig = new InMemoryPlatformConfig(fileSystem);
+        InMemoryPlatformConfig platformConfigInMemory = new InMemoryPlatformConfig(fileSystem);
 
-        moduleConfig = platformConfig.createModuleConfig("slurm-computation-manager");
+        moduleConfig = platformConfigInMemory.createModuleConfig("slurm-computation-manager");
         moduleConfig.setStringProperty("polling-time", Integer.toString(POLLING_INTERVAL));
         moduleConfig.setStringProperty("scontrol-time", Integer.toString(SCONTROL_INTERVAL));
         moduleConfig.setStringProperty("job-array", Boolean.toString(JOB_ARRAY));
@@ -69,7 +69,7 @@ class SlurmComputationConfigTest {
         // Local configuration
         moduleConfig.setStringProperty("working-dir", WORKING_DIR);
 
-        this.platformConfig = platformConfig;
+        this.platformConfig = platformConfigInMemory;
     }
 
     @AfterEach

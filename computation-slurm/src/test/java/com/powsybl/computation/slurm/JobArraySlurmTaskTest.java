@@ -69,4 +69,24 @@ class JobArraySlurmTaskTest extends AbstractDefaultSlurmTaskTest {
         assertEquals(127, error.getExitCode());
         assertEquals(1, error.getIndex());
     }
+
+    @Test
+    void testCannotSubmitTask() {
+        CommandExecutor commandExecutor = mock(CommandExecutor.class);
+        SlurmComputationManager slurmComputationManager = mockScm(commandExecutor);
+        when(slurmComputationManager.isCloseStarted()).thenReturn(true);
+        SlurmTask task = new JobArraySlurmTask(slurmComputationManager, mockWd(), CommandExecutionsTestFactory.longProgramInList(2, 3, 1), ComputationParameters.empty(), ExecutionEnvironment.createDefault());
+        when(commandExecutor.execute(startsWith("sbatch")))
+            .thenReturn(simpleOutput("Submitted batch job 1"))
+            .thenReturn(simpleOutput("Submitted batch job 3"))
+            .thenReturn(simpleOutput("Submitted batch job 6"))
+            .thenThrow(new IllegalArgumentException("no more then 3 times."));
+
+        try {
+            task.submit();
+            assertEquals(0, task.getPendingJobs().size());
+        } catch (Exception e) {
+            fail();
+        }
+    }
 }

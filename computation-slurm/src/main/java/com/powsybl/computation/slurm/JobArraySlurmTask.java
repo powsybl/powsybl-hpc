@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  *
@@ -39,45 +40,59 @@ class JobArraySlurmTask extends AbstractTask {
         commandByJobId = new HashMap<>();
         Long prejobId = null;
         for (int executionIdx = 0; executionIdx < executions.size(); executionIdx++) {
+            AtomicBoolean shouldContinue = new AtomicBoolean(true);
             if (cannotSubmit()) {
-                break;
-            }
-            CommandExecution commandExecution = executions.get(executionIdx);
-            Command command = commandExecution.getCommand();
-            SbatchCmd cmd;
-            if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Executing {} command {} in working directory {}", command.getType(), command, workingDir);
+                shouldContinue.set(false);
+            } else {
+                CommandExecution commandExecution = executions.get(executionIdx);
+                Command command = commandExecution.getCommand();
+                if (LOGGER.isDebugEnabled()) {
+                    LOGGER.debug("Executing {} command {} in working directory {}", command.getType(), command, workingDir);
+                }
+
+                // a master job to copy NonExecutionDependent and PreProcess needed input files
+                prejobId = addMasterJob(command, executionIdx, prejobId, shouldContinue);
+                if (shouldContinue.get()) {
+                    boolean isLast = executionIdx == executions.size() - 1;
+                    String batchName = prepareBatch(commandExecution, isLast);
+                    SbatchCmd cmd = buildSbatchCmd(commandExecution.getExecutionCount(), command.getId(), batchName, prejobId, parameters);
+                    prejobId = launchSbatch(cmd);
+                    checkFirstJob(prejobId);
+                    ids.add(prejobId);
+                    CompletableMonitoredJob completableMonitoredJob = new CompletableMonitoredJob(prejobId, isLast);
+                    completableMonitoredJob.setCounter(commandExecution.getExecutionCount());
+                    jobs.add(completableMonitoredJob);
+                    commandByJobId.put(prejobId, command);
+                }
             }
 
-            // a master job to copy NonExecutionDependent and PreProcess needed input files
-            if (command.getInputFiles().stream()
-                    .anyMatch(inputFile -> !inputFile.dependsOnExecutionNumber() && inputFile.getPreProcessor() != null)) {
-                if (cannotSubmit()) {
-                    break;
-                }
+            if (!shouldContinue.get()) {
+                break;
+            }
+        }
+
+        aggregateMonitoredJobs();
+    }
+
+    private Long addMasterJob(Command command, int executionIdx, Long prejobId, AtomicBoolean shouldContinue) throws IOException {
+        Long localPrejobId = prejobId;
+        if (command.getInputFiles().stream()
+            .anyMatch(inputFile -> !inputFile.dependsOnExecutionNumber() && inputFile.getPreProcessor() != null)) {
+            if (cannotSubmit()) {
+                shouldContinue.set(false);
+            } else {
                 SbatchScriptGenerator sbatchScriptGenerator = new SbatchScriptGenerator(flagDir);
                 List<String> shell = sbatchScriptGenerator.unzipCommonInputFiles(command);
                 String batchName = UNZIP_INPUTS_COMMAND_ID + "_" + executionIdx;
                 copyShellToRemoteWorkingDir(shell, UNZIP_INPUTS_COMMAND_ID + "_" + executionIdx);
-                cmd = buildSbatchCmd(UNZIP_INPUTS_COMMAND_ID, batchName, prejobId, parameters);
-                prejobId = launchSbatch(cmd);
-                checkFirstJob(prejobId);
-                ids.add(prejobId);
-                jobs.add(new CompletableMonitoredJob(prejobId, false));
+                SbatchCmd cmd = buildSbatchCmd(UNZIP_INPUTS_COMMAND_ID, batchName, localPrejobId, parameters);
+                localPrejobId = launchSbatch(cmd);
+                checkFirstJob(localPrejobId);
+                ids.add(localPrejobId);
+                jobs.add(new CompletableMonitoredJob(localPrejobId, false));
             }
-            boolean isLast = executionIdx == executions.size() - 1;
-            String batchName = prepareBatch(commandExecution, isLast);
-            cmd = buildSbatchCmd(commandExecution.getExecutionCount(), command.getId(), batchName, prejobId, parameters);
-            prejobId = launchSbatch(cmd);
-            checkFirstJob(prejobId);
-            ids.add(prejobId);
-            CompletableMonitoredJob completableMonitoredJob = new CompletableMonitoredJob(prejobId, isLast);
-            completableMonitoredJob.setCounter(commandExecution.getExecutionCount());
-            jobs.add(completableMonitoredJob);
-            commandByJobId.put(prejobId, command);
         }
-
-        aggregateMonitoredJobs();
+        return localPrejobId;
     }
 
     private void checkFirstJob(Long prejobId) {
