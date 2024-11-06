@@ -11,10 +11,10 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.util.Collections;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 /**
  * @author Yichen Tang {@literal <yichen.tang at rte-france.com>}
@@ -29,11 +29,13 @@ class TaskStoreTest {
 
         TaskStore store = new TaskStore();
 
+        assertTrue(store.isEmpty());
         assertTrue(store.getTasks().isEmpty());
         assertTrue(store.getPendingJobs().isEmpty());
 
         store.add(task);
 
+        assertFalse(store.isEmpty());
         assertEquals(1, store.getTasks().size());
         assertSame(task, store.getTasks().get(0));
         assertEquals(1, store.getPendingJobs().size());
@@ -47,4 +49,25 @@ class TaskStoreTest {
         assertTrue(store.getPendingJobs().isEmpty());
     }
 
+    @Test
+    void testInterrupt() {
+        AtomicInteger jobsInterrupted = new AtomicInteger(0);
+        // Task and job
+        SlurmTaskImpl task = mock(SlurmTaskImpl.class);
+        MonitoredJob job = Mockito.mock(MonitoredJob.class);
+        when(task.getPendingJobs()).thenReturn(Collections.singletonList(job));
+        doAnswer(invocation -> {
+            jobsInterrupted.incrementAndGet();
+            return null;
+        }).when(task).interrupt();
+
+        // Store
+        TaskStore store = new TaskStore();
+        store.add(task);
+
+        // Test
+        assertFalse(store.isEmpty());
+        store.interruptAll();
+        assertEquals(1, jobsInterrupted.get());
+    }
 }

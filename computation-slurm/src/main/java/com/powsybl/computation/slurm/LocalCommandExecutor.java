@@ -39,12 +39,12 @@ class LocalCommandExecutor implements CommandExecutor {
         try (ByteArrayOutputStream stdOut = new ByteArrayOutputStream();
              ByteArrayOutputStream stdErr = new ByteArrayOutputStream()) {
 
-            DefaultExecutor executor = new DefaultExecutor();
+            DefaultExecutor executor = DefaultExecutor.builder().get();
             executor.setExitValues(null); //Accept all exit values
             executor.setStreamHandler(new PumpStreamHandler(stdOut, stdErr));
             int exitCode = executor.execute(CommandLine.parse(command));
 
-            return new CommandResult(exitCode, stdOut.toString(CHARSET.name()), stdErr.toString(CHARSET.name()));
+            return new CommandResult(exitCode, stdOut.toString(CHARSET), stdErr.toString(CHARSET));
 
         } catch (IOException e) {
             throw new UncheckedIOException(e);

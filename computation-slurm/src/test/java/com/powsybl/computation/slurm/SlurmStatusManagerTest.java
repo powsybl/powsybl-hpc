@@ -7,7 +7,6 @@
  */
 package com.powsybl.computation.slurm;
 
-import com.google.common.collect.ImmutableMap;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -38,7 +37,7 @@ class SlurmStatusManagerTest {
         assertEquals(9, date.getDayOfMonth());
         assertEquals(0, resourcesStatus.getBusyCores());
         assertEquals(32, resourcesStatus.getAvailableCores());
-        Map<String, Integer> map = ImmutableMap.of("cmd2", 1, "simpleCmdId", 8);
+        Map<String, Integer> map = Map.of("cmd2", 1, "simpleCmdId", 8);
         assertEquals(map, resourcesStatus.getBusyCoresPerApp());
     }
 }
