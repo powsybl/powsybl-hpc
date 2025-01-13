@@ -29,7 +29,7 @@ the Java part only. If you're also interested in the MPI computation manager, yo
 
 To build the Java modules, you need the following requirements:
 - JDK *(17 or greater)*
-- Maven *(3.8.0 or greater)*
+- Maven *(3.8.0 or greater)* - you could use the embedded maven wrapper instead if you prefer (see [Using Maven Wrapper](#using-maven-wrapper))
 
 ```
 $> yum install java-17-openjdk maven 
@@ -60,7 +60,7 @@ $> export LD_LIBRARY_PATH=<INSTALL_DIR>/lib:$LD_LIBRARY_PATH
 ## Build
 
 ### Simple Java Build
-If you're interested in the Slurm computation manager only, you can easily compile the project using the following command:
+If you are interested in the Slurm computation manager only, you can easily compile the project using the following command:
 ```
 $> mvn package
 ```
@@ -71,13 +71,13 @@ log4cpp, protobuf) from the Intenet, compiles both Java and C++ modules and crea
 standalone external folder that contains all the built objects required to run powsybl programs through the itools
 command-line interface. This repository contains the `install.sh` script to do so easily. By default, the `install.sh`
 will download dependencies from the Internet, compile code and finally copy the resulting iTools distribution to the
-install folder.
+installation folder.
 ```
 $> ./install.sh
 ```
-This will run both the C++ build and the java build and copy their results to the install folder.
+This will run both the C++ build and the java build and copy their results to the installation folder.
 
-A more detailled description of the install.sh script options follows:
+A more detailed description of the `install.sh` script options follows:
 
 #### Targets
 
@@ -102,6 +102,7 @@ updated each time you use the install.sh script.
 | ------ | ----------- | ------------- |
 | --help | Display this help | |
 | --prefix | Set the installation directory | $HOME/powsybl |
+| --mvn | Set the maven command to use | mvn | 
 
 #### Third-parties
 
@@ -124,3 +125,47 @@ thirdparty_prefix=$HOME/powsybl_thirdparty
 thirdparty_download=true
 thirdparty_packs=$HOME/powsybl_packs
 ```
+
+## Using Maven Wrapper
+If you don't have a proper Maven installed, you could use the [Apache Maven Wrapper](https://maven.apache.org/wrapper/)
+scripts provided. They will download a compatible maven distribution and use it automatically.
+
+### Configuration
+#### Configure the access to the maven distributions
+In order to work properly, Maven Wrapper needs to download 2 artifacts: the maven distribution and the maven wrapper
+distribution. By default, these are downloaded from the online Maven repository.
+
+##### Internet access authentication
+If your internet access requires a Basic Authentication, you should define the following variables in your environment:
+- `MVNW_USERNAME`: the username;
+- `MVNW_PASSWORD`: the password.
+
+##### Using a Maven Repository Manager
+If you prefer to use an internal Maven Repository Manager, you should define the following variable in your environment:
+- `MVNW_REPOURL`: the URL to your repository manager (for instance `https://my_server/repository/maven-public`)
+
+Note that if you need to use this variable, it must be set for **each maven command**. Else, the Maven Wrapper will try to
+retrieve the maven distribution from the online Maven repository (even if one was already downloaded from another location).
+
+##### Checking your access configuration
+You could check your configuration with the following command:
+```shell
+./mvnw -version
+```
+
+If you encounter any problem, you could specify `MVNW_VERBOSE=true` and relaunch the command to have
+further information.
+
+#### Configuring `install.sh` to use maven wrapper
+To indicate `install.sh` to use Maven Wrapper, you need to configure it with the `--mvn` option:
+```shell
+./install.sh clean --mvn ./mvnw
+```
+
+You can revert this configuration with the following command:
+```shell
+./install.sh clean --mvn mvn
+```
+
+### Usage
+Once the configuration is done, you just need to use `./mvnw` instead of `mvn` in your commands.
