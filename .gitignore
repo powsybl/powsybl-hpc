@@ -29,3 +29,6 @@ powsybl.log
 
 # Config
 /computation-slurm-test/src/test/resources/config.yml
+
+# Maven wrapper jar
+.mvn/wrapper/*.jar
