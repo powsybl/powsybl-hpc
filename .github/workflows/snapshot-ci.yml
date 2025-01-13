@@ -4,7 +4,6 @@ on:
   workflow_dispatch:
   schedule:
     - cron: '50 3 * * *'
-  pull_request:
 
 jobs:
   build_powsybl_hpc:
