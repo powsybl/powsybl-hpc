@@ -9,8 +9,8 @@ package com.powsybl.computation.slurm;
 
 import com.powsybl.commons.extensions.AbstractExtension;
 import com.powsybl.computation.ComputationParameters;
+import org.jspecify.annotations.Nullable;
 
-import javax.annotation.Nullable;
 import java.util.Optional;
 import java.util.OptionalInt;
 

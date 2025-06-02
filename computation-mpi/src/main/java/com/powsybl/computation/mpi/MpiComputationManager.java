@@ -10,10 +10,10 @@ package com.powsybl.computation.mpi;
 import com.powsybl.commons.PowsyblException;
 import com.powsybl.commons.io.WorkingDirectory;
 import com.powsybl.computation.*;
+import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.Nonnull;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -110,13 +110,13 @@ public class MpiComputationManager implements ComputationManager {
             }
 
             @Override
-            public void write(@Nonnull byte[] b) throws IOException {
+            public void write(byte @NonNull [] b) throws IOException {
                 buffer.write(b);
                 checkSize(false);
             }
 
             @Override
-            public void write(@Nonnull byte[] b, int off, int len) {
+            public void write(byte @NonNull [] b, int off, int len) {
                 buffer.write(b, off, len);
                 checkSize(false);
             }
