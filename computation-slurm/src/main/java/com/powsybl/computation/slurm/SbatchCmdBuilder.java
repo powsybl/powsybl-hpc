@@ -8,8 +8,8 @@
 package com.powsybl.computation.slurm;
 
 import com.google.common.base.Preconditions;
+import org.jspecify.annotations.Nullable;
 
-import javax.annotation.Nullable;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Collectors;
