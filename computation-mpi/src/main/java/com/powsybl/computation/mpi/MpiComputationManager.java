@@ -134,7 +134,7 @@ public class MpiComputationManager implements ComputationManager {
         };
     }
 
-    private static class AsyncContext {
+    private static final class AsyncContext {
 
         private WorkingDirectory workingDir;
 
