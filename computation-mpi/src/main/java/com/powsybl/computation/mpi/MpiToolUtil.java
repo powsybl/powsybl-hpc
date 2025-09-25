@@ -82,12 +82,19 @@ public final class MpiToolUtil {
         boolean verbose = line.hasOption(VERBOSE);
         Path stdOutArchive = line.hasOption(STDOUT_ARCHIVE) ? fileSystem.getPath(line.getOptionValue(STDOUT_ARCHIVE)) : null;
 
+        MpiConfig mpiConfig = new MpiConfig()
+            .setCoresPerRank(coresPerRank)
+            .setLocalDir(tmpDir)
+            .setStatisticsDbDir(statisticsDbDir)
+            .setStatisticsDbName(statisticsDbName)
+            .setVerbose(verbose)
+            .setStdOutArchive(stdOutArchive);
+
         ComponentDefaultConfig config = ComponentDefaultConfig.load();
 
         MpiStatisticsFactory statisticsFactory = config.newFactoryImpl(MpiStatisticsFactory.class, NoMpiStatisticsFactory.class);
         try {
-            return new MpiComputationManager(tmpDir, statisticsFactory, statisticsDbDir, statisticsDbName,
-                                             new MpiExecutorContext(), coresPerRank, verbose, stdOutArchive);
+            return new MpiComputationManager(statisticsFactory, new MpiExecutorContext(), mpiConfig);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         } catch (InterruptedException e) {

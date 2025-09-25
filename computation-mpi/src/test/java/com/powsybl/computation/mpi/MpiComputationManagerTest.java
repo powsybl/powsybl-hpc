@@ -119,7 +119,8 @@ class MpiComputationManagerTest {
     public void setUp() throws Exception {
         fileSystem = Jimfs.newFileSystem(Configuration.unix());
         Path tmpDir = Files.createDirectory(fileSystem.getPath("/tmp"));
-        cm = new MpiComputationManager(tmpDir, new MpiNativeServicesMock());
+        MpiConfig mpiConfig = new MpiConfig().setLocalDir(tmpDir);
+        cm = new MpiComputationManager(new MpiNativeServicesMock(), mpiConfig);
     }
 
     @AfterEach

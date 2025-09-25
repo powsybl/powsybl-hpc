@@ -36,7 +36,6 @@ public final class CommandExecutionsTestFactory {
                 .id("cmdId")
                 .program("echo")
                 .args(i -> Collections.singletonList("te1st" + i))
-                .timeout(60)
                 .build();
         CommandExecution commandExecution = new CommandExecution(command, executionCount);
         return Collections.singletonList(commandExecution);
@@ -47,7 +46,6 @@ public final class CommandExecutionsTestFactory {
                 .id("spaces")
                 .program("touch")
                 .args(i -> Arrays.asList("line 1,line 2", "v2"))
-                .timeout(60)
                 .build();
         CommandExecution commandExecution = new CommandExecution(command, executionCount);
         return Collections.singletonList(commandExecution);

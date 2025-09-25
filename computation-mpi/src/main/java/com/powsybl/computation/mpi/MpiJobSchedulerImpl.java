@@ -85,19 +85,20 @@ class MpiJobSchedulerImpl implements MpiJobScheduler {
     private long processCompletedTasksTime;
     private long checkTaskCompletionTime;
 
-    MpiJobSchedulerImpl(MpiNativeServices nativeServices, MpiStatisticsFactory statisticsFactory, Path statisticsDbDir, String statisticsDbName,
-                        int coresPerRank, boolean verbose, ExecutorService executor, Path stdOutArchive) throws InterruptedException, IOException {
+    MpiJobSchedulerImpl(MpiNativeServices nativeServices, MpiStatisticsFactory statisticsFactory, MpiConfig mpiConfig,
+                        ExecutorService executor) throws InterruptedException, IOException {
         this.nativeServices = Objects.requireNonNull(nativeServices);
-        this.statistics = Objects.requireNonNull(statisticsFactory).create(statisticsDbDir, statisticsDbName);
-        this.stdOutArchive = checkOutputArchive(stdOutArchive);
+        this.statistics = Objects.requireNonNull(statisticsFactory)
+            .create(mpiConfig.getStatisticsDbDir(), mpiConfig.getStatisticsDbName());
+        this.stdOutArchive = checkOutputArchive(mpiConfig.getStdOutArchive());
         final CountDownLatch initialized = new CountDownLatch(1);
         future = executor.submit(() -> {
             LOGGER.trace("Job scheduler started");
             try {
-                nativeServices.initMpi(coresPerRank, verbose);
+                nativeServices.initMpi(mpiConfig.getCoresPerRank(), mpiConfig.isVerbose());
 
                 mpiVersion = nativeServices.getMpiVersion();
-                resources = new MpiResources(nativeServices.getMpiCommSize(), coresPerRank);
+                resources = new MpiResources(nativeServices.getMpiCommSize(), mpiConfig.getCoresPerRank());
 
                 initialized.countDown();
 
@@ -111,7 +112,7 @@ class MpiJobSchedulerImpl implements MpiJobScheduler {
                     long diff = time - oldTime;
                     if (diff > 1000) { // 1s
                         LOGGER.warn("Slowness ({} ms) has been detected in the job scheduler (startTasksTime={}, startTasksJniTime={}, processCompletedTasksTime={}, checkTaskCompletionTime={})",
-                                diff, startTasksTime, startTasksJniTime, processCompletedTasksTime, checkTaskCompletionTime);
+                            diff, startTasksTime, startTasksJniTime, processCompletedTasksTime, checkTaskCompletionTime);
                     }
                     startTasksTime = 0;
                     startTasksJniTime = 0;
@@ -130,7 +131,7 @@ class MpiJobSchedulerImpl implements MpiJobScheduler {
                     }
 
                     // just sleep in the case nothing has been done in the loop
-                    if (processJobs(completedTasks)) {
+                    if (processJobs(completedTasks, mpiConfig)) {
                         TimeUnit.MILLISECONDS.sleep(TIMEOUT);
                     }
                 }
@@ -195,12 +196,12 @@ class MpiJobSchedulerImpl implements MpiJobScheduler {
         return builder.build();
     }
 
-    private static Messages.Task.Command createCommand(SimpleCommand command, int taskIndex) {
+    private static Messages.Task.Command createCommand(SimpleCommand command, int taskIndex, MpiConfig mpiConfig) {
         Messages.Task.Command.Builder builder = Messages.Task.Command.newBuilder()
                 .setProgram(command.getProgram())
                 .addAllArgument(command.getArgs(taskIndex));
-        if (command.getTimeout() != -1) {
-            builder.setTimeout(command.getTimeout());
+        if (mpiConfig.getTimeout() != -1) {
+            builder.setTimeout(mpiConfig.getTimeout());
         }
         return builder.build();
     }
@@ -215,7 +216,8 @@ class MpiJobSchedulerImpl implements MpiJobScheduler {
         return builder.build();
     }
 
-    private Messages.Task createTaskMessage(MpiJob job, MpiRank rank, Command command, int taskIndex) throws IOException {
+    private Messages.Task createTaskMessage(MpiJob job, MpiRank rank, Command command, int taskIndex,
+                                            MpiConfig mpiConfig) throws IOException {
 
         // job scoped file will be sent only one time to each slave
         boolean initJob = rank.jobs.add(job);
@@ -241,7 +243,7 @@ class MpiJobSchedulerImpl implements MpiJobScheduler {
 
         switch (command.getType()) {
             case SIMPLE:
-                builder.addCommand(createCommand((SimpleCommand) command, taskIndex));
+                builder.addCommand(createCommand((SimpleCommand) command, taskIndex, mpiConfig));
                 break;
 
             case GROUP:
@@ -350,13 +352,13 @@ class MpiJobSchedulerImpl implements MpiJobScheduler {
         }
     }
 
-    private boolean processJobs(List<MpiTask> completedTasks) throws IOException {
+    private boolean processJobs(List<MpiTask> completedTasks, MpiConfig mpiConfig) throws IOException {
         boolean sleep = true;
 
         for (Iterator<MpiJob> it = jobs.iterator(); it.hasNext(); ) {
             MpiJob job = it.next();
 
-            sleep = startTasks(job);
+            sleep = startTasks(job, mpiConfig);
 
             long t0 = System.currentTimeMillis();
             try {
@@ -374,7 +376,7 @@ class MpiJobSchedulerImpl implements MpiJobScheduler {
                 });
 
                 // ...and re-use immediatly free cores
-                startTasks(job);
+                startTasks(job, mpiConfig);
 
                 // ...and then post process terminated tasks
                 processCompletedTasks(job, completedTasks);
@@ -394,7 +396,7 @@ class MpiJobSchedulerImpl implements MpiJobScheduler {
         return sleep;
     }
 
-    private boolean startTasks(MpiJob job) throws IOException {
+    private boolean startTasks(MpiJob job, MpiConfig mpiConfig) throws IOException {
         long t0 = System.currentTimeMillis();
         try {
             CommandExecution execution = job.getExecution();
@@ -424,7 +426,7 @@ class MpiJobSchedulerImpl implements MpiJobScheduler {
                 int oldTaskIndex = taskIndex;
                 List<MpiTask> tasks = new ArrayList<>(allocatedCores.size());
                 for (Core core : allocatedCores) {
-                    byte[] message = createTaskMessage(job, core.rank, command, taskIndex).toByteArray();
+                    byte[] message = createTaskMessage(job, core.rank, command, taskIndex, mpiConfig).toByteArray();
 
                     MpiTask task = new MpiTask(taskId++, core, taskIndex, message, startTime);
                     tasks.add(task);

@@ -47,21 +47,60 @@ public class MpiComputationManager implements ComputationManager {
         this(localDir, scheduler, new MpiExecutorContext());
     }
 
-    public MpiComputationManager(Path localDir, MpiNativeServices nativeServices) throws IOException, InterruptedException {
-        this(localDir, nativeServices, new NoMpiStatisticsFactory(), null, null, new MpiExecutorContext(), 1, false, null);
+    public MpiComputationManager(MpiNativeServices nativeServices, MpiConfig mpiConfig) throws IOException, InterruptedException {
+        this(nativeServices, new NoMpiStatisticsFactory(), new MpiExecutorContext(), mpiConfig);
     }
 
+    public MpiComputationManager(Path localDir, MpiNativeServices nativeServices) throws IOException, InterruptedException {
+        this(nativeServices, new NoMpiStatisticsFactory(), new MpiExecutorContext(), new MpiConfig().setLocalDir(localDir));
+    }
+
+    /**
+     * @deprecated Use {@link #MpiComputationManager(MpiStatisticsFactory, MpiExecutorContext, MpiConfig)} instead
+     */
+    @Deprecated(since = "4.0.0", forRemoval = true)
     public MpiComputationManager(Path localDir, MpiStatisticsFactory statisticsFactory, Path statisticsDbDir, String statisticsDbName,
                                  MpiExecutorContext executorContext, int coresPerRank, boolean verbose, Path stdOutArchive) throws IOException, InterruptedException {
-        this(localDir, new JniMpiNativeServices(), statisticsFactory, statisticsDbDir, statisticsDbName, executorContext,
-            coresPerRank, verbose, stdOutArchive);
+        this(new JniMpiNativeServices(), statisticsFactory, executorContext,
+            new MpiConfig()
+                .setLocalDir(localDir)
+                .setStatisticsDbDir(statisticsDbDir)
+                .setStatisticsDbName(statisticsDbName)
+                .setCoresPerRank(coresPerRank)
+                .setStdOutArchive(stdOutArchive)
+                .setVerbose(verbose));
     }
 
+    public MpiComputationManager(MpiStatisticsFactory statisticsFactory, MpiExecutorContext executorContext,
+                                 MpiConfig mpiConfig) throws IOException, InterruptedException {
+        this(new JniMpiNativeServices(), statisticsFactory, executorContext, mpiConfig);
+    }
+
+    /**
+     * @deprecated Use {@link #MpiComputationManager(MpiNativeServices, MpiStatisticsFactory, MpiExecutorContext, MpiConfig)} instead
+     */
+    @Deprecated(since = "4.0.0", forRemoval = true)
     public MpiComputationManager(Path localDir, MpiNativeServices nativeServices, MpiStatisticsFactory statisticsFactory,
                                  Path statisticsDbDir, String statisticsDbName, MpiExecutorContext executorContext,
                                  int coresPerRank, boolean verbose, Path stdOutArchive) throws IOException, InterruptedException {
-        this(localDir, new MpiJobSchedulerImpl(nativeServices, statisticsFactory, statisticsDbDir, statisticsDbName, coresPerRank,
-                                               verbose, executorContext.getSchedulerExecutor(), stdOutArchive), executorContext);
+        this(localDir,
+            new MpiJobSchedulerImpl(nativeServices, statisticsFactory,
+                new MpiConfig()
+                    .setLocalDir(localDir)
+                    .setStatisticsDbDir(statisticsDbDir)
+                    .setStatisticsDbName(statisticsDbName)
+                    .setCoresPerRank(coresPerRank)
+                    .setVerbose(verbose)
+                    .setStdOutArchive(stdOutArchive),
+                executorContext.getSchedulerExecutor()),
+            executorContext);
+    }
+
+    public MpiComputationManager(MpiNativeServices nativeServices, MpiStatisticsFactory statisticsFactory,
+                                 MpiExecutorContext executorContext, MpiConfig mpiConfig) throws IOException, InterruptedException {
+        this(mpiConfig.getLocalDir(),
+            new MpiJobSchedulerImpl(nativeServices, statisticsFactory, mpiConfig, executorContext.getSchedulerExecutor()),
+            executorContext);
     }
 
     public MpiComputationManager(Path localDir, MpiJobScheduler scheduler, MpiExecutorContext executorContext) {
