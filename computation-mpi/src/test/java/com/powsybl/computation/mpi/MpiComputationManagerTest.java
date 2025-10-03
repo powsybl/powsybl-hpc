@@ -12,7 +12,14 @@ import com.google.common.jimfs.Jimfs;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.powsybl.commons.PowsyblException;
-import com.powsybl.computation.*;
+import com.powsybl.computation.AbstractExecutionHandler;
+import com.powsybl.computation.CommandExecution;
+import com.powsybl.computation.ComputationManager;
+import com.powsybl.computation.ExecutionEnvironment;
+import com.powsybl.computation.ExecutionReport;
+import com.powsybl.computation.InputFile;
+import com.powsybl.computation.OutputFile;
+import com.powsybl.computation.SimpleCommandBuilder;
 import com.powsybl.computation.mpi.generated.Messages;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,6 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystem;
@@ -30,7 +38,10 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  *
@@ -53,15 +64,15 @@ class MpiComputationManagerTest {
 
         private static Messages.TaskResult createResultMessage(String fileName, String fileContent) {
             return Messages.TaskResult.newBuilder()
-                    .setExitCode(0)
-                    .setTaskDuration(0)
-                    .addCommandDuration(0)
-                    .setWorkingDataSize(0)
-                    .addOutputFile(Messages.TaskResult.OutputFile.newBuilder()
-                            .setName(fileName)
-                            .setData(ByteString.copyFromUtf8(fileContent))
-                            .build())
-                    .build();
+                .setExitCode(0)
+                .setTaskDuration(0)
+                .addCommandDuration(0)
+                .setWorkingDataSize(0)
+                .addOutputFile(Messages.TaskResult.OutputFile.newBuilder()
+                    .setName(fileName)
+                    .setData(ByteString.copyFromUtf8(fileContent))
+                    .build())
+                .build();
         }
 
         @Override
@@ -119,7 +130,8 @@ class MpiComputationManagerTest {
     public void setUp() throws Exception {
         fileSystem = Jimfs.newFileSystem(Configuration.unix());
         Path tmpDir = Files.createDirectory(fileSystem.getPath("/tmp"));
-        cm = new MpiComputationManager(tmpDir, new MpiNativeServicesMock());
+        MpiConfig mpiConfig = new MpiConfig().setLocalDir(tmpDir);
+        cm = new MpiComputationManager(new MpiNativeServicesMock(), mpiConfig);
     }
 
     @AfterEach
@@ -132,24 +144,24 @@ class MpiComputationManagerTest {
 
     private static CommandExecution createParams1() {
         return new CommandExecution(new SimpleCommandBuilder()
-                .id(ID_CMD_1)
-                .program("exec1")
-                .inputFiles(new InputFile(INPUT_FILE_NAME_1))
-                .args(INPUT_FILE_NAME_1, OUTPUT_FILE_NAME_1)
-                .outputFiles(new OutputFile(OUTPUT_FILE_NAME_1))
-                .build(),
-                1);
+            .id(ID_CMD_1)
+            .program("exec1")
+            .inputFiles(new InputFile(INPUT_FILE_NAME_1))
+            .args(INPUT_FILE_NAME_1, OUTPUT_FILE_NAME_1)
+            .outputFiles(new OutputFile(OUTPUT_FILE_NAME_1))
+            .build(),
+            1);
     }
 
     private static CommandExecution createParams2() {
         return new CommandExecution(new SimpleCommandBuilder()
-                .id(ID_CMD_2)
-                .program("exec2")
-                .inputFiles(new InputFile(OUTPUT_FILE_NAME_1))
-                .args(OUTPUT_FILE_NAME_1, OUTPUT_FILE_NAME_2)
-                .outputFiles(new OutputFile(OUTPUT_FILE_NAME_2))
-                .build(),
-                1);
+            .id(ID_CMD_2)
+            .program("exec2")
+            .inputFiles(new InputFile(OUTPUT_FILE_NAME_1))
+            .args(OUTPUT_FILE_NAME_1, OUTPUT_FILE_NAME_2)
+            .outputFiles(new OutputFile(OUTPUT_FILE_NAME_2))
+            .build(),
+            1);
     }
 
     private static void writeInput1(Path workingDir) throws IOException {
@@ -186,7 +198,7 @@ class MpiComputationManagerTest {
         public List<CommandExecution> before(Path workingDir) throws IOException {
             writeInput1(workingDir);
             return Arrays.asList(createParams1(),
-                    createParams2());
+                createParams2());
         }
 
         @Override
@@ -200,12 +212,12 @@ class MpiComputationManagerTest {
     void testExecute() throws Exception {
         final Path[] workingDirSav = new Path[1];
         String result = cm.execute(ExecutionEnvironment.createDefault(), new ExecutionHandlerTest1() {
-                @Override
-                public List<CommandExecution> before(Path workingDir) throws IOException {
-                    workingDirSav[0] = workingDir;
-                    return super.before(workingDir);
-                }
-            }).join();
+            @Override
+            public List<CommandExecution> before(Path workingDir) throws IOException {
+                workingDirSav[0] = workingDir;
+                return super.before(workingDir);
+            }
+        }).join();
         assertEquals(OUTPUT_FILE_CONTENT_1, result);
         assertTrue(Files.notExists(workingDirSav[0]));
     }
@@ -215,12 +227,12 @@ class MpiComputationManagerTest {
         final Path[] workingDirSav = new Path[1];
         try {
             cm.execute(ExecutionEnvironment.createDefault(), new ExecutionHandlerTest1() {
-                    @Override
-                    public List<CommandExecution> before(Path workingDir) throws IOException {
-                        workingDirSav[0] = workingDir;
-                        throw new PowsyblException("test error");
-                    }
-                }).join();
+                @Override
+                public List<CommandExecution> before(Path workingDir) throws IOException {
+                    workingDirSav[0] = workingDir;
+                    throw new PowsyblException("test error");
+                }
+            }).join();
             fail();
         } catch (Exception ignored) {
         }
@@ -253,22 +265,40 @@ class MpiComputationManagerTest {
     void testExecute4() throws Exception {
         final Path[] workingDirSav = new Path[1];
         String result = cm.execute(ExecutionEnvironment.createDefault(), new ExecutionHandlerTest2() {
-                @Override
-                public List<CommandExecution> before(Path workingDir) throws IOException {
-                    workingDirSav[0] = workingDir;
-                    return super.before(workingDir);
-                }
+            @Override
+            public List<CommandExecution> before(Path workingDir) throws IOException {
+                workingDirSav[0] = workingDir;
+                return super.before(workingDir);
+            }
 
-                @Override
-                public String after(Path workingDir, ExecutionReport report) throws IOException {
-                    String result = super.after(workingDir, report);
-                    assertTrue(Files.exists(workingDir.resolve(OUTPUT_FILE_NAME_1)));
-                    assertTrue(Files.exists(workingDir.resolve(OUTPUT_FILE_NAME_2)));
-                    return result;
-                }
-            }).join();
+            @Override
+            public String after(Path workingDir, ExecutionReport report) throws IOException {
+                String result = super.after(workingDir, report);
+                assertTrue(Files.exists(workingDir.resolve(OUTPUT_FILE_NAME_1)));
+                assertTrue(Files.exists(workingDir.resolve(OUTPUT_FILE_NAME_2)));
+                return result;
+            }
+        }).join();
         assertEquals(OUTPUT_FILE_CONTENT_2, result);
         assertTrue(Files.notExists(workingDirSav[0]));
+    }
+
+    @Test
+    void testConstructorDeprecated() throws IOException, InterruptedException {
+        // GIVEN
+        Path localDir = Path.of("");
+        MpiNativeServices nativeServices = new MpiNativeServicesMock();
+        MpiStatisticsFactory statisticsFactory = new NoMpiStatisticsFactory();
+        Path statisticsDbDir = Path.of("");
+        String statisticsDbName = null;
+        MpiExecutorContext executorContext = new MpiExecutorContext();
+        int coresPerRank = 2;
+        boolean verbose = true;
+        Path stdOutArchive = Path.of(File.separator + "archive");
+        // WHEN
+        MpiComputationManager mpiComputationManagerDeprecated = new MpiComputationManager(localDir, nativeServices, statisticsFactory, statisticsDbDir, statisticsDbName, executorContext, coresPerRank, verbose, stdOutArchive);
+        // THEN
+        assertNotNull(mpiComputationManagerDeprecated);
     }
 
 }
