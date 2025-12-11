@@ -109,7 +109,7 @@ class ScontrolMonitorTest {
         assertEquals(3, logsList.size());
         assertEquals("Scontrol monitor starts 0...",
             logsList.get(0).getFormattedMessage());
-        assertEquals("Not implemented yet FAILED",
+        assertEquals("Job 3 failed",
             logsList.get(1).getFormattedMessage());
         assertEquals("Scontrol monitor ends 0...",
             logsList.get(2).getFormattedMessage());
