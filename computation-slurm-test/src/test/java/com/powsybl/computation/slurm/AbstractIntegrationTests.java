@@ -62,12 +62,12 @@ public abstract class AbstractIntegrationTests {
 
     private static SlurmComputationConfig batchConfig(ModuleConfig config) {
         return new SlurmComputationConfig(generateSsh(config), config.getStringProperty("remote-dir"),
-                Paths.get(config.getStringProperty("local-dir")), 5, 1, false);
+                Paths.get(config.getStringProperty("local-dir")), 5, 60, false);
     }
 
     private static SlurmComputationConfig arrayConfig(ModuleConfig config) {
         return new SlurmComputationConfig(generateSsh(config), config.getStringProperty("remote-dir"),
-                Paths.get(config.getStringProperty("local-dir")), 5, 1, true);
+                Paths.get(config.getStringProperty("local-dir")), 5, 60, true);
     }
 
     static void assertIsCleaned(TaskStore store) {
