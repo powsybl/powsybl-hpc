@@ -15,8 +15,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import static com.powsybl.computation.slurm.SlurmConstants.JobState.FAILED;
-
 /**
  * A job monitor which uses "scontrol show job ID_OF_JOB" to get state of job,
  * in case, the job itself can not finish completely.
@@ -84,14 +82,16 @@ public class ScontrolMonitor extends AbstractSlurmJobMonitor {
                 LOGGER.info(msg);
                 yield true;
             }
-            case COMPLETING, COMPLETED, FAILED -> {
+            case COMPLETING, COMPLETED -> {
                 // this monitor found task finished before flagDirMonitor
                 // maybe store it and recheck in next run()
-                if (FAILED == jobState) {
-                    LOGGER.warn("Job {} failed", id);
-                }
                 checkedIds.add(id);
                 yield false;
+            }
+            case FAILED -> {
+                LOGGER.warn("JobId: {} is {}", id, jobState);
+                job.failed();
+                yield true;
             }
             default -> {
                 LOGGER.warn("Not implemented yet {}", jobState);
