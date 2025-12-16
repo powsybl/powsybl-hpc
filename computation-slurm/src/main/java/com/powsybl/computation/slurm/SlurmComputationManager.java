@@ -177,7 +177,7 @@ public class SlurmComputationManager implements ComputationManager {
 
     private void startScontrolMonitor() {
         ScontrolMonitor scontrolMonitor = new ScontrolMonitor(this);
-        flagsDirMonitorFuture = scontrolMonitorService.scheduleAtFixedRate(scontrolMonitor, config.getScontrolInterval(), config.getScontrolInterval(), TimeUnit.MINUTES);
+        flagsDirMonitorFuture = scontrolMonitorService.scheduleAtFixedRate(scontrolMonitor, config.getScontrolInterval(), config.getScontrolInterval(), TimeUnit.SECONDS);
     }
 
     CommandExecutor getCommandRunner() {
