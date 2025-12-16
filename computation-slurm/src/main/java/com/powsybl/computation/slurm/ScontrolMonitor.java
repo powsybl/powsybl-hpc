@@ -88,6 +88,11 @@ public class ScontrolMonitor extends AbstractSlurmJobMonitor {
                 checkedIds.add(id);
                 yield false;
             }
+            case FAILED -> {
+                LOGGER.warn("JobId: {} is {}", id, jobState);
+                job.failed();
+                yield true;
+            }
             default -> {
                 LOGGER.warn("Not implemented yet {}", jobState);
                 yield false;

@@ -102,14 +102,14 @@ class ScontrolMonitorTest {
         monitor.run();
 
         assertEquals(0, jobs.stream().filter(MockJob::isDone).count());
-        assertEquals(0, jobs.stream().filter(MockJob::isFailed).count());
+        assertEquals(1, jobs.stream().filter(MockJob::isFailed).count());
 
         // Checks
         List<ILoggingEvent> logsList = logWatcher.list;
         assertEquals(3, logsList.size());
         assertEquals("Scontrol monitor starts 0...",
             logsList.get(0).getFormattedMessage());
-        assertEquals("Not implemented yet FAILED",
+        assertEquals("JobId: 3 is FAILED",
             logsList.get(1).getFormattedMessage());
         assertEquals("Scontrol monitor ends 0...",
             logsList.get(2).getFormattedMessage());
