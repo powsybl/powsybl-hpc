@@ -62,7 +62,7 @@
         <jsch.extension.version>0.1.11</jsch.extension.version>
         <jsch.nio.version>1.0.14</jsch.nio.version>
         <junit-jupiter.version>5.12.2</junit-jupiter.version>
-        <logback.version>1.5.25</logback.version>
+        <logback.version>1.5.26</logback.version>
         <mockito.version>5.18.0</mockito.version>
         <protobuf.version>3.25.8</protobuf.version>
 
