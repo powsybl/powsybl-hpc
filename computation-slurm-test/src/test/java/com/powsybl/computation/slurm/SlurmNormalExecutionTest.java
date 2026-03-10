@@ -86,6 +86,31 @@ class SlurmNormalExecutionTest extends AbstractIntegrationTests {
     }
 
     @Test
+    void testKillTask() {
+        // Script configuration
+        String program = String.format("%s/%s",
+            moduleConfig.getOptionalStringProperty("program").orElse("No program configured"),
+            "test.sh");
+        Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractReturnOKExecutionHandler() {
+            @Override
+            public List<CommandExecution> before(Path workingDir) {
+                return longProgram(5, program);
+            }
+        };
+
+        // QOS configuration
+        String qos = moduleConfig.getOptionalStringProperty("qos").orElse("No qos configured");
+
+        // Parameters
+        ComputationParameters parameters = new ComputationParametersBuilder().setTimeout("longProgram", 60).build();
+        SlurmComputationParameters slurmComputationParameters = new SlurmComputationParameters(parameters, qos);
+        parameters.addExtension(SlurmComputationParameters.class, slurmComputationParameters);
+
+        // Test
+        baseTest(supplier, parameters);
+    }
+
+    @Test
     void testLongTask() {
         // Script configuration
         String program = String.format("%s/%s",

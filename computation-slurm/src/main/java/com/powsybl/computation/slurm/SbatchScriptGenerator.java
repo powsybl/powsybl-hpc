@@ -163,7 +163,7 @@ class SbatchScriptGenerator {
         if (command.getType() == SIMPLE) {
             SimpleCommand simpleCmd = (SimpleCommand) command;
             list.add(CommandUtils.commandToString(simpleCmd.getProgram(), simpleCmd.getArgs(executionIndex)));
-            list.add(String.format(CHECK_EXITCODE, flagDir.toAbsolutePath(), workingDir.getFileName()));
+            addCommandWithKillTrap(list, String.format(CHECK_EXITCODE, flagDir.toAbsolutePath(), workingDir.getFileName()));
         } else {
             GroupCommand groupCommand = (GroupCommand) command;
             for (GroupCommand.SubCommand subCommand : groupCommand.getSubCommands()) {
@@ -286,7 +286,7 @@ class SbatchScriptGenerator {
         if (command.getType() == SIMPLE) {
             SimpleCommand simpleCmd = (SimpleCommand) command;
             simpleCmdWithArgs(shell, simpleCmd);
-            shell.add(String.format(CHECK_EXITCODE_ARRAY, flagDir.toAbsolutePath(), workingDir.getFileName()));
+            addCommandWithKillTrap(shell, String.format(CHECK_EXITCODE_ARRAY, flagDir.toAbsolutePath(), workingDir.getFileName()));
         } else {
             GroupCommand groupCommand = (GroupCommand) command;
             List<GroupCommand.SubCommand> subCommands = groupCommand.getSubCommands();
@@ -296,6 +296,14 @@ class SbatchScriptGenerator {
                 shell.add(String.format(CHECK_EXITCODE_ARRAY, flagDir.toAbsolutePath(), workingDir.getFileName()));
             }
         }
+    }
+
+    private void addCommandWithKillTrap(List<String> shell, String command) {
+        shell.add("_term() { kill -TERM \"$child_pid\"; wait \"$child_pid\"; }");
+        shell.add("trap _term TERM INT");
+        shell.add(command + " &");
+        shell.add("child_pid=$!");
+        shell.add("wait \"$child_pid\"");
     }
 
     private void simpleCmdWithArgs(List<String> list, SimpleCommand simpleCommand) {
