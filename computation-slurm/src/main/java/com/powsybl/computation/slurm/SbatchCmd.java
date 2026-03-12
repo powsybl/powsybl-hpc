@@ -43,6 +43,10 @@ public class SbatchCmd extends AbstractSlurmCmd<SbatchCmdResult> {
         return new SbatchCmdResult(result);
     }
 
+    public String getScriptName() {
+        return scriptName;
+    }
+
     @Override
     public String toString() {
         if (cmd == null) {
