@@ -196,7 +196,7 @@ jobs:
 
 
       - name: Send Slack Notification
-        uses: slackapi/slack-github-action#91efab103c0de0a537f72a35f6b8cda0ee76bf0a # v2.1.1
+        uses: slackapi/slack-github-action@91efab103c0de0a537f72a35f6b8cda0ee76bf0a # v2.1.1
         if: ${{ steps.workflow_status.outputs.status != 'Successful' || github.event_name == 'workflow_dispatch' }}
         with:
           webhook: ${{ secrets.SLACK_POWSYBL_WEBHOOK_URL }}
