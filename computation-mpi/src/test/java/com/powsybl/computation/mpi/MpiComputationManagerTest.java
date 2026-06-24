@@ -296,7 +296,8 @@ class MpiComputationManagerTest {
         boolean verbose = true;
         Path stdOutArchive = Path.of(File.separator + "archive");
         // WHEN
-        MpiComputationManager mpiComputationManagerDeprecated = new MpiComputationManager(localDir, nativeServices, statisticsFactory, statisticsDbDir, statisticsDbName, executorContext, coresPerRank, verbose, stdOutArchive);
+        MpiComputationManager mpiComputationManagerDeprecated = new MpiComputationManager(localDir, nativeServices,
+            statisticsFactory, statisticsDbDir, statisticsDbName, executorContext, coresPerRank, verbose, stdOutArchive);
         // THEN
         assertNotNull(mpiComputationManagerDeprecated);
     }

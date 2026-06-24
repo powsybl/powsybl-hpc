@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class CorePoolTest {
 
-    public CorePoolTest() {
+    CorePoolTest() {
     }
 
     private CorePool pool;

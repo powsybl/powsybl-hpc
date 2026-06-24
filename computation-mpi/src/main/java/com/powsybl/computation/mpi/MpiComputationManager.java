@@ -239,8 +239,8 @@ public class MpiComputationManager implements ComputationManager {
         } catch (Throwable t) {
             try {
                 ctxt.workingDir.close();
-            } catch (IOException e2) {
-                LOGGER.error(e2.toString(), e2);
+            } catch (IOException exception) {
+                LOGGER.error(exception.toString(), exception);
             }
             throw new PowsyblException(t);
         }
@@ -285,8 +285,8 @@ public class MpiComputationManager implements ComputationManager {
         } finally {
             try {
                 ctxt.workingDir.close();
-            } catch (IOException e2) {
-                LOGGER.error(e2.toString(), e2);
+            } catch (IOException exception) {
+                LOGGER.error(exception.toString(), exception);
             }
         }
     }

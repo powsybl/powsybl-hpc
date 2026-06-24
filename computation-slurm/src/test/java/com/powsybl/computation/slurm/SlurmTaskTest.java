@@ -95,7 +95,8 @@ class SlurmTaskTest {
     @Test
     void test() {
         CommandExecutor commandExecutor = mock(CommandExecutor.class);
-        SlurmTaskImpl task = new SlurmTaskImpl(mockScm(commandExecutor), mockWd(), CommandExecutionsTestFactory.longProgramInList(2, 3, 1), ComputationParameters.empty(), ExecutionEnvironment.createDefault());
+        SlurmTaskImpl task = new SlurmTaskImpl(mockScm(commandExecutor), mockWd(),
+            CommandExecutionsTestFactory.longProgramInList(2, 3, 1), ComputationParameters.empty(), ExecutionEnvironment.createDefault());
         when(commandExecutor.execute(startsWith("sbatch")))
                 .thenReturn(simpleOutput("Submitted batch job 1"))
                 .thenReturn(simpleOutput("Submitted batch job 2"))
@@ -137,7 +138,8 @@ class SlurmTaskTest {
     @Test
     void testSubmitCommonUnzipFile() {
         CommandExecutor commandExecutor = mock(CommandExecutor.class);
-        SlurmTaskImpl task2 = new SlurmTaskImpl(mockScm(commandExecutor), mockWd(), CommandExecutionsTestFactory.md5sumLargeFile(), ComputationParameters.empty(), ExecutionEnvironment.createDefault());
+        SlurmTaskImpl task2 = new SlurmTaskImpl(mockScm(commandExecutor), mockWd(),
+            CommandExecutionsTestFactory.md5sumLargeFile(), ComputationParameters.empty(), ExecutionEnvironment.createDefault());
         when(commandExecutor.execute(startsWith("sbatch")))
                 .thenReturn(simpleOutput("Submitted batch job 1"))
                 .thenReturn(simpleOutput("Submitted batch job 2"))
