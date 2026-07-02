@@ -66,7 +66,7 @@ class SlurmOtherCaseTest extends AbstractIntegrationTests {
         } catch (IOException e) {
             LOGGER.error(e.getMessage(), e);
             failed = true;
-        } catch (CompletionException ce) {
+        } catch (CompletionException completionException) {
             System.out.println("in ce");
         }
         // assert on main thread
@@ -158,8 +158,8 @@ class SlurmOtherCaseTest extends AbstractIntegrationTests {
             assertTrue(appender.list.stream().anyMatch(e -> e.getFormattedMessage().contains("exit point 2: Error by slurm")));
         } catch (IOException e) {
             fail();
-        } catch (CompletionException ce) {
-            assertTrue(ce.getCause().getMessage().contains("Invalid qos specification"));
+        } catch (CompletionException completionException) {
+            assertTrue(completionException.getCause().getMessage().contains("Invalid qos specification"));
         } finally {
             removeAppender(appender);
         }

@@ -221,76 +221,12 @@ class SlurmNormalExecutionTest extends AbstractIntegrationTests {
 
     @Test
     void testFilesReadBytes() {
-        Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractExecutionHandler<>() {
-
-            static final int COUNT = 10;
-
-            @Override
-            public List<CommandExecution> before(Path workingDir) {
-                Command command = new SimpleCommandBuilder()
-                        .id("echo")
-                        .program("echo asdf >")
-                        .arg(i -> i + ".txt")
-                        .build();
-                return Collections.singletonList(new CommandExecution(command, COUNT));
-            }
-
-            @Override
-            public String after(Path workingDir, ExecutionReport report) throws IOException {
-                IntStream.range(0, COUNT).forEach(i -> {
-                    try {
-                        System.out.println("i : " + i);
-                        byte[] bytes = Files.readAllBytes(workingDir.resolve(i + ".txt"));
-                        byte[] bytes1 = Files.readAllBytes(workingDir.resolve("echo_" + i + ".out"));
-                        byte[] bytes2 = Files.readAllBytes(workingDir.resolve("echo_" + i + ".err"));
-                        System.out.println(bytes.length);
-                        System.out.println(bytes1.length);
-                        System.out.println(bytes2.length);
-                    } catch (IOException e) {
-                        failed = true;
-                    }
-                });
-                super.after(workingDir, report);
-                return "OK";
-            }
-        };
-        baseTest(supplier);
+        baseTest(FilesReadBytesHandler::new);
     }
 
     @Test
     void testZMd5sumLargeFile() {
-        Supplier<AbstractExecutionHandler<String>> supplier = () -> new AbstractExecutionHandler<>() {
-            @Override
-            public List<CommandExecution> before(Path workingDir) {
-                long startDump = System.nanoTime();
-                generateGzFileOnRemote(2, workingDir.resolve("2GFile.gz"));
-                generateGzFileOnRemote(4, workingDir.resolve("4GFile.gz"));
-                LOGGER.info("Dump two files in {} ms", TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startDump));
-                return md5sumLargeFile();
-            }
-
-            @Override
-            public String after(Path workingDir, ExecutionReport report) throws IOException {
-                List<String> actual2GMd5 = Files.readAllLines(workingDir.resolve("c1_0.out"));
-                List<String> actual4GMd5 = Files.readAllLines(workingDir.resolve("c2_0.out"));
-                String expected2GMd5 = "1ea9851f9b83e9bd50b8d7577b23e14b  2GFile";
-                String expected4GMd5 = "bbe2b516d690f337d8f48fc03db99c9a  4GFile";
-                if (!Objects.equals(actual2GMd5.get(0), expected2GMd5)) {
-                    failed = true;
-                    System.out.println("  actual:" + actual2GMd5.get(0));
-                    System.out.println("expected:" + expected2GMd5);
-                    return "KO";
-                }
-                if (!Objects.equals(actual4GMd5.get(0), expected4GMd5)) {
-                    failed = true;
-                    System.out.println("  actual:" + actual4GMd5.get(0));
-                    System.out.println("expected:" + expected4GMd5);
-                    return "KO";
-                }
-                return "OK";
-            }
-        };
-        baseTest(supplier);
+        baseTest(Md5sumLargeFileHandler::new);
     }
 
     private void generateGzFileOnRemote(int sizeGb, Path dest) {
@@ -312,4 +248,73 @@ class SlurmNormalExecutionTest extends AbstractIntegrationTests {
             failed = true;
         }
     }
+
+    private final class FilesReadBytesHandler extends AbstractExecutionHandler<String> {
+
+        static final int COUNT = 10;
+
+        @Override
+        public List<CommandExecution> before(Path workingDir) {
+            Command command = new SimpleCommandBuilder()
+                .id("echo")
+                .program("echo asdf >")
+                .arg(i -> i + ".txt")
+                .build();
+            return Collections.singletonList(new CommandExecution(command, COUNT));
+        }
+
+        @Override
+        public String after(Path workingDir, ExecutionReport report) throws IOException {
+            IntStream.range(0, COUNT).forEach(i -> readFilesForIndex(workingDir, i));
+            super.after(workingDir, report);
+            return "OK";
+        }
+
+        private void readFilesForIndex(Path workingDir, int i) {
+            try {
+                System.out.println("i : " + i);
+                byte[] bytes = Files.readAllBytes(workingDir.resolve(i + ".txt"));
+                byte[] bytes1 = Files.readAllBytes(workingDir.resolve("echo_" + i + ".out"));
+                byte[] bytes2 = Files.readAllBytes(workingDir.resolve("echo_" + i + ".err"));
+                System.out.println(bytes.length);
+                System.out.println(bytes1.length);
+                System.out.println(bytes2.length);
+            } catch (IOException e) {
+                failed = true;
+            }
+        }
+    }
+
+    private final class Md5sumLargeFileHandler extends AbstractExecutionHandler<String> {
+        @Override
+        public List<CommandExecution> before(Path workingDir) {
+            long startDump = System.nanoTime();
+            generateGzFileOnRemote(2, workingDir.resolve("2GFile.gz"));
+            generateGzFileOnRemote(4, workingDir.resolve("4GFile.gz"));
+            LOGGER.info("Dump two files in {} ms", TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startDump));
+            return md5sumLargeFile();
+        }
+
+        @Override
+        public String after(Path workingDir, ExecutionReport report) throws IOException {
+            List<String> actual2GMd5 = Files.readAllLines(workingDir.resolve("c1_0.out"));
+            List<String> actual4GMd5 = Files.readAllLines(workingDir.resolve("c2_0.out"));
+            String expected2GMd5 = "1ea9851f9b83e9bd50b8d7577b23e14b  2GFile";
+            String expected4GMd5 = "bbe2b516d690f337d8f48fc03db99c9a  4GFile";
+            if (!Objects.equals(actual2GMd5.getFirst(), expected2GMd5)) {
+                failed = true;
+                System.out.println("  actual:" + actual2GMd5.getFirst());
+                System.out.println("expected:" + expected2GMd5);
+                return "KO";
+            }
+            if (!Objects.equals(actual4GMd5.getFirst(), expected4GMd5)) {
+                failed = true;
+                System.out.println("  actual:" + actual4GMd5.getFirst());
+                System.out.println("expected:" + expected4GMd5);
+                return "KO";
+            }
+            return "OK";
+        }
+    }
+
 }
