@@ -7,11 +7,16 @@
  */
 package com.powsybl.computation.mpi;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.powsybl.commons.PowsyblException;
+import com.powsybl.commons.io.WorkingDirectory;
 import com.powsybl.computation.AbstractExecutionHandler;
 import com.powsybl.computation.CommandExecution;
 import com.powsybl.computation.ComputationManager;
@@ -24,7 +29,6 @@ import com.powsybl.computation.mpi.generated.Messages;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.BufferedWriter;
@@ -38,10 +42,14 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import static com.powsybl.computation.mpi.MpiComputationManager.closeWorkingDir;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  *
@@ -49,7 +57,7 @@ import static org.junit.jupiter.api.Assertions.fail;
  */
 class MpiComputationManagerTest {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(MpiComputationManagerTest.class);
+    private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(MpiComputationManagerTest.class);
 
     private static final String ID_CMD_1 = "cmd1";
     private static final String INPUT_FILE_NAME_1 = "in1.txt";
@@ -281,6 +289,41 @@ class MpiComputationManagerTest {
         }).join();
         assertEquals(OUTPUT_FILE_CONTENT_2, result);
         assertTrue(Files.notExists(workingDirSav[0]));
+    }
+
+    @Test
+    void testCloseWorkingDirWithException() throws IOException {
+        ListAppender<ILoggingEvent> logWatcher = new ListAppender<>();
+        logWatcher.start();
+        Logger logger = (Logger) LoggerFactory.getLogger(MpiComputationManager.class);
+        try {
+            // GIVEN
+            logger.addAppender(logWatcher);
+            String ioExceptionMessage = "close failed";
+            IOException closeFailedException = new IOException(ioExceptionMessage);
+            WorkingDirectory workingDirectory = mock(WorkingDirectory.class);
+            Path path = fileSystem.getPath("/tmp/test");
+            when(workingDirectory.toPath()).thenReturn(path);
+            doThrow(closeFailedException).when(workingDirectory).close();
+
+            // WHEN
+            closeWorkingDir(workingDirectory);
+
+            // THEN
+            List<ILoggingEvent> errorLogEntries = logWatcher.list.stream().filter(event -> event.getLevel() == Level.ERROR).toList();
+            assertEquals(1, errorLogEntries.size());
+
+            ILoggingEvent log = errorLogEntries.getFirst();
+            assertEquals(Level.ERROR, log.getLevel());
+            assertTrue(log.getFormattedMessage().contains(ioExceptionMessage));
+
+            assertNotNull(log.getThrowableProxy());
+            assertEquals(IOException.class.getName(), log.getThrowableProxy().getClassName());
+            assertEquals(ioExceptionMessage, log.getThrowableProxy().getMessage());
+        } finally {
+            logger.detachAppender(logWatcher);
+        }
+
     }
 
     @Test
