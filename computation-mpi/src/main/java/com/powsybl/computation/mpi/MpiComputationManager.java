@@ -237,11 +237,7 @@ public class MpiComputationManager implements ComputationManager {
         try {
             ctxt.parametersList = handler.before(ctxt.workingDir.toPath());
         } catch (Throwable t) {
-            try {
-                ctxt.workingDir.close();
-            } catch (IOException e2) {
-                LOGGER.error(e2.toString(), e2);
-            }
+            closeWorkingDir(ctxt.workingDir);
             throw new PowsyblException(t);
         }
         return ctxt;
@@ -283,11 +279,15 @@ public class MpiComputationManager implements ComputationManager {
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         } finally {
-            try {
-                ctxt.workingDir.close();
-            } catch (IOException e2) {
-                LOGGER.error(e2.toString(), e2);
-            }
+            closeWorkingDir(ctxt.workingDir);
+        }
+    }
+
+    static void closeWorkingDir(WorkingDirectory workingDirectory) {
+        try {
+            workingDirectory.close();
+        } catch (IOException exception) {
+            LOGGER.error(exception.toString(), exception);
         }
     }
 

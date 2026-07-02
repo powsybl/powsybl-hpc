@@ -376,7 +376,7 @@ public class SlurmComputationManager implements ComputationManager {
                     LOGGER.error("Thread pool did not terminate");
                 }
             }
-        } catch (InterruptedException ie) {
+        } catch (InterruptedException interruptedException) {
             executorService.shutdownNow();
             Thread.currentThread().interrupt();
         }

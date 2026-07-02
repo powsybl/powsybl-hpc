@@ -45,7 +45,8 @@ class JobArraySlurmTaskTest extends AbstractDefaultSlurmTaskTest {
     @Test
     void testSubmit231() throws ExecutionException, InterruptedException {
         CommandExecutor commandExecutor = mock(CommandExecutor.class);
-        SlurmTask task = new JobArraySlurmTask(mockScm(commandExecutor), mockWd(), CommandExecutionsTestFactory.longProgramInList(2, 3, 1), ComputationParameters.empty(), ExecutionEnvironment.createDefault());
+        SlurmTask task = new JobArraySlurmTask(mockScm(commandExecutor), mockWd(),
+            CommandExecutionsTestFactory.longProgramInList(2, 3, 1), ComputationParameters.empty(), ExecutionEnvironment.createDefault());
         when(commandExecutor.execute(startsWith("sbatch")))
                 .thenReturn(simpleOutput("Submitted batch job 1"))
                 .thenReturn(simpleOutput("Submitted batch job 3"))
@@ -75,7 +76,8 @@ class JobArraySlurmTaskTest extends AbstractDefaultSlurmTaskTest {
         CommandExecutor commandExecutor = mock(CommandExecutor.class);
         SlurmComputationManager slurmComputationManager = mockScm(commandExecutor);
         when(slurmComputationManager.isCloseStarted()).thenReturn(true);
-        SlurmTask task = new JobArraySlurmTask(slurmComputationManager, mockWd(), CommandExecutionsTestFactory.longProgramInList(2, 3, 1), ComputationParameters.empty(), ExecutionEnvironment.createDefault());
+        SlurmTask task = new JobArraySlurmTask(slurmComputationManager, mockWd(),
+            CommandExecutionsTestFactory.longProgramInList(2, 3, 1), ComputationParameters.empty(), ExecutionEnvironment.createDefault());
         when(commandExecutor.execute(startsWith("sbatch")))
             .thenReturn(simpleOutput("Submitted batch job 1"))
             .thenReturn(simpleOutput("Submitted batch job 3"))

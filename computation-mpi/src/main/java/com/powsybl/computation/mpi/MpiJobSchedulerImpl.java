@@ -92,61 +92,63 @@ class MpiJobSchedulerImpl implements MpiJobScheduler {
             .create(mpiConfig.getStatisticsDbDir(), mpiConfig.getStatisticsDbName());
         this.stdOutArchive = checkOutputArchive(mpiConfig.getStdOutArchive());
         final CountDownLatch initialized = new CountDownLatch(1);
-        future = executor.submit(() -> {
-            LOGGER.trace("Job scheduler started");
-            try {
-                nativeServices.initMpi(mpiConfig.getCoresPerRank(), mpiConfig.isVerbose());
-
-                mpiVersion = nativeServices.getMpiVersion();
-                resources = new MpiResources(nativeServices.getMpiCommSize(), mpiConfig.getCoresPerRank());
-
-                initialized.countDown();
-
-                long time = System.currentTimeMillis();
-
-                List<MpiTask> completedTasks = new ArrayList<>();
-                while (!stopRequested || !jobs.isEmpty()) {
-                    // check performances
-                    long oldTime = time;
-                    time = System.currentTimeMillis();
-                    long diff = time - oldTime;
-                    if (diff > 1000) { // 1s
-                        LOGGER.warn("Slowness ({} ms) has been detected in the job scheduler (startTasksTime={}, startTasksJniTime={}, processCompletedTasksTime={}, checkTaskCompletionTime={})",
-                            diff, startTasksTime, startTasksJniTime, processCompletedTasksTime, checkTaskCompletionTime);
-                    }
-                    startTasksTime = 0;
-                    startTasksJniTime = 0;
-                    processCompletedTasksTime = 0;
-                    checkTaskCompletionTime = 0;
-
-                    sendCommonFilesChunks();
-
-                    // add new context
-                    newJobsLock.lock();
-                    try {
-                        jobs.addAll(newJobs);
-                        newJobs.clear();
-                    } finally {
-                        newJobsLock.unlock();
-                    }
-
-                    // just sleep in the case nothing has been done in the loop
-                    if (processJobs(completedTasks, mpiConfig)) {
-                        TimeUnit.MILLISECONDS.sleep(TIMEOUT);
-                    }
-                }
-
-                nativeServices.terminateMpi();
-
-            } catch (Throwable t) {
-                LOGGER.error(t.toString(), t);
-                System.exit(-1);
-            }
-
-            LOGGER.trace("Job scheduler stopped");
-        });
+        future = executor.submit(() -> runJob(nativeServices, mpiConfig, initialized));
 
         initialized.await();
+    }
+
+    private void runJob(MpiNativeServices nativeServices, MpiConfig mpiConfig, CountDownLatch initialized) {
+        LOGGER.trace("Job scheduler started");
+        try {
+            nativeServices.initMpi(mpiConfig.getCoresPerRank(), mpiConfig.isVerbose());
+
+            mpiVersion = nativeServices.getMpiVersion();
+            resources = new MpiResources(nativeServices.getMpiCommSize(), mpiConfig.getCoresPerRank());
+
+            initialized.countDown();
+
+            long time = System.currentTimeMillis();
+
+            List<MpiTask> completedTasks = new ArrayList<>();
+            while (!stopRequested || !jobs.isEmpty()) {
+                // check performances
+                long oldTime = time;
+                time = System.currentTimeMillis();
+                long diff = time - oldTime;
+                if (diff > 1000) { // 1s
+                    LOGGER.warn("Slowness ({} ms) has been detected in the job scheduler (startTasksTime={}, startTasksJniTime={}, processCompletedTasksTime={}, checkTaskCompletionTime={})",
+                        diff, startTasksTime, startTasksJniTime, processCompletedTasksTime, checkTaskCompletionTime);
+                }
+                startTasksTime = 0;
+                startTasksJniTime = 0;
+                processCompletedTasksTime = 0;
+                checkTaskCompletionTime = 0;
+
+                sendCommonFilesChunks();
+
+                // add new context
+                newJobsLock.lock();
+                try {
+                    jobs.addAll(newJobs);
+                    newJobs.clear();
+                } finally {
+                    newJobsLock.unlock();
+                }
+
+                // just sleep in the case nothing has been done in the loop
+                if (processJobs(completedTasks, mpiConfig)) {
+                    TimeUnit.MILLISECONDS.sleep(TIMEOUT);
+                }
+            }
+
+            nativeServices.terminateMpi();
+
+        } catch (Throwable t) {
+            LOGGER.error(t.toString(), t);
+            System.exit(-1);
+        }
+
+        LOGGER.trace("Job scheduler stopped");
     }
 
     private static Path checkOutputArchive(Path stdOutArchive) throws IOException {
@@ -261,7 +263,7 @@ class MpiJobSchedulerImpl implements MpiJobScheduler {
                         .setPostProcessor(createPostProcessor(outputFile.getPostProcessor()))
                         .build()));
 
-        for (Iterator<MpiJob> it = rank.jobs.iterator(); it.hasNext(); ) {
+        for (Iterator<MpiJob> it = rank.jobs.iterator(); it.hasNext();) {
             MpiJob otherJob = it.next();
             if (otherJob.isCompleted()) {
                 it.remove();
@@ -355,7 +357,7 @@ class MpiJobSchedulerImpl implements MpiJobScheduler {
     private boolean processJobs(List<MpiTask> completedTasks, MpiConfig mpiConfig) throws IOException {
         boolean sleep = true;
 
-        for (Iterator<MpiJob> it = jobs.iterator(); it.hasNext(); ) {
+        for (Iterator<MpiJob> it = jobs.iterator(); it.hasNext();) {
             MpiJob job = it.next();
 
             sleep = startTasks(job, mpiConfig);
@@ -443,7 +445,7 @@ class MpiJobSchedulerImpl implements MpiJobScheduler {
 
                     // update used ranks
                     // TODO c'est completement bugge, ne pas reactiver!!!!
-//                        job.getUsedRanks().add(core.rank.num);
+                    // job.getUsedRanks().add(core.rank.num);
                 }
 
                 if (LOGGER.isTraceEnabled()) {
