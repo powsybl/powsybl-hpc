@@ -7,6 +7,7 @@ List of third-party dependencies grouped by their license type.
         * Apache Commons CLI (commons-cli:commons-cli:1.9.0 - https://commons.apache.org/proper/commons-cli/)
         * Apache Commons Codec (commons-codec:commons-codec:1.17.1 - https://commons.apache.org/proper/commons-codec/)
         * Apache Commons Compress (org.apache.commons:commons-compress:1.27.1 - https://commons.apache.org/proper/commons-compress/)
+        * Apache Commons CSV (org.apache.commons:commons-csv:1.14.0 - https://commons.apache.org/proper/commons-csv/)
         * Apache Commons Exec (org.apache.commons:commons-exec:1.5.0 - https://commons.apache.org/proper/commons-exec/)
         * Apache Commons IO (commons-io:commons-io:2.19.0 - https://commons.apache.org/proper/commons-io/)
         * Apache Commons Lang (org.apache.commons:commons-lang3:3.18.0 - https://commons.apache.org/proper/commons-lang/)
@@ -19,9 +20,9 @@ List of third-party dependencies grouped by their license type.
         * Guava InternalFutureFailureAccess and InternalFutures (com.google.guava:failureaccess:1.0.3 - https://github.com/google/guava/failureaccess)
         * Guava ListenableFuture only (com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava - https://github.com/google/guava/listenablefuture)
         * J2ObjC Annotations (com.google.j2objc:j2objc-annotations:3.0.0 - https://github.com/google/j2objc/)
-        * Jackson-annotations (com.fasterxml.jackson.core:jackson-annotations:2.19.0 - https://github.com/FasterXML/jackson)
-        * Jackson-core (com.fasterxml.jackson.core:jackson-core:2.19.0 - https://github.com/FasterXML/jackson-core)
-        * jackson-databind (com.fasterxml.jackson.core:jackson-databind:2.19.0 - https://github.com/FasterXML/jackson)
+        * Jackson-annotations (com.fasterxml.jackson.core:jackson-annotations:2.21 - https://github.com/FasterXML/jackson)
+        * Jackson-core (com.fasterxml.jackson.core:jackson-core:2.21.1 - https://github.com/FasterXML/jackson-core)
+        * jackson-databind (com.fasterxml.jackson.core:jackson-databind:2.21.1 - https://github.com/FasterXML/jackson)
         * JSpecify annotations (org.jspecify:jspecify:1.0.0 - http://jspecify.org/)
         * SIROCCO ::  Text Table Formatter (org.ow2.sirocco:sirocco-text-table-formatter:1.0 - http://www.ow2.org/sirocco-text-table-formatter)
         * SnakeYAML (org.yaml:snakeyaml:2.4 - https://bitbucket.org/snakeyaml/snakeyaml)
@@ -60,7 +61,7 @@ List of third-party dependencies grouped by their license type.
 
     Eclipse Public License - v 1.0, GNU Lesser General Public License v2.1
 
-        * Logback Classic Module (ch.qos.logback:logback-classic:1.5.19 - http://logback.qos.ch/logback-classic)
+        * Logback Classic Module (ch.qos.logback:logback-classic:1.5.26 - http://logback.qos.ch/logback-classic)
 
     GNU Lesser General Public License v2.1
 
