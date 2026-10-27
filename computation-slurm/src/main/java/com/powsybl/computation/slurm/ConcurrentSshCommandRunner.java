@@ -95,7 +95,7 @@ class ConcurrentSshCommandRunner extends CommandRunner {
                 lock.release();
                 LOGGER.trace("SSH lock released on exception, available permits = {}", lock.availablePermits());
                 LOGGER.warn("{} Channel open failed on attempt {}: open channels = {}, command = {}",
-                    e, tried, openChannels.get(), command, e);
+                    e, tried, openChannels.get(), command);
                 if (tried == maxRetries) {
                     String maxRetryReached = String.format("Max retry (%d) reached for command: %s", maxRetries, command);
                     throw new SlurmException(maxRetryReached);
