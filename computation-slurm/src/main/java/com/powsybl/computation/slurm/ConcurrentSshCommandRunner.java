@@ -30,10 +30,12 @@ class ConcurrentSshCommandRunner extends CommandRunner {
 
     private final Semaphore lock;
     private final int maxRetries;
+    private final int maxOpenChannels;
 
     ConcurrentSshCommandRunner(SessionFactory factory, int maxSshConnections, int maxRetries) {
         super(factory);
-        this.lock = new Semaphore(maxSshConnections - 2);
+        this.maxOpenChannels = maxSshConnections - 2;
+        this.lock = new Semaphore(maxOpenChannels);
         this.maxRetries = maxRetries;
         LOGGER.trace("init ConcurrentCommandRunner");
     }
@@ -91,9 +93,12 @@ class ConcurrentSshCommandRunner extends CommandRunner {
             } catch (Exception e) {
                 lock.release();
                 LOGGER.trace("SSH lock released on exception, available permits = {}", lock.availablePermits());
-                LOGGER.warn(e.toString() + " for " + command, e);
+                int openChannels = maxOpenChannels - lock.availablePermits();
+                LOGGER.warn("{} Channel open failed on attempt {}: open channels = {}, command = {}",
+                    e, tried + 1, openChannels, command);
                 if (tried == maxRetries) {
-                    throw new SlurmException("Max retry reached");
+                    String maxRetryReached = String.format("Max retry (%d) reached for command: %s", maxRetries, command);
+                    throw new SlurmException(maxRetryReached, e);
                 }
                 tried++;
             }

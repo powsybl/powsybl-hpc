@@ -67,7 +67,7 @@ class ConcurrentSshCommandRunnerTest {
                 .build();
             String commandAsString = command.toString(0);
             SlurmException slurmException = assertThrows(SlurmException.class, () -> commandRunner.execute(commandAsString));
-            assertEquals("Max retry reached", slurmException.getMessage());
+            assertEquals("Max retry (5) reached for command: [sleep, 10s]", slurmException.getMessage());
         }
     }
 }

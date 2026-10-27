@@ -22,4 +22,8 @@ public class SlurmException extends PowsyblException {
     public SlurmException(String message) {
         super(message);
     }
+
+    public SlurmException(String message, Throwable cause) {
+        super(message, cause);
+    }
 }
