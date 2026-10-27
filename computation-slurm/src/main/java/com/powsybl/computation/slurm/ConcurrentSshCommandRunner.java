@@ -98,7 +98,7 @@ class ConcurrentSshCommandRunner extends CommandRunner {
                     e, tried, openChannels.get(), command);
                 if (tried == maxRetries) {
                     String maxRetryReached = String.format("Max retry (%d) reached for command: %s", maxRetries, command);
-                    throw new SlurmException(maxRetryReached);
+                    throw new SlurmException(maxRetryReached, e);
                 }
                 tried++;
             }
