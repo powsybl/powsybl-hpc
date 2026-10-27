@@ -20,7 +20,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author Sylvain Leclerc {@literal <sylvain.leclerc at rte-france.com>}
@@ -31,11 +30,12 @@ class ConcurrentSshCommandRunner extends CommandRunner {
 
     private final Semaphore lock;
     private final int maxRetries;
-    private final AtomicInteger openChannels = new AtomicInteger();
+    private final int maxOpenChannels;
 
     ConcurrentSshCommandRunner(SessionFactory factory, int maxSshConnections, int maxRetries) {
         super(factory);
-        this.lock = new Semaphore(maxSshConnections - 2);
+        this.maxOpenChannels = maxSshConnections - 2;
+        this.lock = new Semaphore(maxOpenChannels);
         this.maxRetries = maxRetries;
         LOGGER.trace("init ConcurrentCommandRunner");
     }
@@ -90,12 +90,12 @@ class ConcurrentSshCommandRunner extends CommandRunner {
                 //allows to acquire a new session in case previously used one was down
                 Session session = getSession();
                 channelExecWrapper = new AutoReleaseLockChannelWrapper(session, command, null, stdOut, stdErr);
-                openChannels.incrementAndGet();
             } catch (Exception e) {
                 lock.release();
                 LOGGER.trace("SSH lock released on exception, available permits = {}", lock.availablePermits());
+                int openChannels = maxOpenChannels - lock.availablePermits();
                 LOGGER.warn("{} Channel open failed on attempt {}: open channels = {}, command = {}",
-                    e, tried, openChannels.get(), command);
+                    e, tried + 1, openChannels, command);
                 if (tried == maxRetries) {
                     String maxRetryReached = String.format("Max retry (%d) reached for command: %s", maxRetries, command);
                     throw new SlurmException(maxRetryReached, e);
@@ -125,7 +125,6 @@ class ConcurrentSshCommandRunner extends CommandRunner {
             if (!closed) {
                 exitCode = super.close();
                 closed = true;
-                openChannels.decrementAndGet();
                 lock.release();
                 LOGGER.trace("SSH lock released on channel close, available permits = {}", lock.availablePermits());
             }
