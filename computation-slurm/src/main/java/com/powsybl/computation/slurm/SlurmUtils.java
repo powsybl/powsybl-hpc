@@ -20,7 +20,7 @@ final class SlurmUtils {
 
     /**
      * Seconds to parse and return an acceptable time format in String.
-     * Used in --time.
+     * Used in --time and in --time-min.
      * @see <a href="https://slurm.schedmd.com/sbatch.html">https://slurm.schedmd.com/sbatch.html</a>
      * @param seconds Should be greater than 0.
      * @return Acceptable time format.

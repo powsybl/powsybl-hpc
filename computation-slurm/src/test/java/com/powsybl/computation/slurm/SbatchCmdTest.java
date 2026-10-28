@@ -132,4 +132,25 @@ class SbatchCmdTest {
                 .build();
         assertEquals("sbatch --job-name=testMem --mem=20M --kill-on-invalid-dep=yes submit.sh", cmd.toString());
     }
+
+    @Test
+    void testTimemin() {
+        SbatchCmdBuilder builder = new SbatchCmdBuilder();
+        SbatchCmd cmd = builder.jobName("testTimemin")
+            .script("submit.sh")
+            .timemin(100L)
+            .build();
+        assertEquals("sbatch --job-name=testTimemin --kill-on-invalid-dep=yes --time-min=00-00:01:40 submit.sh", cmd.toString());
+    }
+
+    @Test
+    void testPriority() {
+        SbatchCmdBuilder builder = new SbatchCmdBuilder();
+        SbatchCmd cmd = builder.jobName("testPriority")
+                .script("submit.sh")
+                .nice(2)
+                .priority(1)
+                .build();
+        assertEquals("sbatch --job-name=testPriority --kill-on-invalid-dep=yes --priority=1 --nice=2 submit.sh", cmd.toString());
+    }
 }

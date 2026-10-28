@@ -32,5 +32,20 @@ class SlurmComputationParametersTest {
         assertSame(base, sut2.getExtendable());
         assertEquals(50, sut2.getMem().orElse(-1));
         assertEquals(-1, new SlurmComputationParameters(base, "aQos", -5).getMem().orElse(-1));
+        sut.setTimemin("foo", 3L);
+        assertEquals(3L, sut.getTimemin("foo").orElse(4L));
+    }
+
+    @Test
+    public void testPriority() {
+        ComputationParameters base = mock(ComputationParameters.class);
+        SlurmComputationParameters sut = new SlurmComputationParameters(base, "aQos");
+        String cmdId = "foo";
+        sut.setNice(cmdId, 1);
+        assertEquals(1, sut.getNice(cmdId).orElse(3));
+        sut.setPriority(cmdId, 2);
+        assertEquals(2, sut.getPriority(cmdId).orElse(3));
+        assertThrows(IllegalArgumentException.class, () -> sut.setNice(cmdId, -99));
+        assertThrows(IllegalArgumentException.class, () -> sut.setPriority(cmdId, -99));
     }
 }
