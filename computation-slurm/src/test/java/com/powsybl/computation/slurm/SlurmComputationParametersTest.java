@@ -37,7 +37,7 @@ class SlurmComputationParametersTest {
     }
 
     @Test
-    public void testPriority() {
+    void testPriority() {
         ComputationParameters base = mock(ComputationParameters.class);
         SlurmComputationParameters sut = new SlurmComputationParameters(base, "aQos");
         String cmdId = "foo";
