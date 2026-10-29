@@ -102,8 +102,11 @@ class SlurmNormalExecutionTest extends AbstractIntegrationTests {
         String qos = moduleConfig.getOptionalStringProperty("qos").orElse("No qos configured");
 
         // Parameters
-        ComputationParameters parameters = new ComputationParametersBuilder().setTimeout("longProgram", 60).build();
+        String cmdId = "longProgram";
+        ComputationParameters parameters = new ComputationParametersBuilder().setTimeout(cmdId, 60).build();
         SlurmComputationParameters slurmComputationParameters = new SlurmComputationParameters(parameters, qos);
+        slurmComputationParameters.setPriority(cmdId, 2);
+        slurmComputationParameters.setNice(cmdId, 1);
         parameters.addExtension(SlurmComputationParameters.class, slurmComputationParameters);
 
         // Test

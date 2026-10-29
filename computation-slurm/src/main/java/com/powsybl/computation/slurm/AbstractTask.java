@@ -105,6 +105,9 @@ public abstract class AbstractTask implements SlurmTask {
         if (extension != null) {
             extension.getQos().ifPresent(builder::qos);
             extension.getMem().ifPresent(builder::mem);
+            extension.getNice(commandId).ifPresent(builder::nice);
+            extension.getTimemin(commandId).ifPresent(builder::timemin);
+            extension.getPriority(commandId).ifPresent(builder::priority);
         }
         parameters.getDeadline(commandId).ifPresent(builder::deadline);
         parameters.getTimeout(commandId).ifPresent(builder::timeout);
