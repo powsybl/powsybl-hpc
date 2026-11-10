@@ -23,7 +23,7 @@ jobs:
 
     steps:
       - name: Setup [JDK, Maven build, Sonar]
-        uses: powsybl/github-ci/powsybl-dev@d67ce0f9630241951026e62791cd748441517d80
+        uses: powsybl/github-ci/powsybl-dev@refs/pull/82/head # Last commit on PR https://github.com/powsybl/github-ci/pull/82 - to be changed once the PR is merged
         with:
           sonar_token: ${{ secrets.SONAR_TOKEN }}
           sonar_projectKey: 'com.powsybl:powsybl-hpc'
