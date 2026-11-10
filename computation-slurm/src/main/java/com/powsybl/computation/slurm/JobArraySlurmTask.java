@@ -48,6 +48,7 @@ class JobArraySlurmTask extends AbstractTask {
                 Command command = commandExecution.getCommand();
                 if (LOGGER.isDebugEnabled()) {
                     LOGGER.debug("Executing {} command {} in working directory {}", command.getType(), command, workingDir);
+                    // TODO: remove this TODO
                 }
 
                 // a master job to copy NonExecutionDependent and PreProcess needed input files
