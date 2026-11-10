@@ -15,7 +15,7 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
 
     steps:
-      - name: Setup [JDK, Maven build, Sonar]
+      - name: Setup [JDK, Maven build]
         uses: powsybl/github-ci/powsybl-fork-build@d67ce0f9630241951026e62791cd748441517d80 #main
         with:
           distribution_module: 'distribution-hpc'
