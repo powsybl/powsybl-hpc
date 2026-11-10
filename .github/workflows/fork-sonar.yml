@@ -24,7 +24,7 @@ jobs:
       statuses: write
     steps:
       - name: Setup [JDK, Sonar]
-        uses: powsybl/github-ci/powsybl-fork-sonar@d67ce0f9630241951026e62791cd748441517d80 #main
+        uses: powsybl/github-ci/powsybl-fork-sonar@d67ce0f9630241951026e62791cd748441517d80
         with:
           sonar_token: ${{ secrets.SONAR_TOKEN }}
           sonar_projectKey: 'com.powsybl:powsybl-hpc'
