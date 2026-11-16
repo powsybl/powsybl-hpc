@@ -3,12 +3,7 @@ name: CI
 on:
   push:
     branches:
-      - 'main'
-      - 'release-v**'
-      - 'full-sonar-analysis-**'
-    tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+*'
-  pull_request:
+      - 'test/ci_action_mvn_check'
 
 permissions: { }
 
@@ -23,7 +18,7 @@ jobs:
 
     steps:
       - name: Setup [JDK, Maven build, Sonar]
-        uses: powsybl/github-ci/powsybl-dev@e6f51f02aab4255ca2714397952c4fe5affe1ea7 # v1.0.0
+        uses: powsybl/github-ci/powsybl-dev@0fd98fb981bfe13f572dba7980bdca683b5e6d5f # v1.0.0 - next
         with:
           sonar_token: ${{ secrets.SONAR_TOKEN }}
           sonar_projectKey: 'com.powsybl:powsybl-hpc'
