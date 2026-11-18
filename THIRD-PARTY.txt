@@ -8,22 +8,22 @@ List of third-party dependencies grouped by their license type.
         * Apache Commons Codec (commons-codec:commons-codec:1.19.0 - https://commons.apache.org/proper/commons-codec/)
         * Apache Commons Compress (org.apache.commons:commons-compress:1.28.0 - https://commons.apache.org/proper/commons-compress/)
         * Apache Commons CSV (org.apache.commons:commons-csv:1.14.1 - https://commons.apache.org/proper/commons-csv/)
-        * Apache Commons Exec (org.apache.commons:commons-exec:1.5.0 - https://commons.apache.org/proper/commons-exec/)
+        * Apache Commons Exec (org.apache.commons:commons-exec:1.6.0 - https://commons.apache.org/proper/commons-exec/)
         * Apache Commons IO (commons-io:commons-io:2.22.0 - https://commons.apache.org/proper/commons-io/)
         * Apache Commons Lang (org.apache.commons:commons-lang3:3.20.0 - https://commons.apache.org/proper/commons-lang/)
         * Apache Commons Text (org.apache.commons:commons-text:1.15.0 - https://commons.apache.org/proper/commons-text)
         * Auto Common Libraries (com.google.auto:auto-common:1.2.1 - https://github.com/google/auto/tree/master/common)
         * AutoService (com.google.auto.service:auto-service-annotations:1.1.1 - https://github.com/google/auto/tree/main/service)
         * AutoService Processor (com.google.auto.service:auto-service:1.1.1 - https://github.com/google/auto/tree/main/service)
-        * error-prone annotations (com.google.errorprone:error_prone_annotations:2.47.0 - https://errorprone.info/error_prone_annotations)
-        * Guava: Google Core Libraries for Java (com.google.guava:guava:33.6.0-jre - https://github.com/google/guava)
+        * error-prone annotations (com.google.errorprone:error_prone_annotations:2.50.0 - https://errorprone.info/error_prone_annotations)
+        * Guava: Google Core Libraries for Java (com.google.guava:guava:33.7.2-jre - https://github.com/google/guava)
         * Guava InternalFutureFailureAccess and InternalFutures (com.google.guava:failureaccess:1.0.3 - https://github.com/google/guava/failureaccess)
         * Guava ListenableFuture only (com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava - https://github.com/google/guava/listenablefuture)
         * J2ObjC Annotations (com.google.j2objc:j2objc-annotations:3.1 - https://github.com/google/j2objc/)
         * Jackson-annotations (com.fasterxml.jackson.core:jackson-annotations:2.21 - https://github.com/FasterXML/jackson)
-        * Jackson-core (com.fasterxml.jackson.core:jackson-core:2.21.4 - https://github.com/FasterXML/jackson-core)
-        * jackson-databind (com.fasterxml.jackson.core:jackson-databind:2.21.4 - https://github.com/FasterXML/jackson)
-        * JSpecify annotations (org.jspecify:jspecify:1.0.0 - http://jspecify.org/)
+        * Jackson-core (com.fasterxml.jackson.core:jackson-core:2.21.7 - https://github.com/FasterXML/jackson-core)
+        * jackson-databind (com.fasterxml.jackson.core:jackson-databind:2.21.7 - https://github.com/FasterXML/jackson)
+        * JSpecify annotations (org.jspecify:jspecify:1.0.1 - https://jspecify.dev/)
         * SIROCCO ::  Text Table Formatter (org.ow2.sirocco:sirocco-text-table-formatter:1.0 - http://www.ow2.org/sirocco-text-table-formatter)
         * SnakeYAML (org.yaml:snakeyaml:2.6 - https://bitbucket.org/snakeyaml/snakeyaml)
 
@@ -56,11 +56,11 @@ List of third-party dependencies grouped by their license type.
 
     BSD 3-clause License, ISC
 
-        * JSch (com.github.mwiede:jsch:2.28.3 - https://github.com/mwiede/jsch)
+        * JSch (com.github.mwiede:jsch:2.28.8 - https://github.com/mwiede/jsch)
 
     Eclipse Public License - v 2.0, LGPL-2.1-only
 
-        * Logback Classic Module (ch.qos.logback:logback-classic:1.5.34 - http://logback.qos.ch/logback-classic)
+        * Logback Classic Module (ch.qos.logback:logback-classic:1.6.6 - http://logback.qos.ch/logback-classic)
 
     GNU Lesser General Public License v2.1
 
